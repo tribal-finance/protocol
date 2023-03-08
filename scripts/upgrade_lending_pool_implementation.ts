@@ -1,10 +1,11 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 async function main() {
   const LendingPool = await ethers.getContractFactory("LendingPool");
-  const pool = await LendingPool.deploy();
-
-  await pool.deployed();
+  const pool = await upgrades.upgradeProxy(
+    process.env.GOERLI_LENDING_POOL_PROXY_ADDRESS!,
+    LendingPool
+  );
 
   console.log(`Pool deployed to ${pool.address}`);
 }

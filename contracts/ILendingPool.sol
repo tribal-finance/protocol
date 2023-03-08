@@ -12,7 +12,6 @@ abstract contract ILendingPool {
 
     /**
      * @dev Called by a proxy contract to initialize the pool.
-     * @param _owner Address of the smart contract owner (will be able to access administrative functions)
      * @param _borrower Address of the pool borrower
      * @param _duration The duration of the lending pool in seconds (e.g. 90 days = 90 * 24 * 60 * 60 = 7,776,000)
      * @param _targetAmount The target amount of USDC to be deposited by *lenders* (with 6 decimals e.g 1,000,000 = 1 USDC)
@@ -24,7 +23,6 @@ abstract contract ILendingPool {
      *                            principalAmount * _borrowerAIR * (_duration / 365days)
      */
     function initialize(
-        address _owner,
         address _borrower,
         uint _duration,
         uint _targetAmount,
@@ -85,8 +83,9 @@ abstract contract ILendingPool {
     /**
      * @dev withdraw the principal amount from the pool
      *  called by *lender* AFTER the pool is repaid OR BEFORE the pool is funded
+     * @param _amount The amount of USDC to be deposited (with 6 decimals e.g 1,000,000 = 1 USDC)
      */
-    function withdrawPrincipal() external virtual;
+    function withdrawPrincipal(uint _amount) external virtual;
 
     /**
      * @dev is APY boosted for address?
