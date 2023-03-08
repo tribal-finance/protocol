@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.8.2",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "solium": "^1.2.5"
   }
 }
