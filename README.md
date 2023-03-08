@@ -1,13 +1,9 @@
-# Sample Hardhat Project
+# Tribal DEFI smart contracts
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
-```
+## Contracts description (mentioned in the order of their deployment):
+- `contracts/authority` - authority smart contract containing whitelists of admins, lenders and borrowers.
+- `contracts/staking` - TRIBL token staking smart contract (stake TRIBL, get USDC).
+- `contracts/fee_sharing` - A contract that shares fees earned by the pool between staking and the foundation.
+- `contracts/vaults` - ERC-4626 vault for lending pool tranches.
+- `contracts/pool` - MAIN lending pool contract. Deploys logic of the pool.
+- `contracts/factory` - PoolFactory used to deploy various pools.
