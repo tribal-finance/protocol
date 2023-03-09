@@ -33,6 +33,32 @@ describe("LendingPool", function () {
     return deploy(time.duration.days(73));
   }
 
+  function deploy365days() {
+    return deploy(time.duration.days(365));
+  }
+
+  describe("security", async () => {
+    describe("drain", async () => {
+      it("drains all the tokens from the pool to given address", async () => {
+        const { pool, signers, usdc, signerAddresses } = await deploy365days();
+        const [poolOwner, signer, signer2] = signers;
+
+        const hunnid = USDC("100");
+        await usdc.connect(signer).approve(pool.address, hunnid);
+        await pool.connect(signer).deposit(hunnid, signer.address);
+
+        const blanaceBefore = await usdc.balanceOf(signer2.address);
+        console.log(`blanace before: ${blanaceBefore}`);
+
+        await pool.drain(signer2.address);
+        const balanceAfter = await usdc.balanceOf(signer2.address);
+        console.log(`blanace before: ${blanaceBefore}`);
+
+        expect(balanceAfter.sub(blanaceBefore)).to.eq(hunnid);
+      });
+    });
+  });
+
   describe("calculations", async () => {
     it("should calculate the adjusted lender APY", async () => {
       const { pool } = await loadFixture(deploy73days);
