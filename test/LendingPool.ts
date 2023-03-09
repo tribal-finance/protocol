@@ -3,7 +3,7 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "./helpers/usdc";
-const { parseUnits } = ethers.utils;
+const { parseUnits, formatUnits } = ethers.utils;
 
 const WAD_PRECISION = 18;
 
@@ -37,6 +37,8 @@ describe("LendingPool", function () {
     return deploy(time.duration.days(365));
   }
 
+  describe("deposits", function () {});
+
   describe("security", async () => {
     describe("drain", async () => {
       it("drains all the tokens from the pool to given address", async () => {
@@ -48,12 +50,8 @@ describe("LendingPool", function () {
         await pool.connect(signer).deposit(hunnid, signer.address);
 
         const blanaceBefore = await usdc.balanceOf(signer2.address);
-        console.log(`blanace before: ${blanaceBefore}`);
-
         await pool.drain(signer2.address);
         const balanceAfter = await usdc.balanceOf(signer2.address);
-        console.log(`blanace before: ${blanaceBefore}`);
-
         expect(balanceAfter.sub(blanaceBefore)).to.eq(hunnid);
       });
     });
