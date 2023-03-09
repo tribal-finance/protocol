@@ -1,4 +1,7 @@
 import { ethers, upgrades } from "hardhat";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 async function main() {
   const LendingPool = await ethers.getContractFactory("LendingPool");

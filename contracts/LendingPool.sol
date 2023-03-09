@@ -1,81 +1,131 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-// import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableMapUpgradeable.sol";
-
-import "./LendingPoolStorage.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 contract LendingPool is
     Initializable,
+    ERC4626Upgradeable,
     PausableUpgradeable,
-    OwnableUpgradeable,
-    UUPSUpgradeable,
-    LendingPoolStorage
+    OwnableUpgradeable
 {
-    using SafeERC20 for IERC20;
-    using EnumerableMapUpgradeable for EnumerableMapUpgradeable.AddressToUintMap;
+    using MathUpgradeable for uint;
+    /*////////////////////////////////////////////////
+        STORAGE
+    ////////////////////////////////////////////////*/
+    enum Status {
+        OPEN,
+        FUNDED,
+        ENDED,
+        REPAID,
+        DEFAULTED
+    }
+    uint public targetAssets;
+    uint public lenderAPY;
+    uint public borrowerAPR;
 
+    Status status;
+    uint64 public loanDuration;
+    uint64 public createdAt;
+    uint64 public fundedAt;
+    uint64 public repaidAt;
+
+    /**
+     * @return adj lender APY adjusted by duration of the loan
+     */
+    function adjustedLenderAPY() public view returns (uint adj) {
+        adj = lenderAPY.mulDiv(loanDuration, 365 * 24 * 60 * 60);
+    }
+
+    function expectedLenderYield() public view returns (uint yld) {
+        yld = adjustedLenderAPY().mulDiv(targetAssets, 10 ** 18);
+    }
+
+    /**
+     * @return adj borrower interest rate adjusted by duration of the loan
+     */
+    function adjustedBorrowerAPR() public view returns (uint adj) {
+        adj = borrowerAPR.mulDiv(loanDuration, 365 * 24 * 60 * 60);
+    }
+
+    function expectedBorrowerInterest() public view returns (uint interest) {
+        interest = adjustedBorrowerAPR().mulDiv(targetAssets, 10 ** 18);
+    }
+
+    /*////////////////////////////////////////////////
+        CONSTRUCTOR
+    ////////////////////////////////////////////////*/
+
+    /** @dev Constructor
+     *  @param poolName pool name
+     *  @param symbol pool token symbol
+     *  @param underlying address of the underlying token
+     *  @param poolTarget amount that the pool is intended to raise
+     *  @param lenderAPY_ Lender's Annual Percentage Yield (wad)
+     *  @param borrowerAPR_ Borrowers's Annual Percentage Rate (wad)
+     */
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(
+        string memory poolName,
+        string memory symbol,
+        IERC20Upgradeable underlying,
+        uint poolTarget,
+        uint64 poolDuration,
+        uint lenderAPY_,
+        uint borrowerAPR_
+    ) {
+        initialize(
+            poolName,
+            symbol,
+            underlying,
+            poolTarget,
+            poolDuration,
+            lenderAPY_,
+            borrowerAPR_
+        );
         _disableInitializers();
     }
 
+    /** @dev  Initializer
+     *  @param poolName pool name
+     *  @param symbol pool token symbol
+     *  @param underlying address of the underlying token
+     *  @param poolTarget amount that the pool is intended to raise
+     *  @param lenderAPY_ Lender's Annual Percentage Yield (wad)
+     *  @param borrowerAPR_ Borrowers's Annual Percentage Rate (wad)
+     */
     function initialize(
-        address usdcAddress,
-        address borrower,
-        uint targetAmount,
-        uint64 duration
+        string memory poolName,
+        string memory symbol,
+        IERC20Upgradeable underlying,
+        uint poolTarget,
+        uint64 poolDuration,
+        uint lenderAPY_,
+        uint borrowerAPR_
     ) public initializer {
-        // solium-disable-next-line security/no-block-members
-        _createdAt = uint64(block.timestamp);
-        USDC_ADDRESS = usdcAddress;
+        createdAt = uint64(block.timestamp);
+        status = Status.OPEN;
 
-        _borrower = borrower;
-        _targetAmount = targetAmount;
-        _fundedAmount = 0;
-        _duration = duration;
+        targetAssets = poolTarget;
+        loanDuration = poolDuration;
+        lenderAPY = lenderAPY_;
+        borrowerAPR = borrowerAPR_;
 
+        string memory tokenName = string(abi.encodePacked(poolName, " Token"));
+        __ERC20_init(tokenName, symbol);
         __Pausable_init();
         __Ownable_init();
-        __UUPSUpgradeable_init();
+        __ERC4626_init(underlying);
     }
 
-    function depositPrincipal(uint256 amountUSDC) external {
-        require(
-            _fundedAmount + amountUSDC <= _targetAmount,
-            "amount exceeds target"
-        );
-        USDCContract().safeTransferFrom(msg.sender, address(this), amountUSDC);
-        _increaseStake(msg.sender, amountUSDC);
-    }
-
-    function withdrawPrincipal(uint256 amountUSDC) external {
-        (, uint currentStake) = _lenderStakes.tryGet(msg.sender);
-        require(currentStake >= amountUSDC, "not enough funds");
-
-        _decreaseStake(msg.sender, amountUSDC);
-        USDCContract().transfer(msg.sender, amountUSDC);
-    }
-
-    function _increaseStake(address addr, uint amount) internal {
-        (, uint currentStake) = _lenderStakes.tryGet(addr);
-        _lenderStakes.set(addr, currentStake + amount);
-        _fundedAmount += amount;
-    }
-
-    function _decreaseStake(address addr, uint amount) internal {
-        (, uint currentStake) = _lenderStakes.tryGet(addr);
-        _lenderStakes.set(addr, currentStake - amount);
-        _fundedAmount -= amount;
-    }
-
+    /*////////////////////////////////////////////////
+        SECURITY METHODS
+    ////////////////////////////////////////////////*/
     function pause() public onlyOwner {
         _pause();
     }
@@ -84,7 +134,11 @@ contract LendingPool is
         _unpause();
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override whenNotPaused {
+        super._beforeTokenTransfer(from, to, amount);
+    }
 }
