@@ -49,6 +49,7 @@ contract LendingPool is
     uint64 public repaidAt;
 
     mapping(address => Rewardable) rewardables;
+    mapping(address => uint) rewardCorrections;
     mapping(address => uint) rewardWithdrawals;
 
     /*////////////////////////////////////////////////
@@ -118,6 +119,61 @@ contract LendingPool is
         uint256 amount
     ) internal override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
+    }
+
+    /*////////////////////////////////////////////////
+        REWARDS
+    ////////////////////////////////////////////////*/
+    function totalRewardsGenerated(
+        address receiver
+    ) public view returns (uint256 totalRewards) {
+        Rewardable memory rewardable = rewardables[receiver];
+        if (
+            rewardable.stake == 0 ||
+            status < Status.FUNDED ||
+            status == Status.DEFAULTED
+        ) {
+            return 0;
+        }
+
+        uint256 start = MathUpgradeable.max(
+            uint256(fundedAt),
+            uint256(rewardable.start)
+        );
+        uint256 end = MathUpgradeable.min(
+            uint256(fundedAt + loanDuration),
+            block.timestamp
+        );
+
+        uint256 stakeDuration = end - start;
+
+        // targetAssets * stakeDuration * adjustedAPY / loanDuration
+        uint256 calculatedRewards = targetAssets
+            .mulDiv(stakeDuration, loanDuration)
+            .mulDiv(adjustedLenderAPY(), 10 ** 18);
+
+        return rewardCorrections[receiver] + calculatedRewards;
+    }
+
+    function rewardsWitdrawable(
+        address receiver
+    ) public view returns (uint256 withdrawable) {
+        return totalRewardsGenerated(receiver) - rewardWithdrawals[receiver];
+    }
+
+    function withdrawRewards() external payable {
+        uint toWithdraw = rewardsWitdrawable(_msgSender());
+        require(
+            toWithdraw > 10 ** decimals(),
+            "withdrawRewards: minimum withdrawal is 1 USDC"
+        );
+
+        rewardWithdrawals[_msgSender()] = toWithdraw;
+        SafeERC20Upgradeable.safeTransfer(
+            _assetToken(),
+            _msgSender(),
+            toWithdraw
+        );
     }
 
     /*////////////////////////////////////////////////
@@ -230,6 +286,9 @@ contract LendingPool is
         uint256 amount
     ) internal override {
         require(false, "ERC20 transfer is not supported");
+        // TODO: Alice has 10000 tokens
+        // When alice transfers tokens to Bob:
+        // 1. get current rewards()
     }
 
     /*////////////////////////////////////////////////

@@ -3,7 +3,7 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "./helpers/usdc";
-const { parseUnits, formatUnits } = ethers.utils;
+const { parseUnits } = ethers.utils;
 
 const WAD_PRECISION = 18;
 
@@ -56,14 +56,14 @@ describe("LendingPool", function () {
 
   describe("deposits", async function () {
     it("allows a user to deposit USDC up to pool target", async function () {
-      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+      const { pool, signers } = await deploy365days();
       const [poolOwner, signer] = signers;
 
       expect(await pool.maxDeposit(signer.address)).to.eq(USDC(10000));
     });
 
     it("updates max deposit when", async function () {
-      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+      const { pool, signers } = await deploy365days();
       const [poolOwner, signer] = signers;
 
       await pool.connect(signer).deposit(USDC(5000), signer.address);
@@ -72,7 +72,7 @@ describe("LendingPool", function () {
     });
 
     it("will now allow a user to deposit more USDC than the pool target", async function () {
-      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+      const { pool, signers } = await deploy365days();
       const [poolOwner, signer] = signers;
 
       await expect(pool.connect(signer).deposit(USDC(10000), signer.address))
@@ -81,8 +81,8 @@ describe("LendingPool", function () {
         .reverted;
     });
 
-    it.only("will change pool status to funded when the pool is funded", async function () {
-      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+    it("will change pool status to funded when the pool is funded", async function () {
+      const { pool, signers } = await deploy365days();
       const [poolOwner, signer, signer2, signer3] = signers;
 
       await pool.connect(signer).deposit(USDC(5000), signer.address);
@@ -95,7 +95,7 @@ describe("LendingPool", function () {
   describe("security", async () => {
     describe("drain", async () => {
       it("cannot be ran unless the pool is paused", async () => {
-        const { pool, signers, usdc, signerAddresses } = await deploy365days();
+        const { pool, signers } = await deploy365days();
         const [poolOwner, signer, signer2] = signers;
 
         expect(pool.drain(signer2.address)).to.be.revertedWith(
@@ -103,7 +103,7 @@ describe("LendingPool", function () {
         );
       });
       it("drains all the tokens from the pool to given address", async () => {
-        const { pool, signers, usdc, signerAddresses } = await deploy365days();
+        const { pool, signers, usdc } = await deploy365days();
         const [poolOwner, signer, signer2] = signers;
 
         const hunnid = USDC("100");
