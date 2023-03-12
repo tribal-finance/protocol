@@ -20,7 +20,7 @@ contract LendingPool is
 {
     using MathUpgradeable for uint;
 
-    enum Status {
+    enum Stages {
         INITIAL,
         OPEN,
         FUNDED,
@@ -40,9 +40,10 @@ contract LendingPool is
     ////////////////////////////////////////////////*/
     uint public targetAssets;
     uint public lenderAPY;
+    uint public boostedLenderAPY;
     uint public borrowerAPR;
 
-    Status public status;
+    Stages public stage;
     uint64 public loanDuration;
     uint64 public createdAt;
     uint64 public fundedAt;
@@ -51,6 +52,15 @@ contract LendingPool is
     mapping(address => Rewardable) rewardables;
     mapping(address => uint) rewardCorrections;
     mapping(address => uint) rewardWithdrawals;
+    mapping(address => bool) rewardBoosts;
+
+    /*////////////////////////////////////////////////
+        MODIFIERS
+    ////////////////////////////////////////////////*/
+    modifier atStage(Stages _stage) {
+        require(stage == _stage, "wrong stage");
+        _;
+    }
 
     /*////////////////////////////////////////////////
         CONSTRUCTOR
@@ -74,11 +84,12 @@ contract LendingPool is
         uint borrowerAPR_
     ) public initializer {
         createdAt = uint64(block.timestamp);
-        status = Status.OPEN;
+        stage = Stages.OPEN;
 
         targetAssets = poolTarget;
         loanDuration = poolDuration;
         lenderAPY = lenderAPY_;
+        boostedLenderAPY = lenderAPY_;
         borrowerAPR = borrowerAPR_;
 
         string memory tokenName = string(abi.encodePacked(poolName, " Token"));
@@ -113,6 +124,136 @@ contract LendingPool is
         );
     }
 
+    /*////////////////////////////////////////////////
+        ERC4626Upgradeable overrides
+    ////////////////////////////////////////////////*/
+
+    /** @dev See {IERC4626-deposit}. */
+    function deposit(
+        uint256 assets,
+        address receiver
+    ) public override whenNotPaused atStage(Stages.OPEN) returns (uint256) {
+        return super.deposit(assets, receiver);
+    }
+
+    /** @dev See {IERC4626-mint}. */
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public override whenNotPaused atStage(Stages.OPEN) returns (uint256) {
+        return super.mint(shares, receiver);
+    }
+
+    /** @dev See {IERC4626-withdraw}. */
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public override whenNotPaused atStage(Stages.REPAID) returns (uint256) {
+        return super.withdraw(assets, receiver, owner);
+    }
+
+    /** @dev See {IERC4626-redeem}. */
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) public override whenNotPaused atStage(Stages.REPAID) returns (uint256) {
+        return super.redeem(shares, receiver, owner);
+    }
+
+    /** @dev See {IERC4626-totalAssets}. */
+    function totalAssets() public view override returns (uint256) {
+        return convertToAssets(totalSupply()); // TODO: interest?
+    }
+
+    /** @dev See {IERC4626-maxDeposit}. */
+    function maxDeposit(address) public view override returns (uint256) {
+        if (stage != Stages.OPEN) {
+            return 0;
+        }
+        if (totalAssets() >= targetAssets) {
+            return 0;
+        }
+        return targetAssets - totalAssets();
+    }
+
+    /** @dev See {IERC4626-maxMint}. */
+    function maxMint(address) public view override returns (uint256) {
+        return convertToShares(maxDeposit(msg.sender));
+    }
+
+    /** @dev See {IERC4626-maxWithdraw}. */
+    function maxWithdraw(
+        address owner
+    ) public view virtual override returns (uint256) {
+        return 0; // TODO: temporarily disabled
+    }
+
+    /** @dev See {IERC4626-maxRedeem}. */
+    function maxRedeem(
+        address owner
+    ) public view virtual override returns (uint256) {
+        return 0; // TODO:temporarily disabled
+    }
+
+    /** @dev will return 1:1 */
+    function _convertToShares(
+        uint256 assets,
+        MathUpgradeable.Rounding rounding
+    ) internal view override returns (uint256 shares) {
+        return _initialConvertToShares(assets, rounding);
+    }
+
+    /** @dev will return 1:1 */
+    function _convertToAssets(
+        uint256 shares,
+        MathUpgradeable.Rounding rounding
+    ) internal view override returns (uint256 assets) {
+        return _initialConvertToAssets(shares, rounding); // 1:1
+    }
+
+    /**
+     * @dev deposit/mint common workflow
+     */
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        super._deposit(caller, receiver, assets, shares);
+
+        rewardables[receiver] = Rewardable(
+            balanceOf(receiver),
+            uint64(block.timestamp),
+            false
+        );
+
+        if (totalSupply() == targetAssets && stage == Stages.OPEN) {
+            fundedAt = uint64(block.timestamp);
+            stage = Stages.FUNDED;
+            // TODO: emit funded event
+        }
+    }
+
+    /*////////////////////////////////////////////////
+        ERC20Upgradeable overrides
+    ////////////////////////////////////////////////*/
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        require(false, "ERC20 transfer is not supported");
+        // When alice transfers tokens to Bob:
+        // 1. get Alice rewardsWithdrawable()
+        // 2. add them rewardCorrections
+        // 3. update Alice rewardable with stake = currentStake - amount and start = block.timestamp
+        // 4. transfer funds and make sure bob stake is corrected with above ^
+        // NOTE: use _beforeTransfer() and _afterTransfer()
+    }
+
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -124,14 +265,29 @@ contract LendingPool is
     /*////////////////////////////////////////////////
         REWARDS
     ////////////////////////////////////////////////*/
-    function totalRewardsGenerated(
+    function withdrawRewards() external payable whenNotPaused {
+        uint toWithdraw = rewardsWitdrawable(_msgSender());
+        require(
+            toWithdraw > 10 ** decimals(),
+            "withdrawRewards: minimum withdrawal is 1 USDC"
+        );
+
+        rewardWithdrawals[_msgSender()] = toWithdraw;
+        SafeERC20Upgradeable.safeTransfer(
+            _assetToken(),
+            _msgSender(),
+            toWithdraw
+        );
+    }
+
+    function rewardsGeneratedByDate(
         address receiver
     ) public view returns (uint256 totalRewards) {
         Rewardable memory rewardable = rewardables[receiver];
         if (
             rewardable.stake == 0 ||
-            status < Status.FUNDED ||
-            status == Status.DEFAULTED
+            stage < Stages.FUNDED ||
+            stage == Stages.DEFAULTED
         ) {
             return 0;
         }
@@ -158,27 +314,8 @@ contract LendingPool is
     function rewardsWitdrawable(
         address receiver
     ) public view returns (uint256 withdrawable) {
-        return totalRewardsGenerated(receiver) - rewardWithdrawals[receiver];
+        return rewardsGeneratedByDate(receiver) - rewardWithdrawals[receiver];
     }
-
-    function withdrawRewards() external payable {
-        uint toWithdraw = rewardsWitdrawable(_msgSender());
-        require(
-            toWithdraw > 10 ** decimals(),
-            "withdrawRewards: minimum withdrawal is 1 USDC"
-        );
-
-        rewardWithdrawals[_msgSender()] = toWithdraw;
-        SafeERC20Upgradeable.safeTransfer(
-            _assetToken(),
-            _msgSender(),
-            toWithdraw
-        );
-    }
-
-    /*////////////////////////////////////////////////
-        UTILITIES
-    ////////////////////////////////////////////////*/
 
     /**
      * @return adj lender APY adjusted by duration of the loan
@@ -202,100 +339,7 @@ contract LendingPool is
         interest = adjustedBorrowerAPR().mulDiv(targetAssets, 10 ** 18);
     }
 
-    /*////////////////////////////////////////////////
-        ERC4626Upgradeable overrides
-    ////////////////////////////////////////////////*/
-    /** @dev See {IERC4626-totalAssets}. */
-    function totalAssets() public view override returns (uint256) {
-        return convertToAssets(totalSupply()); // TODO: interest?
-    }
-
-    /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view override returns (uint256) {
-        if (status != Status.OPEN) {
-            return 0;
-        }
-        if (totalAssets() >= targetAssets) {
-            return 0;
-        }
-        return targetAssets - totalAssets();
-    }
-
-    /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view override returns (uint256) {
-        return convertToShares(maxDeposit(msg.sender));
-    }
-
-    /** @dev See {IERC4626-maxWithdraw}. */
-    function maxWithdraw(
-        address owner
-    ) public view virtual override returns (uint256) {
-        return 0; // temporarily disabled
-    }
-
-    /** @dev See {IERC4626-maxRedeem}. */
-    function maxRedeem(
-        address owner
-    ) public view virtual override returns (uint256) {
-        return 0; // temporarily disabled
-    }
-
-    /** @dev will return 1:1 */
-    function _convertToShares(
-        uint256 assets,
-        MathUpgradeable.Rounding rounding
-    ) internal view override returns (uint256 shares) {
-        return _initialConvertToShares(assets, rounding);
-    }
-
-    /** @dev will return 1:1 */
-    function _convertToAssets(
-        uint256 shares,
-        MathUpgradeable.Rounding rounding
-    ) internal view override returns (uint256 assets) {
-        return _initialConvertToAssets(shares, rounding); // 1:1
-    }
-
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
-        super._deposit(caller, receiver, assets, shares);
-
-        rewardables[receiver] = Rewardable(
-            balanceOf(receiver),
-            uint64(block.timestamp),
-            false
-        );
-
-        if (totalSupply() == targetAssets && status == Status.OPEN) {
-            fundedAt = uint64(block.timestamp);
-            status = Status.FUNDED;
-            // TODO: emit funded event
-        }
-    }
-
-    /*////////////////////////////////////////////////
-        ERC20Upgradeable overrides
-    ////////////////////////////////////////////////*/
-    function _transfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override {
-        require(false, "ERC20 transfer is not supported");
-        // TODO: Alice has 10000 tokens
-        // When alice transfers tokens to Bob:
-        // 1. get current rewards()
-    }
-
-    /*////////////////////////////////////////////////
-        UTILITIES
-    ////////////////////////////////////////////////*/
-
-    function _assetToken() private view returns (IERC20Upgradeable) {
+    function _assetToken() internal view returns (IERC20Upgradeable) {
         return IERC20Upgradeable(asset());
     }
 }

@@ -12,7 +12,7 @@ const WAD = (amount: string | number) =>
 const USDC = (amount: string | number) =>
   parseUnits(amount.toString(), USDC_PRECISION);
 
-const STATUS = {
+const STAGES = {
   INITIAL: 0,
   OPEN: 1,
   FUNDED: 2,
@@ -81,14 +81,14 @@ describe("LendingPool", function () {
         .reverted;
     });
 
-    it("will change pool status to funded when the pool is funded", async function () {
+    it("will change pool stage to funded when the pool is funded", async function () {
       const { pool, signers } = await deploy365days();
       const [poolOwner, signer, signer2, signer3] = signers;
 
       await pool.connect(signer).deposit(USDC(5000), signer.address);
       await pool.connect(signer2).deposit(USDC(5000), signer.address);
 
-      expect(await pool.status()).to.eq(STATUS.FUNDED);
+      expect(await pool.stage()).to.eq(STAGES.FUNDED);
     });
   });
 
