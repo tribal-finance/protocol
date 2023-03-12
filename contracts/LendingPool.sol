@@ -3,11 +3,14 @@ pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
+import "hardhat/console.sol";
 
 contract LendingPool is
     Initializable,
@@ -16,9 +19,7 @@ contract LendingPool is
     OwnableUpgradeable
 {
     using MathUpgradeable for uint;
-    /*////////////////////////////////////////////////
-        STORAGE
-    ////////////////////////////////////////////////*/
+
     enum Status {
         INITIAL,
         OPEN,
@@ -27,49 +28,32 @@ contract LendingPool is
         REPAID,
         DEFAULTED
     }
+
+    struct Rewardable {
+        uint stake;
+        uint64 start;
+        bool isBoosted;
+    }
+
+    /*////////////////////////////////////////////////
+        STORAGE
+    ////////////////////////////////////////////////*/
     uint public targetAssets;
     uint public lenderAPY;
     uint public borrowerAPR;
 
-    Status status;
+    Status public status;
     uint64 public loanDuration;
     uint64 public createdAt;
     uint64 public fundedAt;
     uint64 public repaidAt;
 
+    mapping(address => Rewardable) rewardables;
+    mapping(address => uint) rewardWithdrawals;
+
     /*////////////////////////////////////////////////
         CONSTRUCTOR
     ////////////////////////////////////////////////*/
-
-    /** @dev Constructor
-     *  @param poolName pool name
-     *  @param symbol pool token symbol
-     *  @param underlying address of the underlying token
-     *  @param poolTarget amount that the pool is intended to raise
-     *  @param lenderAPY_ Lender's Annual Percentage Yield (wad)
-     *  @param borrowerAPR_ Borrowers's Annual Percentage Rate (wad)
-     */
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        string memory poolName,
-        string memory symbol,
-        IERC20Upgradeable underlying,
-        uint poolTarget,
-        uint64 poolDuration,
-        uint lenderAPY_,
-        uint borrowerAPR_
-    ) {
-        initialize(
-            poolName,
-            symbol,
-            underlying,
-            poolTarget,
-            poolDuration,
-            lenderAPY_,
-            borrowerAPR_
-        );
-        _disableInitializers();
-    }
 
     /** @dev  Initializer
      *  @param poolName pool name
@@ -120,7 +104,7 @@ contract LendingPool is
     /**
      *  @dev withraws all the pool funds to receiver address
      */
-    function drain(address receiver) public onlyOwner whenNotPaused {
+    function drain(address receiver) public onlyOwner whenPaused {
         SafeERC20Upgradeable.safeTransfer(
             _assetToken(),
             receiver,
@@ -214,6 +198,27 @@ contract LendingPool is
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 assets) {
         return _initialConvertToAssets(shares, rounding); // 1:1
+    }
+
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        super._deposit(caller, receiver, assets, shares);
+
+        rewardables[receiver] = Rewardable(
+            balanceOf(receiver),
+            uint64(block.timestamp),
+            false
+        );
+
+        if (totalSupply() == targetAssets && status == Status.OPEN) {
+            fundedAt = uint64(block.timestamp);
+            status = Status.FUNDED;
+            // TODO: emit funded event
+        }
     }
 
     /*////////////////////////////////////////////////
