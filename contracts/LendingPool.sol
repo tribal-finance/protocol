@@ -20,7 +20,7 @@ contract LendingPool is
         STORAGE
     ////////////////////////////////////////////////*/
     enum Status {
-        CREATED,
+        INITIAL,
         OPEN,
         FUNDED,
         ENDED,

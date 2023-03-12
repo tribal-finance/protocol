@@ -33,6 +33,7 @@ describe("PoolFactory", function () {
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const factory = await PoolFactory.deploy();
     await factory.deployed();
+    await factory.initialize();
 
     const signers = await ethers.getSigners();
 
@@ -50,13 +51,14 @@ describe("PoolFactory", function () {
       const { factory, pool, signers, deployParams } = await fixture();
       deployParams[0] = "New Pool";
       await factory.setImplementation(pool.address);
-      await expect(factory.deployPool(...deployParams)).not.to.be.reverted;
+      await expect(factory.deployUnitranchePool(...deployParams)).not.to.be
+        .reverted;
     });
 
     it("will be set as the owner of a new pool", async function () {
       const { factory, pool, signers, deployParams } = await fixture();
       await factory.setImplementation(pool.address);
-      await factory.deployPool(...deployParams);
+      await factory.deployUnitranchePool(...deployParams);
       const lastDeployedPoolRecord = await factory.lastDeployedPoolRecord();
       const newPoolAddress = lastDeployedPoolRecord.poolAddress;
 
@@ -75,8 +77,9 @@ describe("PoolFactory", function () {
     it("can not deploy a copy of the pool", async function () {
       const { factory, pool, signers, deployParams } = await fixture();
       await factory.setImplementation(pool.address);
-      await expect(factory.connect(signers[1]).deployPool(...deployParams)).to
-        .be.reverted;
+      await expect(
+        factory.connect(signers[1]).deployUnitranchePool(...deployParams)
+      ).to.be.reverted;
     });
   });
 });

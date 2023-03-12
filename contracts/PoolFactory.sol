@@ -10,6 +10,7 @@ import "./LendingPool.sol";
 contract PoolFactory is OwnableUpgradeable {
     struct PoolRecord {
         address poolAddress;
+        address secondPoolAddress;
         address implementationAddress;
         string name;
         string tokenName;
@@ -37,7 +38,7 @@ contract PoolFactory is OwnableUpgradeable {
     /** @dev Deploys a clone of implementation as a new pool.
      * . See {LendingPool-initialize}
      */
-    function deployPool(
+    function deployUnitranchePool(
         string memory poolName,
         string memory symbol,
         IERC20Upgradeable underlying,
@@ -62,10 +63,12 @@ contract PoolFactory is OwnableUpgradeable {
 
         PoolRecord memory pool = PoolRecord(
             poolAddress,
+            address(0),
             implementationAddress,
             poolName,
             symbol
         );
+
         poolRegistry.push(pool);
 
         return poolAddress;
