@@ -19,6 +19,11 @@
       "address": "0x417D999E01B37A7C41CE54Cd6DCE8402A5A18E79",
       "txHash": "0x38c5e7e1c0e487e45010714525324fe87ed98b999e604dec54b27d8cbe8e64ca",
       "kind": "transparent"
+    },
+    {
+      "address": "0x9394Bc337834228921Ed93bC7c405d640e3d2e57",
+      "txHash": "0x1115cad530635190853fc841972b0115768ac17469cbe84edbafae28e0d6eb2c",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -165,6 +170,136 @@
           "t_bool": {
             "label": "bool",
             "numberOfBytes": "1"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "48ce5003239b6a25d3c3f8e2f23f8f817662fdb594cceb1fc8176171db8fd9bc": {
+      "address": "0x7483D482c6da8F3A5E615E9Ae86c50Cd69d81F07",
+      "txHash": "0xbdd50dece0861ab1c3661bdbd08be97ec0033e28e615324c2620f7b384c970b1",
+      "layout": {
+        "solcVersion": "0.8.18",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "implementationAddress",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "PoolFactory",
+            "src": "contracts/PoolFactory.sol:18"
+          },
+          {
+            "label": "poolRegistry",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_struct(PoolRecord)4073_storage)dyn_storage",
+            "contract": "PoolFactory",
+            "src": "contracts/PoolFactory.sol:19"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_struct(PoolRecord)4073_storage)dyn_storage": {
+            "label": "struct PoolFactory.PoolRecord[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(PoolRecord)4073_storage": {
+            "label": "struct PoolFactory.PoolRecord",
+            "members": [
+              {
+                "label": "poolAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "implementationAddress",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "tokenName",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
           },
           "t_uint256": {
             "label": "uint256",

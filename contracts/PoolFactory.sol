@@ -18,11 +18,6 @@ contract PoolFactory is OwnableUpgradeable {
     address public implementationAddress;
     PoolRecord[] public poolRegistry;
 
-    constructor() {
-        initialize();
-        _disableInitializers();
-    }
-
     function initialize() public initializer {
         __Ownable_init();
     }
