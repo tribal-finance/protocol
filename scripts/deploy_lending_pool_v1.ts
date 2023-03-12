@@ -6,6 +6,7 @@ const { parseUnits } = ethers.utils;
 
 const USDC_CONTRACT_ADDRESS_GOERLI =
   "0x07865c6E87B9F70255377e024ace6630C1Eaa37F";
+
 const USDC_PRECISION = 6;
 const USDC = (amount: string | number) =>
   parseUnits(amount.toString(), USDC_PRECISION);

@@ -20,6 +20,7 @@ contract LendingPool is
         STORAGE
     ////////////////////////////////////////////////*/
     enum Status {
+        CREATED,
         OPEN,
         FUNDED,
         ENDED,
@@ -213,6 +214,17 @@ contract LendingPool is
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 assets) {
         return _initialConvertToAssets(shares, rounding); // 1:1
+    }
+
+    /*////////////////////////////////////////////////
+        ERC20Upgradeable overrides
+    ////////////////////////////////////////////////*/
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        require(false, "ERC20 transfer is not supported");
     }
 
     /*////////////////////////////////////////////////

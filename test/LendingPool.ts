@@ -37,7 +37,37 @@ describe("LendingPool", function () {
     return deploy(time.duration.days(365));
   }
 
-  describe("deposits", function () {});
+  describe("deposits", async function () {
+    it("allows a user to deposit USDC up to pool target", async function () {
+      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+      const [poolOwner, signer] = signers;
+
+      expect(await pool.maxDeposit(signer.address)).to.eq(USDC(10000));
+    });
+
+    it("updates max deposit when", async function () {
+      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+      const [poolOwner, signer] = signers;
+
+      usdc.connect(signer).approve(pool.address, USDC(5000));
+      await pool.connect(signer).deposit(USDC(5000), signer.address);
+
+      expect(await pool.maxDeposit(signer.address)).to.eq(USDC(5000));
+    });
+
+    it("will now allow a user to deposit more USDC than the pool target", async function () {
+      const { pool, signers, usdc, signerAddresses } = await deploy365days();
+      const [poolOwner, signer] = signers;
+
+      usdc.connect(signer).approve(pool.address, USDC(20000));
+      await expect(pool.connect(signer).deposit(USDC(10000), signer.address))
+        .not.to.be.reverted;
+      await expect(pool.connect(signer).deposit(USDC(1), signer.address)).to.be
+        .reverted;
+    });
+
+    it("will change pool status to funded when the pool is funded");
+  });
 
   describe("security", async () => {
     describe("drain", async () => {
