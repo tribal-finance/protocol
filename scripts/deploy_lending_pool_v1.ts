@@ -18,13 +18,13 @@ const WAD = (amount: string | number) =>
 async function main() {
   const LendingPool = await ethers.getContractFactory("LendingPool");
   const constructorParams = [
-    "TestLendingPool",
-    "TEST",
-    USDC_CONTRACT_ADDRESS_GOERLI,
-    USDC(10000),
-    365 * 24 * 60 * 60,
-    WAD("0.1"), // APY is 10%
-    WAD("0.2"), // APR is 20%
+    // "TestLendingPool",
+    // "TEST",
+    // USDC_CONTRACT_ADDRESS_GOERLI,
+    // USDC(10000),
+    // 365 * 24 * 60 * 60,
+    // WAD("0.1"), // APY is 10%
+    // WAD("0.2"), // APR is 20%
   ];
   console.log({ constructorParams });
   const pool = await LendingPool.deploy(...constructorParams);

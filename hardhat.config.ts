@@ -3,12 +3,22 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-solhint";
 import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
+import "hardhat-contract-sizer";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.18",
+  solidity: {
+    version: "0.8.18",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
+  },
+
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {

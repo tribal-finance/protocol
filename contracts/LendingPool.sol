@@ -20,11 +20,17 @@ contract LendingPool is
 {
     using MathUpgradeable for uint;
 
+    /*////////////////////////////////////////////////
+        CONSTANTS
+    ////////////////////////////////////////////////*/
+    uint public constant WAD = 10 ** 18;
+    uint public constant YEAR = 365 * 24 * 60 * 60;
+
     enum Stages {
         INITIAL,
         OPEN,
         FUNDED,
-        ENDED,
+        BORROWER_INTEREST_REPAID,
         REPAID,
         DEFAULTED
     }
@@ -47,7 +53,9 @@ contract LendingPool is
     uint64 public loanDuration;
     uint64 public createdAt;
     uint64 public fundedAt;
+    uint64 public borrowedAt;
     uint64 public repaidAt;
+    uint64 public defaultedAt;
 
     mapping(address => Rewardable) rewardables;
     mapping(address => uint) rewardCorrections;
@@ -58,7 +66,7 @@ contract LendingPool is
         MODIFIERS
     ////////////////////////////////////////////////*/
     modifier atStage(Stages _stage) {
-        require(stage == _stage, "wrong stage");
+        require(stage == _stage, "STG");
         _;
     }
 
@@ -100,27 +108,42 @@ contract LendingPool is
     }
 
     /*////////////////////////////////////////////////
-        SECURITY METHODS
+        ADMIN METHODS
     ////////////////////////////////////////////////*/
 
     /** @dev Pauses the pool */
-    function pause() public onlyOwner {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /** @dev Unpauses the pool */
-    function unpause() public onlyOwner {
+    function unpause() external onlyOwner {
         _unpause();
     }
 
     /**
      *  @dev withraws all the pool funds to receiver address
      */
-    function drain(address receiver) public onlyOwner whenPaused {
+    function drain(address receiver) external onlyOwner whenPaused {
         SafeERC20Upgradeable.safeTransfer(
             _assetToken(),
             receiver,
             _assetToken().balanceOf(address(this))
+        );
+    }
+
+    /** @dev changes stage */
+    function changeStage(Stages _stage) external onlyOwner {
+        stage = _stage;
+    }
+
+    /*////////////////////////////////////////////////
+        Borrower methods
+    ////////////////////////////////////////////////*/
+    function borrow() external atStage(Stages.FUNDED) returns (uint256) {
+        require(
+            _assetToken().balanceOf(address(this)) >= targetAssets,
+            "B:NEF"
         );
     }
 
@@ -245,13 +268,23 @@ contract LendingPool is
         address to,
         uint256 amount
     ) internal override {
-        require(false, "ERC20 transfer is not supported");
+        require(false, "NOTRNSFR");
         // When alice transfers tokens to Bob:
         // 1. get Alice rewardsWithdrawable()
         // 2. add them rewardCorrections
         // 3. update Alice rewardable with stake = currentStake - amount and start = block.timestamp
         // 4. transfer funds and make sure bob stake is corrected with above ^
         // NOTE: use _beforeTransfer() and _afterTransfer()
+        if (from == address(0) || to == address(0)) {
+            return;
+        }
+        rewardCorrections[from] += rewardsWitdrawable(from);
+        rewardables[from].start = uint64(block.timestamp);
+        rewardables[from].stake -= amount;
+
+        rewardCorrections[to] += rewardsWitdrawable(to);
+        rewardables[to].start = uint64(block.timestamp);
+        rewardables[to].stake += amount;
     }
 
     function _beforeTokenTransfer(
@@ -267,10 +300,8 @@ contract LendingPool is
     ////////////////////////////////////////////////*/
     function withdrawRewards() external payable whenNotPaused {
         uint toWithdraw = rewardsWitdrawable(_msgSender());
-        require(
-            toWithdraw > 10 ** decimals(),
-            "withdrawRewards: minimum withdrawal is 1 USDC"
-        );
+        console.log("toWithdraw", toWithdraw);
+        require(toWithdraw > 1 * 10 ** decimals(), "MINWD");
 
         rewardWithdrawals[_msgSender()] = toWithdraw;
         SafeERC20Upgradeable.safeTransfer(
@@ -303,10 +334,10 @@ contract LendingPool is
 
         uint256 stakeDuration = end - start;
 
-        // targetAssets * stakeDuration * adjustedAPY / loanDuration
-        uint256 calculatedRewards = targetAssets
+        // stakedAssets * stakeDuration * adjustedAPY / (loanDuration)
+        uint256 calculatedRewards = (rewardable.stake)
             .mulDiv(stakeDuration, loanDuration)
-            .mulDiv(adjustedLenderAPY(), 10 ** 18);
+            .mulDiv(adjustedLenderAPY(), WAD);
 
         return rewardCorrections[receiver] + calculatedRewards;
     }
@@ -321,22 +352,22 @@ contract LendingPool is
      * @return adj lender APY adjusted by duration of the loan
      */
     function adjustedLenderAPY() public view returns (uint adj) {
-        adj = lenderAPY.mulDiv(loanDuration, 365 * 24 * 60 * 60);
+        adj = lenderAPY.mulDiv(loanDuration, YEAR);
     }
 
-    function expectedLenderYield() public view returns (uint yld) {
-        yld = adjustedLenderAPY().mulDiv(targetAssets, 10 ** 18);
+    function expectedAllLendersYield() public view returns (uint yld) {
+        yld = adjustedLenderAPY().mulDiv(targetAssets, WAD);
     }
 
     /**
      * @return adj borrower interest rate adjusted by duration of the loan
      */
     function adjustedBorrowerAPR() public view returns (uint adj) {
-        adj = borrowerAPR.mulDiv(loanDuration, 365 * 24 * 60 * 60);
+        adj = borrowerAPR.mulDiv(loanDuration, YEAR);
     }
 
     function expectedBorrowerInterest() public view returns (uint interest) {
-        interest = adjustedBorrowerAPR().mulDiv(targetAssets, 10 ** 18);
+        interest = adjustedBorrowerAPR().mulDiv(targetAssets, WAD);
     }
 
     function _assetToken() internal view returns (IERC20Upgradeable) {

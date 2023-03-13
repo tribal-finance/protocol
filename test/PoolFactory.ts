@@ -27,7 +27,7 @@ describe("PoolFactory", function () {
       parseUnits("0.1", 18), // APY is 10%
       parseUnits("0.2", 18),
     ];
-    const pool = await LendingPool.deploy(...deployParams);
+    const pool = await LendingPool.deploy();
     await pool.deployed();
 
     const PoolFactory = await ethers.getContractFactory("PoolFactory");

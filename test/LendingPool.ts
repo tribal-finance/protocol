@@ -54,16 +54,28 @@ describe("LendingPool", function () {
     return deploy(time.duration.days(365));
   }
 
+  async function fundedPoolHalfAndHalf73days() {
+    const { pool, signers, usdc, signerAddresses } = await loadFixture(
+      deploy73days
+    );
+    const [owner, lender1, lender2, nonLender] = signers;
+
+    await pool.connect(lender1).deposit(USDC(5000), lender1.address);
+    await pool.connect(lender2).deposit(USDC(5000), lender2.address);
+
+    return { pool, owner, lender1, lender2, nonLender, usdc, signerAddresses };
+  }
+
   describe("deposits", async function () {
     it("allows a user to deposit USDC up to pool target", async function () {
-      const { pool, signers } = await deploy365days();
+      const { pool, signers } = await loadFixture(deploy365days);
       const [poolOwner, signer] = signers;
 
       expect(await pool.maxDeposit(signer.address)).to.eq(USDC(10000));
     });
 
     it("updates max deposit when", async function () {
-      const { pool, signers } = await deploy365days();
+      const { pool, signers } = await loadFixture(deploy365days);
       const [poolOwner, signer] = signers;
 
       await pool.connect(signer).deposit(USDC(5000), signer.address);
@@ -72,7 +84,7 @@ describe("LendingPool", function () {
     });
 
     it("will now allow a user to deposit more USDC than the pool target", async function () {
-      const { pool, signers } = await deploy365days();
+      const { pool, signers } = await loadFixture(deploy365days);
       const [poolOwner, signer] = signers;
 
       await expect(pool.connect(signer).deposit(USDC(10000), signer.address))
@@ -82,7 +94,7 @@ describe("LendingPool", function () {
     });
 
     it("will change pool stage to funded when the pool is funded", async function () {
-      const { pool, signers } = await deploy365days();
+      const { pool, signers } = await loadFixture(deploy365days);
       const [poolOwner, signer, signer2, signer3] = signers;
 
       await pool.connect(signer).deposit(USDC(5000), signer.address);
@@ -92,10 +104,107 @@ describe("LendingPool", function () {
     });
   });
 
+  describe("rewards", async function () {
+    describe("for non-investor", async function () {
+      it("rewardsGeneratedByDate() is zero at beginning of term", async function () {
+        const { pool, nonLender } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        expect(await pool.rewardsGeneratedByDate(nonLender.address)).to.eq(0);
+      });
+
+      it("rewardsGeneratedByDate() is zero after halve of term", async function () {
+        const { pool, nonLender } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        await time.increase(time.duration.days(73) / 2);
+
+        expect(await pool.rewardsGeneratedByDate(nonLender.address)).to.eq(0);
+      });
+
+      it("rewardsGeneratedByDate() is zero after full term", async function () {
+        const { pool, nonLender } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        await time.increase(time.duration.days(73));
+
+        expect(await pool.rewardsGeneratedByDate(nonLender.address)).to.eq(0);
+      });
+    });
+
+    describe("for investor that put 5000/10000 to 73day pool with yield=10%", async function () {
+      it("rewardsGeneratedByDate() is zero at beginning of term", async function () {
+        const { pool, lender1 } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        expect(await pool.rewardsGeneratedByDate(lender1.address)).to.eq(0);
+      });
+
+      // 10% * 73/365/2 * 5000/10000 USDC = 50 USDC
+      it("rewardsGeneratedByDate() is 50 USDC after halve of term", async function () {
+        const { pool, lender1 } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        await time.increase(time.duration.days(73) / 2);
+
+        expect(await pool.rewardsGeneratedByDate(lender1.address)).to.eq(
+          USDC(50)
+        );
+      });
+
+      // 10% * 73/365 * 5000/10000 USDC = 100 USDC
+      it("rewardsGeneratedByDate() is 100 USDC after full term", async function () {
+        const { pool, lender1 } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        await time.increase(time.duration.days(73));
+
+        expect(await pool.rewardsGeneratedByDate(lender1.address)).to.eq(
+          USDC(100)
+        );
+      });
+
+      it("can withdraw 50USDC after halve term and withdraw another 50USDC at the end of term", async function () {
+        const { usdc, pool, lender1 } = await loadFixture(
+          fundedPoolHalfAndHalf73days
+        );
+
+        // half term passes
+        await time.increase(time.duration.days(73) / 2);
+        const balanceBefore = await usdc.balanceOf(lender1.address);
+        await expect(pool.connect(lender1).withdrawRewards()).not.to.be
+          .reverted;
+        const balanceAfter = await usdc.balanceOf(lender1.address);
+        const balanceDiff = balanceAfter.sub(balanceBefore);
+        expect(balanceDiff).to.be.gte(USDC(49.99));
+        expect(balanceDiff).to.lte(USDC(50.01));
+
+        // whole lending term passes
+        await time.increase(time.duration.days(73) / 2);
+        const balanceBefore2 = await usdc.balanceOf(lender1.address);
+        await expect(pool.connect(lender1).withdrawRewards()).not.to.be
+          .reverted;
+        const balanceAfter2 = await usdc.balanceOf(lender1.address);
+        const balanceDiff2 = balanceAfter2.sub(balanceBefore2);
+        expect(balanceDiff2).to.be.gte(USDC(49.99));
+        expect(balanceDiff2).to.lte(USDC(50.01));
+
+        const totalBalanceDiff = balanceAfter2.sub(balanceBefore);
+        expect(totalBalanceDiff).to.be.eq(USDC(100));
+      });
+    });
+  });
+
   describe("security", async () => {
     describe("drain", async () => {
       it("cannot be ran unless the pool is paused", async () => {
-        const { pool, signers } = await deploy365days();
+        const { pool, signers } = await loadFixture(deploy365days);
         const [poolOwner, signer, signer2] = signers;
 
         expect(pool.drain(signer2.address)).to.be.revertedWith(
@@ -103,7 +212,7 @@ describe("LendingPool", function () {
         );
       });
       it("drains all the tokens from the pool to given address", async () => {
-        const { pool, signers, usdc } = await deploy365days();
+        const { pool, signers, usdc } = await loadFixture(deploy365days);
         const [poolOwner, signer, signer2] = signers;
 
         const hunnid = USDC("100");
@@ -128,7 +237,7 @@ describe("LendingPool", function () {
 
     it("should calculate expected lender yield", async () => {
       const { pool } = await loadFixture(deploy73days);
-      expect(await pool.expectedLenderYield()).to.be.equal(
+      expect(await pool.expectedAllLendersYield()).to.be.equal(
         parseUnits("200", USDC_PRECISION)
       );
     });
