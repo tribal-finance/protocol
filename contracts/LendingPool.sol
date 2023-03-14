@@ -396,15 +396,13 @@ contract LendingPool is
 
     /** @dev See {IERC4626-maxWithdraw}. */
     function maxWithdraw(
-        address owner
+        address
     ) public view virtual override returns (uint256) {
         return 0; // TODO: temporarily disabled
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
-    function maxRedeem(
-        address owner
-    ) public view virtual override returns (uint256) {
+    function maxRedeem(address) public view virtual override returns (uint256) {
         return 0; // TODO:temporarily disabled
     }
 
