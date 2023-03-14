@@ -65,6 +65,15 @@ describe("PoolFactory", function () {
       const newPool = await ethers.getContractAt("LendingPool", newPoolAddress);
       expect(await newPool.owner()).to.equal(await signers[0].getAddress());
     });
+
+    it("will emit PoolDeployed event", async function () {
+      const { factory, pool, signers, deployParams } = await fixture();
+      await factory.setImplementation(pool.address);
+      await expect(factory.deployUnitranchePool(...deployParams)).to.emit(
+        factory,
+        "PoolDeployed"
+      );
+    });
   });
 
   describe("other user", async function () {

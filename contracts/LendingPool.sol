@@ -30,6 +30,7 @@ contract LendingPool is
         INITIAL,
         OPEN,
         FUNDED,
+        BORROWED,
         BORROWER_INTEREST_REPAID,
         REPAID,
         DEFAULTED

@@ -8,6 +8,19 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./LendingPool.sol";
 
 contract PoolFactory is OwnableUpgradeable {
+    event PoolDeployed(
+        address indexed deployer,
+        address indexed poolAddress,
+        address indexed secondPoolAddress,
+        address implementationAddress,
+        string name,
+        string tokenName,
+        uint poolTarget,
+        uint64 poolDuration,
+        uint lenderAPY,
+        uint borrowerAPY
+    );
+
     struct PoolRecord {
         address poolAddress;
         address secondPoolAddress;
@@ -23,16 +36,25 @@ contract PoolFactory is OwnableUpgradeable {
         __Ownable_init();
     }
 
+    /// @dev sets implementation for future pool deployments
     function setImplementation(address implementation) external onlyOwner {
         implementationAddress = implementation;
     }
 
+    /// @dev returns last deployed pool record
     function lastDeployedPoolRecord()
         external
         view
         returns (PoolRecord memory p)
     {
         p = poolRegistry[poolRegistry.length - 1];
+    }
+
+    /// @dev removes all the pool records from storage
+    function clearPoolRecords() external onlyOwner {
+        while (poolRegistry.length != 0) {
+            poolRegistry.pop();
+        }
     }
 
     /** @dev Deploys a clone of implementation as a new pool.
@@ -70,6 +92,19 @@ contract PoolFactory is OwnableUpgradeable {
         );
 
         poolRegistry.push(pool);
+
+        emit PoolDeployed(
+            owner(),
+            poolAddress,
+            address(0),
+            implementationAddress,
+            poolName,
+            symbol,
+            poolTarget,
+            poolDuration,
+            lenderAPY_,
+            borrowerAPY_
+        );
 
         return poolAddress;
     }
