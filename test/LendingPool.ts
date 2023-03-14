@@ -16,9 +16,10 @@ const STAGES = {
   INITIAL: 0,
   OPEN: 1,
   FUNDED: 2,
-  ENDED: 3,
-  REPAID: 4,
-  DEFAULTED: 5,
+  BORROWED: 3,
+  BORROWED_INTEREST_PAID: 4,
+  REPAID: 5,
+  DEFAULTED: 6,
 };
 
 describe("LendingPool", function () {
