@@ -35,27 +35,33 @@ async function main() {
   };
 
   // 1. Open pool
-  // const openPoolAddress = await deployOpenPool(commonInput);
-  // console.log({ openPoolAddress });
+  console.log("=== 1. Open pool");
+  const openPoolAddress = await deployOpenPool(commonInput);
+  console.log({ openPoolAddress });
 
   // 2. halve founded pool
-  // const halveFoundedPoolAddress = await deployHalveFoundedPool(commonInput);
-  // console.log({ halveFoundedPoolAddress });
+  console.log("=== 2. halve founded pool");
+  const halveFoundedPoolAddress = await deployHalveFoundedPool(commonInput);
+  console.log({ halveFoundedPoolAddress });
 
   // 3. founded pool
-  // const foundedPoolAddress = await deployFoundedPool(commonInput);
-  // console.log({ foundedPoolAddress });
+  console.log("=== 3. founded pool");
+  const foundedPoolAddress = await deployFoundedPool(commonInput);
+  console.log({ foundedPoolAddress });
 
   // 4. borrowed pool
-  // const borrowedPoolAddress = await deployBorrowedPool(commonInput);
-  // console.log({ borrowedPoolAddress });
+  console.log("=== 4. borrowed pool");
+  const borrowedPoolAddress = await deployBorrowedPool(commonInput);
+  console.log({ borrowedPoolAddress });
 
   // 5. borrowed halve interst repaid pool
-  // const borrowedHalveInterestRepaidPoolAddress =
-  //   await deployBorrowedHalveInterestRepaidPool(commonInput);
-  // console.log({ borrowedHalveInterestRepaidPoolAddress });
+  console.log("=== 5. borrowed halve interst repaid pool");
+  const borrowedHalveInterestRepaidPoolAddress =
+    await deployBorrowedHalveInterestRepaidPool(commonInput);
+  console.log({ borrowedHalveInterestRepaidPoolAddress });
 
   // 6. borrowed full interst repaid pool
+  console.log("=== 6. borrowed halve interst repaid pool");
   const borrowedFullInterestRepaidPoolAddress =
     await deployBorrowedFullInterestRepaidPool(commonInput);
   console.log({ borrowedFullInterestRepaidPoolAddress });

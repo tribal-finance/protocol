@@ -21,6 +21,8 @@ import type { IUSDC } from "../typechain-types/contracts/IUSDC";
 
 const { parseUnits } = ethers.utils;
 
+const WAIT_CONFIRMATIONS = 1;
+
 export type CommonInput = {
   deployer: Signer;
   lender1: Signer;
@@ -77,14 +79,18 @@ async function _lender1Deposit800(
 ) {
   const { usdcContract, lender1 } = params;
   console.log("* set allowance for lender 1");
-  await usdcContract
-    .connect(lender1)
-    .increaseAllowance(poolContract.address, parseUnits("800", 6));
+  await (
+    await usdcContract
+      .connect(lender1)
+      .increaseAllowance(poolContract.address, parseUnits("800", 6))
+  ).wait(WAIT_CONFIRMATIONS);
 
   console.log("* deposit $800 from lender 1");
-  await poolContract
-    .connect(lender1)
-    .deposit(parseUnits("800", 6), await lender1.getAddress());
+  await (
+    await poolContract
+      .connect(lender1)
+      .deposit(parseUnits("800", 6), await lender1.getAddress())
+  ).wait(WAIT_CONFIRMATIONS);
 }
 
 async function _lender2Deposit200(
@@ -93,13 +99,17 @@ async function _lender2Deposit200(
 ) {
   const { usdcContract, lender2 } = params;
   console.log("* set allowance for lender 2");
-  await usdcContract
-    .connect(lender2)
-    .increaseAllowance(poolContract.address, parseUnits("200", 6));
+  await (
+    await usdcContract
+      .connect(lender2)
+      .increaseAllowance(poolContract.address, parseUnits("200", 6))
+  ).wait(WAIT_CONFIRMATIONS);
   console.log("* deposit $200 from lender 2");
-  await poolContract
-    .connect(lender2)
-    .deposit(parseUnits("200", 6), await lender2.getAddress());
+  await (
+    await poolContract
+      .connect(lender2)
+      .deposit(parseUnits("200", 6), await lender2.getAddress())
+  ).wait(WAIT_CONFIRMATIONS);
 }
 
 async function _borrowerBorrows(
@@ -108,7 +118,9 @@ async function _borrowerBorrows(
 ) {
   const { usdcContract, borrower } = params;
   console.log("* borrow as borrower");
-  await poolContract.connect(borrower).borrow();
+  await (
+    await poolContract.connect(borrower).borrow()
+  ).wait(WAIT_CONFIRMATIONS);
 }
 
 async function _borrowerPays50Interest(
@@ -117,11 +129,17 @@ async function _borrowerPays50Interest(
 ) {
   const { usdcContract, borrower } = params;
   console.log("* approve spend $50 for borrower");
-  await usdcContract
-    .connect(borrower)
-    .increaseAllowance(poolContract.address, parseUnits("50", 6));
+  await (
+    await usdcContract
+      .connect(borrower)
+      .increaseAllowance(poolContract.address, parseUnits("50", 6))
+  ).wait(WAIT_CONFIRMATIONS);
   console.log("* borrower pays 50 interest");
-  await poolContract.connect(borrower).borrowerPayInterest(parseUnits("50", 6));
+  await (
+    await poolContract
+      .connect(borrower)
+      .borrowerPayInterest(parseUnits("50", 6))
+  ).wait(WAIT_CONFIRMATIONS);
 }
 
 async function _borrowerPays150Interest(
@@ -130,13 +148,17 @@ async function _borrowerPays150Interest(
 ) {
   const { usdcContract, borrower } = params;
   console.log("* approve spend $150 for borrower");
-  await usdcContract
-    .connect(borrower)
-    .increaseAllowance(poolContract.address, parseUnits("150", 6));
+  await (
+    await usdcContract
+      .connect(borrower)
+      .increaseAllowance(poolContract.address, parseUnits("150", 6))
+  ).wait(WAIT_CONFIRMATIONS);
   console.log("* borrower pays $150 interest");
-  await poolContract
-    .connect(borrower)
-    .borrowerPayInterest(parseUnits("150", 6));
+  await (
+    await poolContract
+      .connect(borrower)
+      .borrowerPayInterest(parseUnits("150", 6))
+  ).wait(WAIT_CONFIRMATIONS);
 }
 
 export async function deployOpenPool(params: CommonInput): Promise<string> {
