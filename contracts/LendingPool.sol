@@ -148,6 +148,140 @@ contract LendingPool is
     }
 
     /*////////////////////////////////////////////////
+        LENDER METHODS
+    ////////////////////////////////////////////////*/
+    /** @dev Deposit asset to the pool
+     *      See {IERC4626-deposit}.
+     * @param assets amount of underlying asset to deposit
+     * @param receiver receiver address (just set it to msg sender)
+     * @return amount of pool tokens minted for the deposit
+     */
+    function deposit(
+        uint256 assets,
+        address receiver
+    ) public override whenNotPaused atStage(Stages.OPEN) returns (uint256) {
+        return super.deposit(assets, receiver);
+    }
+
+    /** @dev Withdraw principal from the pool
+     * See {IERC4626-withdraw}.
+     * @param assets amount of underlying asset to withdraw
+     * @param receiver address to which the underlying assets should be sent
+     * @param owner owner of the principal (just use msg sender)
+     * @return amount of pool tokens burned after withdrawal
+     */
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public override whenNotPaused atStage(Stages.REPAID) returns (uint256) {
+        return super.withdraw(assets, receiver, owner);
+    }
+
+    /** @dev Maximum amount of assets that the pool will accept
+     *  See {IERC4626-maxDeposit}.
+     *  @param . lender address (just set it to msg sender)
+     *  @return maximum amount of assets that can be deposited to the pool
+     */
+    function maxDeposit(address) public view override returns (uint256) {
+        if (stage != Stages.OPEN) {
+            return 0;
+        }
+        if (totalAssets() >= targetAssets) {
+            return 0;
+        }
+        return targetAssets - totalAssets();
+    }
+
+    /**
+     * @dev deposit/mint common workflow
+     * See {ERC4626Upgradeable-_deposit}.
+     */
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        super._deposit(caller, receiver, assets, shares);
+
+        rewardables[receiver] = Rewardable(
+            balanceOf(receiver),
+            uint64(block.timestamp),
+            false
+        );
+
+        if (totalSupply() == targetAssets && stage == Stages.OPEN) {
+            fundedAt = uint64(block.timestamp);
+            stage = Stages.FUNDED;
+            // TODO: emit funded event
+        }
+    }
+
+    /*////////////////////////////////////////////////
+        REWARDS
+    ////////////////////////////////////////////////*/
+    function withdrawRewards() external payable whenNotPaused {
+        uint toWithdraw = rewardsWitdrawable(_msgSender());
+        console.log("toWithdraw", toWithdraw);
+        require(toWithdraw > 1 * 10 ** decimals(), "MINWD");
+
+        rewardWithdrawals[_msgSender()] = toWithdraw;
+        SafeERC20Upgradeable.safeTransfer(
+            _assetToken(),
+            _msgSender(),
+            toWithdraw
+        );
+    }
+
+    function rewardsGeneratedByDate(
+        address receiver
+    ) public view returns (uint256 totalRewards) {
+        Rewardable memory rewardable = rewardables[receiver];
+        if (
+            rewardable.stake == 0 ||
+            stage < Stages.FUNDED ||
+            stage == Stages.DEFAULTED
+        ) {
+            return 0;
+        }
+
+        uint256 start = MathUpgradeable.max(
+            uint256(fundedAt),
+            uint256(rewardable.start)
+        );
+        uint256 end = MathUpgradeable.min(
+            uint256(fundedAt + loanDuration),
+            block.timestamp
+        );
+
+        uint256 stakeDuration = end - start;
+
+        // stakedAssets * stakeDuration * adjustedAPY / (loanDuration)
+        uint256 calculatedRewards = (rewardable.stake)
+            .mulDiv(stakeDuration, loanDuration)
+            .mulDiv(adjustedLenderAPY(), WAD);
+
+        return rewardCorrections[receiver] + calculatedRewards;
+    }
+
+    function rewardsWitdrawable(
+        address receiver
+    ) public view returns (uint256 withdrawable) {
+        return rewardsGeneratedByDate(receiver) - rewardWithdrawals[receiver];
+    }
+
+    /// @dev adjusted lender APY adjusted by duration of the loan = lenderAPY * loanDuration / 365
+    function adjustedLenderAPY() public view returns (uint adj) {
+        adj = lenderAPY.mulDiv(loanDuration, YEAR);
+    }
+
+    /// @dev expected amount of assets that will be rewarded to all the lenders
+    function expectedAllLendersYield() public view returns (uint yld) {
+        yld = adjustedLenderAPY().mulDiv(targetAssets, WAD);
+    }
+
+    /*////////////////////////////////////////////////
         BORROWER
     ////////////////////////////////////////////////*/
 
@@ -233,29 +367,12 @@ contract LendingPool is
         ERC4626Upgradeable overrides
     ////////////////////////////////////////////////*/
 
-    /** @dev See {IERC4626-deposit}. */
-    function deposit(
-        uint256 assets,
-        address receiver
-    ) public override whenNotPaused atStage(Stages.OPEN) returns (uint256) {
-        return super.deposit(assets, receiver);
-    }
-
     /** @dev See {IERC4626-mint}. */
     function mint(
         uint256 shares,
         address receiver
     ) public override whenNotPaused atStage(Stages.OPEN) returns (uint256) {
         return super.mint(shares, receiver);
-    }
-
-    /** @dev See {IERC4626-withdraw}. */
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override whenNotPaused atStage(Stages.REPAID) returns (uint256) {
-        return super.withdraw(assets, receiver, owner);
     }
 
     /** @dev See {IERC4626-redeem}. */
@@ -270,17 +387,6 @@ contract LendingPool is
     /** @dev See {IERC4626-totalAssets}. */
     function totalAssets() public view override returns (uint256) {
         return convertToAssets(totalSupply()); // TODO: interest?
-    }
-
-    /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view override returns (uint256) {
-        if (stage != Stages.OPEN) {
-            return 0;
-        }
-        if (totalAssets() >= targetAssets) {
-            return 0;
-        }
-        return targetAssets - totalAssets();
     }
 
     /** @dev See {IERC4626-maxMint}. */
@@ -318,30 +424,6 @@ contract LendingPool is
         return _initialConvertToAssets(shares, rounding); // 1:1
     }
 
-    /**
-     * @dev deposit/mint common workflow
-     */
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
-        super._deposit(caller, receiver, assets, shares);
-
-        rewardables[receiver] = Rewardable(
-            balanceOf(receiver),
-            uint64(block.timestamp),
-            false
-        );
-
-        if (totalSupply() == targetAssets && stage == Stages.OPEN) {
-            fundedAt = uint64(block.timestamp);
-            stage = Stages.FUNDED;
-            // TODO: emit funded event
-        }
-    }
-
     /*////////////////////////////////////////////////
         ERC20Upgradeable overrides
     ////////////////////////////////////////////////*/
@@ -375,70 +457,6 @@ contract LendingPool is
         uint256 amount
     ) internal override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
-    }
-
-    /*////////////////////////////////////////////////
-        REWARDS
-    ////////////////////////////////////////////////*/
-    function withdrawRewards() external payable whenNotPaused {
-        uint toWithdraw = rewardsWitdrawable(_msgSender());
-        console.log("toWithdraw", toWithdraw);
-        require(toWithdraw > 1 * 10 ** decimals(), "MINWD");
-
-        rewardWithdrawals[_msgSender()] = toWithdraw;
-        SafeERC20Upgradeable.safeTransfer(
-            _assetToken(),
-            _msgSender(),
-            toWithdraw
-        );
-    }
-
-    function rewardsGeneratedByDate(
-        address receiver
-    ) public view returns (uint256 totalRewards) {
-        Rewardable memory rewardable = rewardables[receiver];
-        if (
-            rewardable.stake == 0 ||
-            stage < Stages.FUNDED ||
-            stage == Stages.DEFAULTED
-        ) {
-            return 0;
-        }
-
-        uint256 start = MathUpgradeable.max(
-            uint256(fundedAt),
-            uint256(rewardable.start)
-        );
-        uint256 end = MathUpgradeable.min(
-            uint256(fundedAt + loanDuration),
-            block.timestamp
-        );
-
-        uint256 stakeDuration = end - start;
-
-        // stakedAssets * stakeDuration * adjustedAPY / (loanDuration)
-        uint256 calculatedRewards = (rewardable.stake)
-            .mulDiv(stakeDuration, loanDuration)
-            .mulDiv(adjustedLenderAPY(), WAD);
-
-        return rewardCorrections[receiver] + calculatedRewards;
-    }
-
-    function rewardsWitdrawable(
-        address receiver
-    ) public view returns (uint256 withdrawable) {
-        return rewardsGeneratedByDate(receiver) - rewardWithdrawals[receiver];
-    }
-
-    /**
-     * @return adj lender APY adjusted by duration of the loan
-     */
-    function adjustedLenderAPY() public view returns (uint adj) {
-        adj = lenderAPY.mulDiv(loanDuration, YEAR);
-    }
-
-    function expectedAllLendersYield() public view returns (uint yld) {
-        yld = adjustedLenderAPY().mulDiv(targetAssets, WAD);
     }
 
     function _assetToken() internal view returns (IERC20Upgradeable) {
