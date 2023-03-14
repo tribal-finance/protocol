@@ -10,6 +10,8 @@ const { parseUnits } = ethers.utils;
 describe("PoolFactory", function () {
   async function fixture() {
     const LendingPool = await ethers.getContractFactory("LendingPool");
+    const signers = await ethers.getSigners();
+
     const deployParams: [
       string,
       string,
@@ -17,7 +19,8 @@ describe("PoolFactory", function () {
       BigNumberish,
       BigNumberish,
       BigNumberish,
-      BigNumberish
+      BigNumberish,
+      string
     ] = [
       "TestLendingPool",
       "TEST",
@@ -26,6 +29,7 @@ describe("PoolFactory", function () {
       365 * 24 * 60 * 60,
       parseUnits("0.1", 18), // APY is 10%
       parseUnits("0.2", 18),
+      signers[4].address,
     ];
     const pool = await LendingPool.deploy();
     await pool.deployed();
@@ -34,8 +38,6 @@ describe("PoolFactory", function () {
     const factory = await PoolFactory.deploy();
     await factory.deployed();
     await factory.initialize();
-
-    const signers = await ethers.getSigners();
 
     return { pool, factory, signers, deployParams: [...deployParams] };
   }

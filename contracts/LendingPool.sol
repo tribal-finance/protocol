@@ -49,6 +49,8 @@ contract LendingPool is
     uint public lenderAPY;
     uint public boostedLenderAPY;
     uint public borrowerAPR;
+    uint public borrowerInterestPaid;
+    address public borrowerAddress;
 
     Stages public stage;
     uint64 public loanDuration;
@@ -71,6 +73,11 @@ contract LendingPool is
         _;
     }
 
+    modifier onlyBorrower() {
+        require(_msgSender() == borrowerAddress, "OBRWR");
+        _;
+    }
+
     /*////////////////////////////////////////////////
         CONSTRUCTOR
     ////////////////////////////////////////////////*/
@@ -90,7 +97,8 @@ contract LendingPool is
         uint poolTarget,
         uint64 poolDuration,
         uint lenderAPY_,
-        uint borrowerAPR_
+        uint borrowerAPR_,
+        address borrowerAddress_
     ) public initializer {
         createdAt = uint64(block.timestamp);
         stage = Stages.OPEN;
@@ -100,6 +108,7 @@ contract LendingPool is
         lenderAPY = lenderAPY_;
         boostedLenderAPY = lenderAPY_;
         borrowerAPR = borrowerAPR_;
+        borrowerAddress = borrowerAddress_;
 
         string memory tokenName = string(abi.encodePacked(poolName, " Token"));
         __ERC20_init(tokenName, symbol);
@@ -139,13 +148,85 @@ contract LendingPool is
     }
 
     /*////////////////////////////////////////////////
-        Borrower methods
+        BORROWER
     ////////////////////////////////////////////////*/
-    function borrow() external atStage(Stages.FUNDED) returns (uint256) {
+
+    /** @dev sends assets from pool balance to borrower address
+     *  @return amountSent amount of assets sent
+     */
+    function borrow()
+        external
+        atStage(Stages.FUNDED)
+        onlyBorrower
+        returns (uint256 amountSent)
+    {
         require(
             _assetToken().balanceOf(address(this)) >= targetAssets,
             "B:NEF"
         );
+
+        stage = Stages.BORROWED;
+
+        SafeERC20Upgradeable.safeTransfer(
+            _assetToken(),
+            borrowerAddress,
+            targetAssets
+        );
+
+        return targetAssets;
+    }
+
+    function borrowerPayInterest(
+        uint assets
+    ) external atStage(Stages.BORROWED) onlyBorrower {
+        require(assets <= outstandingBorrowerInterest(), "PI:TMAS");
+        SafeERC20Upgradeable.safeTransferFrom(
+            _assetToken(),
+            _msgSender(),
+            address(this),
+            assets
+        );
+
+        borrowerInterestPaid += assets;
+        if (borrowerInterestPaid == expectedBorrowerInterest()) {
+            stage = Stages.BORROWER_INTEREST_REPAID;
+        }
+    }
+
+    function borrowerRepayPrincipal()
+        external
+        atStage(Stages.BORROWER_INTEREST_REPAID)
+        onlyBorrower
+    {
+        SafeERC20Upgradeable.safeTransferFrom(
+            _assetToken(),
+            _msgSender(),
+            address(this),
+            targetAssets
+        );
+
+        stage = Stages.REPAID;
+    }
+
+    /** @dev adjusted borrower interest rate = APR * duration / 365 days
+     *  @return adj borrower interest rate adjusted by duration of the loan
+     */
+    function adjustedBorrowerAPR() public view returns (uint adj) {
+        adj = borrowerAPR.mulDiv(loanDuration, YEAR);
+    }
+
+    /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * targetAssets
+     *  @return interest amount of assets to be repaid
+     */
+    function expectedBorrowerInterest() public view returns (uint interest) {
+        interest = adjustedBorrowerAPR().mulDiv(targetAssets, WAD);
+    }
+
+    /** @dev outstanding borrower interest = expectedBorrowerInterest - borrowerInterestAlreadyPaid
+     *  @return interest amount of outstanding assets to be repaid
+     */
+    function outstandingBorrowerInterest() public view returns (uint interest) {
+        interest = expectedBorrowerInterest() - borrowerInterestPaid;
     }
 
     /*////////////////////////////////////////////////
@@ -358,17 +439,6 @@ contract LendingPool is
 
     function expectedAllLendersYield() public view returns (uint yld) {
         yld = adjustedLenderAPY().mulDiv(targetAssets, WAD);
-    }
-
-    /**
-     * @return adj borrower interest rate adjusted by duration of the loan
-     */
-    function adjustedBorrowerAPR() public view returns (uint adj) {
-        adj = borrowerAPR.mulDiv(loanDuration, YEAR);
-    }
-
-    function expectedBorrowerInterest() public view returns (uint interest) {
-        interest = adjustedBorrowerAPR().mulDiv(targetAssets, WAD);
     }
 
     function _assetToken() internal view returns (IERC20Upgradeable) {

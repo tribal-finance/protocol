@@ -26,6 +26,8 @@ describe("LendingPool", function () {
     const { usdc, signers, signerAddresses } = await setupUSDC();
     const LendingPool = await ethers.getContractFactory("LendingPool");
 
+    const borrower = signers[4];
+
     const constructorParams = [
       "TestLendingPool",
       "TEST",
@@ -34,6 +36,7 @@ describe("LendingPool", function () {
       duration,
       WAD("0.1"), // APY is 10%
       WAD("0.2"), // APR is 20%
+      borrower.address,
     ];
     const pool = await LendingPool.deploy();
     await pool.deployed();

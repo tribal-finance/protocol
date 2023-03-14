@@ -18,7 +18,8 @@ contract PoolFactory is OwnableUpgradeable {
         uint poolTarget,
         uint64 poolDuration,
         uint lenderAPY,
-        uint borrowerAPY
+        uint borrowerAPY,
+        address borrowerAddress
     );
 
     struct PoolRecord {
@@ -61,33 +62,33 @@ contract PoolFactory is OwnableUpgradeable {
      * . See {LendingPool-initialize}
      */
     function deployUnitranchePool(
-        string memory poolName,
+        string memory poolName_,
         string memory symbol,
         IERC20Upgradeable underlying,
         uint poolTarget,
         uint64 poolDuration,
         uint lenderAPY_,
-        uint borrowerAPY_
+        uint borrowerAPY_,
+        address borrowerAddress_
     ) external onlyOwner returns (address) {
         address poolAddress = Clones.clone(implementationAddress);
-
-        LendingPool newPool = LendingPool(poolAddress);
-        newPool.initialize(
-            poolName,
+        _initPoolAndTransferOwnership(
+            poolAddress,
+            poolName_,
             symbol,
             underlying,
             poolTarget,
             poolDuration,
             lenderAPY_,
-            borrowerAPY_
+            borrowerAPY_,
+            borrowerAddress_
         );
-        newPool.transferOwnership(msg.sender);
 
         PoolRecord memory pool = PoolRecord(
             poolAddress,
             address(0),
             implementationAddress,
-            poolName,
+            poolName_,
             symbol
         );
 
@@ -98,14 +99,40 @@ contract PoolFactory is OwnableUpgradeable {
             poolAddress,
             address(0),
             implementationAddress,
-            poolName,
+            poolName_,
             symbol,
             poolTarget,
             poolDuration,
             lenderAPY_,
-            borrowerAPY_
+            borrowerAPY_,
+            borrowerAddress_
         );
 
         return poolAddress;
+    }
+
+    function _initPoolAndTransferOwnership(
+        address poolAddress,
+        string memory poolName_,
+        string memory symbol,
+        IERC20Upgradeable underlying,
+        uint poolTarget,
+        uint64 poolDuration,
+        uint lenderAPY_,
+        uint borrowerAPY_,
+        address borrowerAddress_
+    ) internal {
+        LendingPool newPool = LendingPool(poolAddress);
+        newPool.initialize(
+            poolName_,
+            symbol,
+            underlying,
+            poolTarget,
+            poolDuration,
+            lenderAPY_,
+            borrowerAPY_,
+            borrowerAddress_
+        );
+        newPool.transferOwnership(msg.sender);
     }
 }
