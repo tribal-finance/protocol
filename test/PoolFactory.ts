@@ -34,12 +34,15 @@ describe("PoolFactory", function () {
     const pool = await LendingPool.deploy();
     await pool.deployed();
 
+    const pool2 = await LendingPool.deploy();
+    await pool2.deployed();
+
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const factory = await PoolFactory.deploy();
     await factory.deployed();
     await factory.initialize();
 
-    return { pool, factory, signers, deployParams: [...deployParams] };
+    return { pool, pool2, factory, signers, deployParams: [...deployParams] };
   }
 
   describe("owner", function () {
@@ -47,6 +50,13 @@ describe("PoolFactory", function () {
       const { factory, pool, signers } = await fixture();
       await expect(factory.setImplementation(pool.address)).not.to.be.reverted;
       expect(await factory.implementationAddress()).to.be.equal(pool.address);
+    });
+
+    it("can set implementation to a new one", async function () {
+      const { factory, pool, pool2, signers } = await fixture();
+      await expect(factory.setImplementation(pool.address)).not.to.be.reverted;
+      await expect(factory.setImplementation(pool2.address)).not.to.be.reverted;
+      expect(await factory.implementationAddress()).to.be.equal(pool2.address);
     });
 
     it("can deploy a copy of the pool", async function () {

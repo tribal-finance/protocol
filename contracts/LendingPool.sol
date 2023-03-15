@@ -90,7 +90,6 @@ contract LendingPool is
         uint amount,
         uint allTimeRewardsAmount
     );
-    event LenderWithdrawPrincipal(address indexed lender, uint amount);
 
     event BorrowerBorrow(address indexed borrowerAddress, uint amount);
     event BorrowerPayInterest(address indexed borrowedAddress, uint amount);
