@@ -115,7 +115,9 @@ describe("LendingPool", function () {
           fundedPoolHalfAndHalf73days
         );
 
-        expect(await pool.rewardsGeneratedByDate(nonLender.address)).to.eq(0);
+        expect(
+          await pool.lenderRewardsGeneratedByDate(nonLender.address)
+        ).to.eq(0);
       });
 
       it("rewardsGeneratedByDate() is zero after halve of term", async function () {
@@ -125,7 +127,9 @@ describe("LendingPool", function () {
 
         await time.increase(time.duration.days(73) / 2);
 
-        expect(await pool.rewardsGeneratedByDate(nonLender.address)).to.eq(0);
+        expect(
+          await pool.lenderRewardsGeneratedByDate(nonLender.address)
+        ).to.eq(0);
       });
 
       it("rewardsGeneratedByDate() is zero after full term", async function () {
@@ -135,7 +139,9 @@ describe("LendingPool", function () {
 
         await time.increase(time.duration.days(73));
 
-        expect(await pool.rewardsGeneratedByDate(nonLender.address)).to.eq(0);
+        expect(
+          await pool.lenderRewardsGeneratedByDate(nonLender.address)
+        ).to.eq(0);
       });
     });
 
@@ -145,7 +151,9 @@ describe("LendingPool", function () {
           fundedPoolHalfAndHalf73days
         );
 
-        expect(await pool.rewardsGeneratedByDate(lender1.address)).to.eq(0);
+        expect(await pool.lenderRewardsGeneratedByDate(lender1.address)).to.eq(
+          0
+        );
       });
 
       // 10% * 73/365/2 * 5000/10000 USDC = 50 USDC
@@ -156,7 +164,7 @@ describe("LendingPool", function () {
 
         await time.increase(time.duration.days(73) / 2);
 
-        expect(await pool.rewardsGeneratedByDate(lender1.address)).to.eq(
+        expect(await pool.lenderRewardsGeneratedByDate(lender1.address)).to.eq(
           USDC(50)
         );
       });
@@ -169,7 +177,7 @@ describe("LendingPool", function () {
 
         await time.increase(time.duration.days(73));
 
-        expect(await pool.rewardsGeneratedByDate(lender1.address)).to.eq(
+        expect(await pool.lenderRewardsGeneratedByDate(lender1.address)).to.eq(
           USDC(100)
         );
       });
@@ -182,7 +190,7 @@ describe("LendingPool", function () {
         // half term passes
         await time.increase(time.duration.days(73) / 2);
         const balanceBefore = await usdc.balanceOf(lender1.address);
-        await expect(pool.connect(lender1).withdrawRewards()).not.to.be
+        await expect(pool.connect(lender1).lenderWithdrawRewards()).not.to.be
           .reverted;
         const balanceAfter = await usdc.balanceOf(lender1.address);
         const balanceDiff = balanceAfter.sub(balanceBefore);
@@ -192,7 +200,7 @@ describe("LendingPool", function () {
         // whole lending term passes
         await time.increase(time.duration.days(73) / 2);
         const balanceBefore2 = await usdc.balanceOf(lender1.address);
-        await expect(pool.connect(lender1).withdrawRewards()).not.to.be
+        await expect(pool.connect(lender1).lenderWithdrawRewards()).not.to.be
           .reverted;
         const balanceAfter2 = await usdc.balanceOf(lender1.address);
         const balanceDiff2 = balanceAfter2.sub(balanceBefore2);
@@ -235,7 +243,7 @@ describe("LendingPool", function () {
   describe("calculations", async () => {
     it("should calculate the adjusted lender APY", async () => {
       const { pool } = await loadFixture(deploy73days);
-      const adjustedLenderAPY = await pool.adjustedLenderAPY();
+      const adjustedLenderAPY = await pool.lenderAdjustedAPY();
       expect(adjustedLenderAPY).to.be.equal(parseUnits("0.02", WAD_PRECISION));
     });
 
@@ -248,14 +256,14 @@ describe("LendingPool", function () {
 
     it("should calculate the adjusted borrower APR", async () => {
       const { pool } = await loadFixture(deploy73days);
-      expect(await pool.adjustedBorrowerAPR()).to.be.equal(
+      expect(await pool.borrowerAdjustedAPR()).to.be.equal(
         parseUnits("0.04", WAD_PRECISION)
       );
     });
 
     it("should calculate expected borrower interest", async () => {
       const { pool } = await loadFixture(deploy73days);
-      expect(await pool.expectedBorrowerInterest()).to.be.equal(
+      expect(await pool.borrowerExpectedInterest()).to.be.equal(
         parseUnits("400", USDC_PRECISION)
       );
     });

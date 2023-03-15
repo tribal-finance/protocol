@@ -66,6 +66,26 @@ contract LendingPool is
     mapping(address => bool) rewardBoosts;
 
     /*////////////////////////////////////////////////
+        EVENTS
+    ////////////////////////////////////////////////*/
+    event PoolInitialized(
+        string poolName,
+        string symbol,
+        address underlying,
+        uint poolTarget,
+        uint64 poolDuration,
+        uint lenderAPY,
+        uint borrowerAPR,
+        address borrowerAddress
+    );
+
+    event StageChanged(
+        Stages indexed fromStage,
+        Stages indexed toStage,
+        address msgSender
+    );
+
+    /*////////////////////////////////////////////////
         MODIFIERS
     ////////////////////////////////////////////////*/
     modifier atStage(Stages _stage) {
@@ -101,7 +121,6 @@ contract LendingPool is
         address borrowerAddress_
     ) public initializer {
         createdAt = uint64(block.timestamp);
-        stage = Stages.OPEN;
 
         targetAssets = poolTarget;
         loanDuration = poolDuration;
@@ -115,6 +134,18 @@ contract LendingPool is
         __Pausable_init();
         __Ownable_init();
         __ERC4626_init(underlying);
+
+        emit PoolInitialized(
+            poolName,
+            symbol,
+            address(underlying),
+            poolTarget,
+            poolDuration,
+            lenderAPY_,
+            borrowerAPR_,
+            borrowerAddress_
+        );
+        _transitionToStage(Stages.OPEN);
     }
 
     /*////////////////////////////////////////////////
@@ -144,7 +175,7 @@ contract LendingPool is
 
     /** @dev changes stage */
     function changeStage(Stages _stage) external onlyOwner {
-        stage = _stage;
+        _transitionToStage(_stage);
     }
 
     /*////////////////////////////////////////////////
@@ -213,7 +244,7 @@ contract LendingPool is
 
         if (totalSupply() == targetAssets && stage == Stages.OPEN) {
             fundedAt = uint64(block.timestamp);
-            stage = Stages.FUNDED;
+            _transitionToStage(Stages.FUNDED);
             // TODO: emit funded event
         }
     }
@@ -221,8 +252,8 @@ contract LendingPool is
     /*////////////////////////////////////////////////
         REWARDS
     ////////////////////////////////////////////////*/
-    function withdrawRewards() external payable whenNotPaused {
-        uint toWithdraw = rewardsWitdrawable(_msgSender());
+    function lenderWithdrawRewards() external whenNotPaused {
+        uint toWithdraw = lenderRewardsWitdrawable(_msgSender());
         console.log("toWithdraw", toWithdraw);
         require(toWithdraw > 1 * 10 ** decimals(), "MINWD");
 
@@ -234,7 +265,7 @@ contract LendingPool is
         );
     }
 
-    function rewardsGeneratedByDate(
+    function lenderRewardsGeneratedByDate(
         address receiver
     ) public view returns (uint256 totalRewards) {
         Rewardable memory rewardable = rewardables[receiver];
@@ -260,25 +291,27 @@ contract LendingPool is
         // stakedAssets * stakeDuration * adjustedAPY / (loanDuration)
         uint256 calculatedRewards = (rewardable.stake)
             .mulDiv(stakeDuration, loanDuration)
-            .mulDiv(adjustedLenderAPY(), WAD);
+            .mulDiv(lenderAdjustedAPY(), WAD);
 
         return rewardCorrections[receiver] + calculatedRewards;
     }
 
-    function rewardsWitdrawable(
+    function lenderRewardsWitdrawable(
         address receiver
     ) public view returns (uint256 withdrawable) {
-        return rewardsGeneratedByDate(receiver) - rewardWithdrawals[receiver];
+        return
+            lenderRewardsGeneratedByDate(receiver) -
+            rewardWithdrawals[receiver];
     }
 
     /// @dev adjusted lender APY adjusted by duration of the loan = lenderAPY * loanDuration / 365
-    function adjustedLenderAPY() public view returns (uint adj) {
+    function lenderAdjustedAPY() public view returns (uint adj) {
         adj = lenderAPY.mulDiv(loanDuration, YEAR);
     }
 
     /// @dev expected amount of assets that will be rewarded to all the lenders
     function expectedAllLendersYield() public view returns (uint yld) {
-        yld = adjustedLenderAPY().mulDiv(targetAssets, WAD);
+        yld = lenderAdjustedAPY().mulDiv(targetAssets, WAD);
     }
 
     /*////////////////////////////////////////////////
@@ -299,13 +332,13 @@ contract LendingPool is
             "B:NEF"
         );
 
-        stage = Stages.BORROWED;
-
         SafeERC20Upgradeable.safeTransfer(
             _assetToken(),
             borrowerAddress,
             targetAssets
         );
+
+        _transitionToStage(Stages.BORROWED);
 
         return targetAssets;
     }
@@ -313,7 +346,7 @@ contract LendingPool is
     function borrowerPayInterest(
         uint assets
     ) external atStage(Stages.BORROWED) onlyBorrower {
-        require(assets <= outstandingBorrowerInterest(), "PI:TMAS");
+        require(assets <= borrowerOutstandingInterest(), "PI:TMAS");
         SafeERC20Upgradeable.safeTransferFrom(
             _assetToken(),
             _msgSender(),
@@ -322,8 +355,8 @@ contract LendingPool is
         );
 
         borrowerInterestPaid += assets;
-        if (borrowerInterestPaid == expectedBorrowerInterest()) {
-            stage = Stages.BORROWER_INTEREST_REPAID;
+        if (borrowerInterestPaid == borrowerExpectedInterest()) {
+            _transitionToStage(Stages.BORROWER_INTEREST_REPAID);
         }
     }
 
@@ -339,28 +372,28 @@ contract LendingPool is
             targetAssets
         );
 
-        stage = Stages.REPAID;
+        _transitionToStage(Stages.REPAID);
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days
      *  @return adj borrower interest rate adjusted by duration of the loan
      */
-    function adjustedBorrowerAPR() public view returns (uint adj) {
+    function borrowerAdjustedAPR() public view returns (uint adj) {
         adj = borrowerAPR.mulDiv(loanDuration, YEAR);
     }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * targetAssets
      *  @return interest amount of assets to be repaid
      */
-    function expectedBorrowerInterest() public view returns (uint interest) {
-        interest = adjustedBorrowerAPR().mulDiv(targetAssets, WAD);
+    function borrowerExpectedInterest() public view returns (uint interest) {
+        interest = borrowerAdjustedAPR().mulDiv(targetAssets, WAD);
     }
 
     /** @dev outstanding borrower interest = expectedBorrowerInterest - borrowerInterestAlreadyPaid
      *  @return interest amount of outstanding assets to be repaid
      */
-    function outstandingBorrowerInterest() public view returns (uint interest) {
-        interest = expectedBorrowerInterest() - borrowerInterestPaid;
+    function borrowerOutstandingInterest() public view returns (uint interest) {
+        interest = borrowerExpectedInterest() - borrowerInterestPaid;
     }
 
     /*////////////////////////////////////////////////
@@ -440,11 +473,11 @@ contract LendingPool is
         if (from == address(0) || to == address(0)) {
             return;
         }
-        rewardCorrections[from] += rewardsWitdrawable(from);
+        rewardCorrections[from] += lenderRewardsWitdrawable(from);
         rewardables[from].start = uint64(block.timestamp);
         rewardables[from].stake -= amount;
 
-        rewardCorrections[to] += rewardsWitdrawable(to);
+        rewardCorrections[to] += lenderRewardsWitdrawable(to);
         rewardables[to].start = uint64(block.timestamp);
         rewardables[to].stake += amount;
     }
@@ -459,5 +492,11 @@ contract LendingPool is
 
     function _assetToken() internal view returns (IERC20Upgradeable) {
         return IERC20Upgradeable(asset());
+    }
+
+    function _transitionToStage(Stages newStage) internal {
+        Stages oldStage = stage;
+        stage = newStage;
+        emit StageChanged(oldStage, newStage, _msgSender());
     }
 }
