@@ -85,6 +85,17 @@ contract LendingPool is
         address msgSender
     );
 
+    event LenderWithdrawRewards(
+        address indexed lender,
+        uint amount,
+        uint allTimeRewardsAmount
+    );
+    event LenderWithdrawPrincipal(address indexed lender, uint amount);
+
+    event BorrowerBorrow(address indexed borrowerAddress, uint amount);
+    event BorrowerPayInterest(address indexed borrowedAddress, uint amount);
+    event BorrowerRepayPrincipal(address indexed borrowerAddress, uint amount);
+
     /*////////////////////////////////////////////////
         MODIFIERS
     ////////////////////////////////////////////////*/
@@ -257,11 +268,17 @@ contract LendingPool is
         console.log("toWithdraw", toWithdraw);
         require(toWithdraw > 1 * 10 ** decimals(), "MINWD");
 
-        rewardWithdrawals[_msgSender()] = toWithdraw;
+        rewardWithdrawals[_msgSender()] += toWithdraw;
         SafeERC20Upgradeable.safeTransfer(
             _assetToken(),
             _msgSender(),
             toWithdraw
+        );
+
+        emit LenderWithdrawRewards(
+            _msgSender(),
+            toWithdraw,
+            rewardWithdrawals[_msgSender()]
         );
     }
 
@@ -306,12 +323,12 @@ contract LendingPool is
 
     /// @dev adjusted lender APY adjusted by duration of the loan = lenderAPY * loanDuration / 365
     function lenderAdjustedAPY() public view returns (uint adj) {
-        adj = lenderAPY.mulDiv(loanDuration, YEAR);
+        return lenderAPY.mulDiv(loanDuration, YEAR);
     }
 
     /// @dev expected amount of assets that will be rewarded to all the lenders
     function expectedAllLendersYield() public view returns (uint yld) {
-        yld = lenderAdjustedAPY().mulDiv(targetAssets, WAD);
+        return lenderAdjustedAPY().mulDiv(targetAssets, WAD);
     }
 
     /*////////////////////////////////////////////////
@@ -339,6 +356,7 @@ contract LendingPool is
         );
 
         _transitionToStage(Stages.BORROWED);
+        emit BorrowerBorrow(borrowerAddress, targetAssets);
 
         return targetAssets;
     }
@@ -355,9 +373,12 @@ contract LendingPool is
         );
 
         borrowerInterestPaid += assets;
+
         if (borrowerInterestPaid == borrowerExpectedInterest()) {
             _transitionToStage(Stages.BORROWER_INTEREST_REPAID);
         }
+
+        emit BorrowerPayInterest(borrowerAddress, assets);
     }
 
     function borrowerRepayPrincipal()
@@ -373,6 +394,7 @@ contract LendingPool is
         );
 
         _transitionToStage(Stages.REPAID);
+        emit BorrowerRepayPrincipal(borrowerAddress, targetAssets);
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days
