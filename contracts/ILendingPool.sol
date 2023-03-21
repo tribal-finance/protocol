@@ -1,180 +1,202 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
 
-/**
- *  @title Tribal Lending Pool contract Interface
+/** @dev Lending pool interface.
  *
- *  You will find a term *WAD* reading this documentation. It is an integer representation 1 WAD = 1*10**18.
- *        for example, 0.2% = 0.002f = 0.002 * 10**18 = 2 * 10**15
+ * Some terms:
+ * WAD: precise integer representation of floating point number precise to 18 decimal points.
+ *      For example, 13.37% = 0.1337 * 10**18 == 2 * 10**17 == 133 700 000 000 000 000
  */
-abstract contract ILendingPool {
-    /////////////////////////////// INITIALIZATION //////////////////////////////////
+interface ILendingPool {
+    /*///////////////////////////////////
+       State / Initialization events
+    ///////////////////////////////////*/
 
-    /**
-     * @dev Called by a proxy contract to initialize the pool.
-     * @param _borrower Address of the pool borrower
-     * @param _duration The duration of the lending pool in seconds (e.g. 90 days = 90 * 24 * 60 * 60 = 7,776,000)
-     * @param _targetAmount The target amount of USDC to be deposited by *lenders* (with 6 decimals e.g 1,000,000 = 1 USDC)
-     * @param _fistLossCapitalAmount The target amount of USDC to be deposited by *borrower* as first loss capital (with 6 decimals e.g 1,000,000 = 1 USDC)
-     * @param _lenderAPY    *wad* Annual Percentage Yield. Total amount to be harvested by *lender* from the pool is:
-     *                            principalAmount * _lenderAPY * (_duration / 365days)
-     * @param _boostableAPY *wad* Boostable Annual Percentage Yield. If set to 0, then the pool is not boostable.
-     * @param _borrowerAIR  *wad* Borrower Interest Rate. Total amount of interest to be repaid by *borrower* is:
-     *                            principalAmount * _borrowerAIR * (_duration / 365days)
+    // Capacities //
+
+    /// @dev The maximum amount of capital that can be deposited into the lending pool.
+    event SetMaxFundingCapacity(
+        address indexed actor,
+        uint oldVal,
+        uint newVal
+    );
+
+    /// @dev The minimum amount of capital required to fund the lending pool.
+    event SetMinFundingCapacity(
+        address indexed actor,
+        uint oldVal,
+        uint newVal
+    );
+
+    // Addresses //
+
+    event SetBorrowerAdddress(
+        address indexed actor,
+        address oldVal,
+        address newVal
+    );
+
+    /// @dev Stable coin (deposit token) address: coming from the protocol configuration
+    event SetStableCoinContractAddress(
+        address indexed actor,
+        address oldVal,
+        address newVal
+    );
+
+    event SetFeeSharingContractAdddress(
+        address indexed actor,
+        address oldVal,
+        address newVal
+    );
+
+    // Dates and durations (in unix time / seconds) //
+    event SetOpenedAt(address indexed actor, uint64 oldVal, uint64 newVal);
+
+    event SetMinFundingCapacityReachedAt(
+        address indexed actor,
+        uint64 oldVal,
+        uint64 newVal
+    );
+
+    event SetMaxFundingCapacityReachedAt(
+        address indexed actor,
+        uint64 oldVal,
+        uint64 newVal
+    );
+
+    event SetFundedAt(address indexed actor, uint64 oldVal, uint64 newVal);
+
+    event SetFundingFailedAt(
+        address indexed actor,
+        uint64 oldVal,
+        uint64 newVal
+    );
+
+    event SetRepaidAt(address indexed actor, uint64 oldVal, uint64 newVal);
+
+    event SetDefaultedAt(address indexed actor, uint64 oldVal, uint64 newVal);
+
+    /// @dev The period of time during which lenders are allowed to deposit capital into the pool.
+    event SetFundingPeriod(address indexed actor, uint64 fundingPeriod);
+
+    /// @dev The period of time during which lenders are restricted from withdrawing their funds (measured in seconds)
+    event SetLendingTerm(address indexed actor, uint64 lendingTerm);
+
+    /// @dev when 1, is unitranche, when 2 is multitranche
+    event SetTranchesCount(address indexed actor, uint8 oldVal, uint8 newVal);
+
+    /** @dev each tranche is a separate vault address:
+     *   id: 0 - first loss capital, 1 - junior/default tranche, 2 - senior tranche
      */
-    function initialize(
-        address _borrower,
-        uint _duration,
-        uint _targetAmount,
-        uint _fistLossCapitalAmount,
-        uint _lenderAPY,
-        uint _boostableAPY,
-        uint _borrowerAIR
-    ) external virtual;
+    event SetTrancheVaultAddresses(
+        address indexed actor,
+        uint8 indexed trancheId,
+        address[] oldVal,
+        address[] newVal
+    );
 
-    /////////////////////////////// ADMIN FUNCTIONS /////////////////////////////////
-    /**
-     * @dev Pauses all the deposits / withdrawal from the pool
+    event SetTrancheMinFundingCapacities(
+        address indexed actor,
+        uint[] oldVal,
+        uint[] newVal
+    );
+    event SetTrancheMaxFundingCapacities(
+        address indexed actor,
+        uint[] oldVal,
+        uint[] newVal
+    );
+
+    /// @dev WAD
+    event SetTrancheAPYs(address indexed actor, uint[] oldVal, uint[] newVal);
+
+    /// @dev WAD
+    event SetTrancheBoostedAPYs(
+        address indexed actor,
+        uint[] oldVal,
+        uint[] newVal
+    );
+
+    /** @dev WAD. The percentage of first-loss capital used as coverage in the event of missed payments or default
+     *  (e.g. assumption that first loss capital will be less than the senior tranche)
      */
-    function pause() external virtual;
+    event SetTrancheCoverages(
+        address indexed actor,
+        uint[] oldVal,
+        uint[] newVal
+    );
 
-    /**
-     * @dev Unpauses all the deposits / withdrawal from the pool
-     */
-    function unpause() external virtual;
+    // Borrower //
 
-    /**
-     * @dev Sends outstanding pool USDC balance to the address specified
-     * @param _benificiary where to send the USDC balance
-     */
-    function drain(address _benificiary) external virtual;
+    /// @dev WAD. Collateral ratio aka FLC/maxFunding. WAD.
+    event SetCollateralRatio(
+        address indexed actor,
+        uint256 oldVal,
+        uint256 newVal
+    );
 
-    /**
-     * @dev Boosts APY for the lender
-     * @param _lender re to send the USDC balance
-     */
-    function boostAPY(address _lender) external virtual;
+    event SetFirstLossCapitalAmount(
+        address indexed actor,
+        uint256 oldVal,
+        uint256 newVal
+    );
 
-    /////////////////////////////// CONTRACT STATE VIEWS //////////////////////////////////
-    function getDuration() public view virtual returns (uint);
+    event SetBorrowerTotalInterestAmount(
+        address indexed actor,
+        uint256 oldValue,
+        uint256 newValue
+    );
 
-    function getTargetAmount() public view virtual returns (uint);
+    /// @dev The penalty that will be applied to borrowers in the event of a default. (ex: Total Penalty = First loss capital + penalty rate * unrepaid capital)
+    event SetDefaultPenalty(
+        address indexed actor,
+        uint256 oldVal,
+        uint256 newVal
+    );
 
-    function getFirstLossCapitalAmount() public view virtual returns (uint);
+    /// @dev WAD. The rate at which borrowers will be penalized for late or missed payments.
+    event SetPenaltyRate(address indexed actor, uint256 oldVal, uint256 newVal);
 
-    function getLenderAPY() public view virtual returns (uint);
+    /*///////////////////////////////////
+       Action events
+    ///////////////////////////////////*/
 
-    function getboostableAPY() public view virtual returns (uint);
+    // State events //
+    event PoolOpen();
+    event PoolFunded();
+    event PoolFundingFailed();
+    event PoolRepaid();
+    event PoolDefaulted();
 
-    function getCreatedAt() public view virtual returns (uint);
+    // Lender events //
+    event LenderDeposit(
+        address indexed lender,
+        uint indexed trancheId,
+        uint256 amount
+    );
 
-    function getFundedAt() public view virtual returns (uint);
+    event LenderWithdraw(
+        address indexed lender,
+        uint indexed trancheId,
+        uint256 amount
+    );
 
-    function getRepaidAt() public view virtual returns (uint);
+    event LenderWithdrawYield(address indexed lender, uint256 amount);
 
-    /////////////////////////////// LENDER FUNCTIONS //////////////////////////////////
-    /**
-     * @dev deposits principal amount to the pool
-     *      before depositing anything to the pool, the *lender* should get approval from USDC smart contract
-     * @param _amount The amount of USDC to be deposited (with 6 decimals e.g 1,000,000 = 1 USDC)
-     */
-    function depositPrincipal(uint _amount) external virtual;
+    event LenderBoostAPY(
+        address indexed lender,
+        uint indexed trancheId,
+        uint boostedAPY
+    );
 
-    /**
-     * @dev withdraw the principal amount from the pool
-     *  called by *lender* AFTER the pool is repaid OR BEFORE the pool is funded
-     * @param _amount The amount of USDC to be deposited (with 6 decimals e.g 1,000,000 = 1 USDC)
-     */
-    function withdrawPrincipal(uint _amount) external virtual;
+    // Borrower events //
+    event BorrowerDepositFirstLossCapital(
+        address indexed Borrower,
+        uint amount
+    );
 
-    /**
-     * @dev is APY boosted for address?
-     * @param _address lender address
-     * @return isBoosted is APY boosted for address?
-     */
-    function isBoosted(
-        address _address
-    ) public view virtual returns (bool isBoosted);
+    event BorrowerBorrow(address indexed Borrower, uint amount);
 
-    /**
-     * @dev deposited for _address
-     * @param _address lender address
-     * @return amount principal amount
-     */
-    function getPrincipalAmount(
-        address _address
-    ) public view virtual returns (uint amount);
-
-    /**
-     * @dev get total yield vested by the pool for _address
-     * @param _address lender address
-     * @return amount vested yield
-     */
-    function getVestedYield(
-        address _address
-    ) public view virtual returns (uint amount);
-
-    /**
-     * @dev get total amount of yield claimed by _address
-     * @param _address lender address
-     * @return amount the claimed yield
-     */
-    function getClaimedYield(
-        address _address
-    ) public view virtual returns (uint amount);
-
-    /**
-     * @dev get total amount of yield claimable by _address.
-     *      equals to getVestedYield(address) virtual - getClaimedYield(address)
-     * @param _address lender address
-     * @return amount claimable yield
-     */
-    function getClaimableYield(
-        address _address
-    ) public view virtual returns (uint amount);
-
-    /////////////////////////////// BORROWER FUNCTIONS //////////////////////////////////
-    /**
-     *  @dev deposit first-loss capital
-     */
-    function depositFirstLoss() external virtual;
-
-    /**
-     *  @dev withdraw first-loss capital
-     */
-    function withdrawFirstLoss() external virtual;
-
-    /**
-     *  @dev borrow first-loss capital
-     */
-    function borrow() external virtual;
-
-    /**
-     *  @dev repay the borrowed amount
-     */
-    function repayPrincipal() external virtual;
-
-    /**
-     *  @dev pay interest on the borrowed amount
-     * @param _amount amount of interest to pay in USDC (with 6 decimals precision e.g 1,000,000 = 1 USDC)
-     */
-    function payInterest(uint _amount) external virtual;
-
-    /**
-     * @dev get total interest on the borrowed amount
-     * @return amount in USDC (with 6 decimals precision e.g 1,000,000 = 1 USDC)
-     */
-    function getTotalInterest() public view virtual returns (uint amount);
-
-    /**
-     * @dev get amount of interest on the borrowed amount that was already paid by the *borrower*
-     * @return amount in USDC (with 6 decimals precision e.g 1,000,000 = 1 USDC)
-     */
-    function getRepaidInterest() public view virtual returns (uint amount);
-
-    /**
-     * @dev get outstanding (unpaid) virtual interest that *borrower* has to pay on the borrowed amount
-     * @return amount in USDC (with 6 decimals precision e.g 1,000,000 = 1 USDC)
-     */
-    function getOutstandingInterest() public view virtual returns (uint amount);
+    event BorrowerPayInterest(address indexed Borrower, uint amount);
+    event BorrowerPayPenalty(address indexed Borrower, uint amount);
+    event BorrowerRepayPrincipal(address indexed Borrower, uint amount);
 }

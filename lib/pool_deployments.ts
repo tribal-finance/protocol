@@ -35,6 +35,7 @@ export type CommonInput = {
 export async function _deployPool(
   name: string,
   poolDuration: BigNumberish,
+  amount: BigNumberish,
   {
     deployer,
     lender1,
@@ -44,25 +45,14 @@ export async function _deployPool(
     poolFactoryContract,
   }: CommonInput
 ): Promise<string> {
-  const params = [
-    name,
-    "TST",
-    usdcContract.address,
-    parseUnits("1000", 6),
-    poolDuration,
-    parseUnits("0.1", 18),
-    parseUnits("0.2", 18),
-    await borrower.getAddress(),
-  ];
-
   console.log("* deploying pool");
   await poolFactoryContract
     .connect(deployer)
     .deployUnitranchePool(
-      name,
+      name + "2",
       "TST",
       usdcContract.address,
-      parseUnits("1000", 6),
+      amount,
       poolDuration,
       parseUnits("0.1", 18),
       parseUnits("0.2", 18),
@@ -70,6 +60,10 @@ export async function _deployPool(
     );
 
   const { poolAddress } = await poolFactoryContract.lastDeployedPoolRecord();
+  console.log(
+    "* pool address: https://goerli.etherscan.io/address/" +
+      ethers.utils.hexlify(poolAddress)
+  );
   return poolAddress;
 }
 
@@ -109,7 +103,7 @@ async function _lender2Deposit200(
     await poolContract
       .connect(lender2)
       .deposit(parseUnits("200", 6), await lender2.getAddress())
-  ).wait(WAIT_CONFIRMATIONS);
+  ).wait(WAIT_CONFIRMATIONS + 5);
 }
 
 async function _borrowerBorrows(
@@ -162,7 +156,12 @@ async function _borrowerPays150Interest(
 }
 
 export async function deployOpenPool(params: CommonInput): Promise<string> {
-  const address = await _deployPool("FreshPool", 365 * 24 * 60 * 60, params);
+  const address = await _deployPool(
+    "FreshPool",
+    365 * 24 * 60 * 60,
+    parseUnits("1000", 6),
+    params
+  );
 
   return address;
 }
@@ -174,6 +173,7 @@ export async function deployHalveFoundedPool(
   const poolAddress = await _deployPool(
     "HalveFounded",
     365 * 24 * 60 * 60,
+    parseUnits("1000", 6),
     params
   );
 
@@ -187,6 +187,7 @@ export async function deployFoundedPool(params: CommonInput): Promise<string> {
   const poolAddress = await _deployPool(
     "FoundedPool",
     365 * 24 * 60 * 60,
+    parseUnits("1000", 6),
     params
   );
 
@@ -197,11 +198,42 @@ export async function deployFoundedPool(params: CommonInput): Promise<string> {
   return poolAddress;
 }
 
+export async function deploy5daysFoundedPool(
+  params: CommonInput
+): Promise<string> {
+  const { usdcContract, lender1, lender2 } = params;
+  const poolAddress = await _deployPool(
+    "5 days 10k pool",
+    6 * 24 * 60 * 60,
+    parseUnits("10000", 6),
+    params
+  );
+
+  const poolContract = await ethers.getContractAt("LendingPool", poolAddress);
+
+  console.log("* set allowance for lender 1");
+  await (
+    await usdcContract
+      .connect(lender1)
+      .increaseAllowance(poolContract.address, parseUnits("10000", 6))
+  ).wait(WAIT_CONFIRMATIONS);
+
+  console.log("* deposit $10,000 from lender 1");
+  await (
+    await poolContract
+      .connect(lender1)
+      .deposit(parseUnits("10000", 6), await lender1.getAddress())
+  ).wait(WAIT_CONFIRMATIONS);
+
+  return poolAddress;
+}
+
 export async function deployBorrowedPool(params: CommonInput): Promise<string> {
   const { usdcContract, lender1, lender2, borrower } = params;
   const poolAddress = await _deployPool(
     "BorrowedPool",
     365 * 24 * 60 * 60,
+    parseUnits("1000", 6),
     params
   );
 
@@ -209,8 +241,6 @@ export async function deployBorrowedPool(params: CommonInput): Promise<string> {
   await _lender1Deposit800(poolContract, params);
   await _lender2Deposit200(poolContract, params);
   await _borrowerBorrows(poolContract, params);
-
-  await poolContract.connect(borrower).borrow();
 
   return poolAddress;
 }
@@ -222,6 +252,7 @@ export async function deployBorrowedHalveInterestRepaidPool(
   const poolAddress = await _deployPool(
     "BorrowedHalveInterstRepaidPool",
     365 * 24 * 60 * 60,
+    parseUnits("1000", 6),
     params
   );
 
@@ -241,6 +272,7 @@ export async function deployBorrowedFullInterestRepaidPool(
   const poolAddress = await _deployPool(
     "BorrowedHalveInterstRepaidPool",
     365 * 24 * 60 * 60,
+    parseUnits("1000", 6),
     params
   );
 

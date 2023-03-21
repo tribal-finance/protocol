@@ -68,20 +68,16 @@ contract LendingPool is
     /*////////////////////////////////////////////////
         EVENTS
     ////////////////////////////////////////////////*/
-    event PoolInitialized(
-        string poolName,
-        string symbol,
-        address underlying,
-        uint poolTarget,
-        uint64 poolDuration,
-        uint lenderAPY,
-        uint borrowerAPR,
-        address borrowerAddress
-    );
+    event NamesSet(string poolName, string symbol);
+    event UnderlyingSet(address underlying);
+    event PoolTargetSet(uint poolTarget);
+    event PoolDurationSet(uint64 poolDuration);
+    event BorrowerAddressSet(address indexed BorroweAddress);
+    event RatesSet(uint lenderAPY, uint borrowerAPR);
 
     event StageChanged(
-        Stages indexed fromStage,
-        Stages indexed toStage,
+        uint8 indexed fromStage,
+        uint8 indexed toStage,
         address msgSender
     );
 
@@ -145,16 +141,12 @@ contract LendingPool is
         __Ownable_init();
         __ERC4626_init(underlying);
 
-        emit PoolInitialized(
-            poolName,
-            symbol,
-            address(underlying),
-            poolTarget,
-            poolDuration,
-            lenderAPY_,
-            borrowerAPR_,
-            borrowerAddress_
-        );
+        emit NamesSet(poolName, symbol);
+        emit UnderlyingSet(address(underlying));
+        emit PoolTargetSet(poolTarget);
+        emit PoolDurationSet(poolDuration);
+        emit BorrowerAddressSet(borrowerAddress_);
+        emit RatesSet(lenderAPY_, borrowerAPR_);
         _transitionToStage(Stages.OPEN);
     }
 
@@ -518,6 +510,6 @@ contract LendingPool is
     function _transitionToStage(Stages newStage) internal {
         Stages oldStage = stage;
         stage = newStage;
-        emit StageChanged(oldStage, newStage, _msgSender());
+        emit StageChanged(uint8(oldStage), uint8(newStage), _msgSender());
     }
 }
