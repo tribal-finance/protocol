@@ -5,23 +5,10 @@ import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "./LendingPool.sol";
+import "../pool/ILendingPool.sol";
+import "../pool/LendingPool.sol";
 
 contract PoolFactory is OwnableUpgradeable {
-    event PoolDeployed(
-        address indexed deployer,
-        address indexed poolAddress,
-        address indexed secondPoolAddress,
-        address implementationAddress,
-        string name,
-        string tokenName,
-        uint poolTarget,
-        uint64 poolDuration,
-        uint lenderAPY,
-        uint borrowerAPY,
-        address borrowerAddress
-    );
-
     struct PoolRecord {
         string name;
         string tokenName;
@@ -33,7 +20,10 @@ contract PoolFactory is OwnableUpgradeable {
         address trancheVaultImplementationAddress;
     }
 
+    uint private constant WAD = 10 ** 18;
+
     address public poolImplementationAddress;
+    address public firstLossCapitalVaultImplementationAddress;
     address public trancheVaultImplementationAddress;
 
     PoolRecord[] public poolRegistry;
@@ -52,6 +42,12 @@ contract PoolFactory is OwnableUpgradeable {
         address implementation
     ) external onlyOwner {
         trancheVaultImplementationAddress = implementation;
+    }
+
+    function setFirstLossCapitalVaultImplementation(
+        address implementation
+    ) external onlyOwner {
+        firstLossCapitalVaultImplementationAddress = implementation;
     }
 
     /// @dev returns last deployed pool record
@@ -73,16 +69,47 @@ contract PoolFactory is OwnableUpgradeable {
     /** @dev Deploys a clone of implementation as a new pool.
      * . See {LendingPool-initialize}
      */
-    function deployUnitranchePool(
-        string memory poolName_,
-        string memory symbol,
-        IERC20Upgradeable underlying,
-        uint poolTarget,
-        uint64 poolDuration,
-        uint lenderAPY_,
-        uint borrowerAPY_,
-        address borrowerAddress_
-    ) external onlyOwner returns (address) {}
+    function deployPool(
+        ILendingPool.LendingPoolParams calldata params
+    ) external onlyOwner returns (address) {
+        address poolAddress = Clones.clone(poolImplementationAddress);
 
-    function _initPoolAndTransferOwnership() internal {}
+        address[] memory trancheVaultAddresses = new address[](
+            params.tranchesCount
+        );
+
+        for (uint8 i; i < params.tranchesCount; ++i) {
+            trancheVaultAddresses[i] = Clones.clone(
+                trancheVaultImplementationAddress
+            );
+        }
+
+        address firstLossCapitalVaultAddress = Clones.clone(
+            firstLossCapitalVaultImplementationAddress
+        );
+
+        ILendingPool(poolAddress).initialize(
+            params,
+            trancheVaultAddresses,
+            firstLossCapitalVaultAddress,
+            address(0)
+        );
+        OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
+
+        PoolRecord memory record = PoolRecord(
+            params.name,
+            params.token,
+            poolAddress,
+            firstLossCapitalVaultAddress,
+            trancheVaultAddresses[0],
+            trancheVaultAddresses.length > 1
+                ? trancheVaultAddresses[1]
+                : address(0),
+            poolImplementationAddress,
+            trancheVaultImplementationAddress
+        );
+        poolRegistry.push(record);
+
+        return poolAddress;
+    }
 }

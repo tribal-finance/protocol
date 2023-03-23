@@ -2,25 +2,8 @@ import { time, loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "./helpers/usdc";
+import { USDC, WAD } from "../helpers/conversion";
 const { parseUnits } = ethers.utils;
-
-const WAD_PRECISION = 18;
-
-const WAD = (amount: string | number) =>
-  parseUnits(amount.toString(), WAD_PRECISION);
-const USDC = (amount: string | number) =>
-  parseUnits(amount.toString(), USDC_PRECISION);
-
-const STAGES = {
-  INITIAL: 0,
-  OPEN: 1,
-  FUNDED: 2,
-  BORROWED: 3,
-  BORROWED_INTEREST_PAID: 4,
-  REPAID: 5,
-  DEFAULTED: 6,
-};
 
 describe("LendingPool", function () {
   async function deploy(duration: number) {

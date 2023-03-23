@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-contract TrancheVault is
+contract BaseVault is
     Initializable,
     ERC4626Upgradeable,
     PausableUpgradeable,
@@ -30,20 +30,6 @@ contract TrancheVault is
         address oldValue = s_poolAddress;
         s_poolAddress = newValue;
         emit ChangePoolAddress(oldValue, newValue);
-    }
-
-    /* id */
-    int8 private s_id;
-    event ChangeId(int8 oldValue, int8 newValue);
-
-    function id() public view returns (int8) {
-        return s_id;
-    }
-
-    function _setId(int8 newValue) internal {
-        int8 oldValue = s_id;
-        s_id = newValue;
-        emit ChangeId(oldValue, newValue);
     }
 
     /* minFundingCapacity */
@@ -91,31 +77,36 @@ contract TrancheVault is
     }
 
     modifier onlyWhitelist() {
-        require(true, "TV: TODO: whitelists are not implemented yet.");
+        require(
+            _isWhitelisted(_msgSender()),
+            "TV: TODO: whitelists are not implemented yet."
+        );
         _;
+    }
+
+    function _isWhitelisted(address) internal virtual returns (bool) {
+        return true;
     }
 
     /*////////////////////////////////////////////////
       CONSTRUCTOR
     ////////////////////////////////////////////////*/
-    function initialize(
+    function _baseInitializer(
         address _poolAddress,
-        int8 _trancheId,
         uint _minCapacity,
         uint _maxCapacity,
         string memory _tokenName,
         string memory _symbol,
-        IERC20Upgradeable underlying
-    ) external initializer onlyOwner {
+        address underlying
+    ) internal onlyOwner onlyInitializing {
         require(_minCapacity <= _maxCapacity, "TV: min > max");
         _setPoolAddress(_poolAddress);
-        _setId(_trancheId);
         _setMinFundingCapacity(_minCapacity);
         _setMaxFundingCapacity(_maxCapacity);
         __ERC20_init(_tokenName, _symbol);
         __Pausable_init();
         __Ownable_init();
-        __ERC4626_init(underlying);
+        __ERC4626_init(IERC20Upgradeable(underlying));
     }
 
     /*////////////////////////////////////////////////
@@ -144,7 +135,7 @@ contract TrancheVault is
     function deposit(
         uint256 assets,
         address receiver
-    ) public override whenNotPaused onlyWhitelist returns (uint256) {
+    ) public virtual override whenNotPaused onlyWhitelist returns (uint256) {
         return super.deposit(assets, receiver);
     }
 
@@ -152,7 +143,7 @@ contract TrancheVault is
     function mint(
         uint256 shares,
         address receiver
-    ) public override whenNotPaused onlyWhitelist returns (uint256) {
+    ) public virtual override whenNotPaused onlyWhitelist returns (uint256) {
         return super.mint(shares, receiver);
     }
 
@@ -206,9 +197,7 @@ contract TrancheVault is
     }
 
     /** @dev See {IERC4626-maxWithdraw}. */
-    function maxWithdraw(
-        address owner
-    ) public view virtual override returns (uint256) {
+    function maxWithdraw(address owner) public view override returns (uint256) {
         if (paused()) {
             return 0;
         }
@@ -217,9 +206,7 @@ contract TrancheVault is
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
-    function maxRedeem(
-        address owner
-    ) public view virtual override returns (uint256) {
+    function maxRedeem(address owner) public view override returns (uint256) {
         if (paused()) {
             return 0;
         }

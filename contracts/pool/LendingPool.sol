@@ -19,7 +19,7 @@ contract LendingPool is
         address[] calldata _trancheVaultAddresses,
         address _firstLossCapitalVaultAddress,
         address _feeSharingContractAddress
-    ) external initializer onlyOwner {
+    ) external initializer {
         _validateInitParams(
             params,
             _trancheVaultAddresses,
@@ -44,7 +44,10 @@ contract LendingPool is
         _setTrancheBoostedAPYsWads(params.trancheBoostedAPYsWads);
         _setTrancheCoveragesWads(params.trancheCoveragesWads);
 
+        _setTrancheVaultAddresses(_trancheVaultAddresses);
+        _setFirstLossCapitalVaultAddress(_firstLossCapitalVaultAddress);
         _setFeeSharingContractAddress(_feeSharingContractAddress);
+
         __Ownable_init();
         __Pausable_init();
     }
@@ -59,7 +62,6 @@ contract LendingPool is
             params.stableCoinContractAddress != address(0),
             "stableCoinContractAddress empty"
         );
-        // require(params.feeSharingContractAddress != address(0), "feeSharingAddress empty"); // TODO: uncomment when fee sharing is developed
 
         require(params.minFundingCapacity > 0, "minFundingCapacity == 0");
         require(params.maxFundingCapacity > 0, "maxFundingCapacity == 0");
@@ -103,5 +105,12 @@ contract LendingPool is
                 "tranche boosted APYs < tranche APYs"
             );
         }
+
+        require(
+            _firstLossCapitalVaultAddress != address(0),
+            "firstLossCapitalVaultAddress == 0"
+        );
+
+        // require(params.feeSharingContractAddress != address(0), "feeSharingAddress empty"); // TODO: uncomment when fee sharing is developed
     }
 }

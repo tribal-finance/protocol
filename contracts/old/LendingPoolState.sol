@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-contract LendingPoolState {
+contract OldLendingPoolState {
     uint private s_minFundingCapacity;
 
     event ChangeMinFundingCapacity(uint oldValue, uint newValue);

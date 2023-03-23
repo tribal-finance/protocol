@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "hardhat/console.sol";
 
-contract LendingPool is
+contract OldLendingPool is
     Initializable,
     ERC4626Upgradeable,
     PausableUpgradeable,

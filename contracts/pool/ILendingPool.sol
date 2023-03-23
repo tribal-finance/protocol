@@ -227,6 +227,13 @@ interface ILendingPool {
         uint[] trancheCoveragesWads;
     }
 
+    function initialize(
+        LendingPoolParams calldata params,
+        address[] calldata _trancheVaultAddresses,
+        address _firstLossCapitalVaultAddress,
+        address _feeSharingContractAddress
+    ) external;
+
     /*///////////////////////////////////
        Tranche notification functions
     ///////////////////////////////////*/
