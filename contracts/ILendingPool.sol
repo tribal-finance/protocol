@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.18;
 
 /** @dev Lending pool interface.
@@ -140,7 +140,7 @@ interface ILendingPool {
         uint256 newVal
     );
 
-    event SetBorrowerTotalInterestAmount(
+    event SetBorrowerTotalInterestRate(
         address indexed actor,
         uint256 oldValue,
         uint256 newValue
@@ -190,13 +190,56 @@ interface ILendingPool {
 
     // Borrower events //
     event BorrowerDepositFirstLossCapital(
-        address indexed Borrower,
+        address indexed borrower,
         uint amount
     );
 
-    event BorrowerBorrow(address indexed Borrower, uint amount);
+    event BorrowerBorrow(address indexed borrower, uint amount);
 
-    event BorrowerPayInterest(address indexed Borrower, uint amount);
-    event BorrowerPayPenalty(address indexed Borrower, uint amount);
-    event BorrowerRepayPrincipal(address indexed Borrower, uint amount);
+    event BorrowerPayInterest(address indexed borrower, uint amount);
+    event BorrowerPayPenalty(address indexed borrower, uint amount);
+    event BorrowerRepayPrincipal(address indexed borrower, uint amount);
+    event BorrowerWithdrawFirstLossCapital(
+        address indexed borrower,
+        uint amount
+    );
+
+    /*///////////////////////////////////
+       Init functions
+    ///////////////////////////////////*/
+
+    struct LendingPoolParams {
+        string name;
+        string token;
+        address stableCoinContractAddress;
+        uint minFundingCapacity;
+        uint maxFundingCapacity;
+        int64 fundingPeriodSeconds;
+        int64 lendingTermSeconds;
+        address borrowerAddress;
+        uint borrowerTotalInterestRateWad;
+        uint collateralRatioWad;
+        uint defaultPenalty;
+        uint penaltyRateWad;
+        uint8 tranchesCount;
+        uint[] trancheAPYsWads;
+        uint[] trancheBoostedAPYsWads;
+        uint[] trancheCoveragesWads;
+    }
+
+    /*///////////////////////////////////
+       Tranche notification functions
+    ///////////////////////////////////*/
+
+    // function onTrancheDeposit(
+    //     uint8 trancheId,
+    //     address depositorAddress,
+    //     uint amount
+    // ) external;
+
+    // function onTrancheWithdraw(
+    //     uint8 trancheId,
+    //     address depositorAddress,
+    //     uint amount
+    // ) external;
 }

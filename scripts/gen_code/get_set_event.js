@@ -4,23 +4,48 @@ function genDefinition(_type, _name) {
   return `
     /* ${_name} */
     ${_type} private s_${_name};
-    event Change${capitalizedName}(${_type} oldValue, ${_type} newValue);
+    event Change${capitalizedName}(address indexed actor, ${_type} oldValue, ${_type} newValue);
     function ${_name}() public view returns (${_type}) { return s_${_name}; }
     function _set${capitalizedName}(${_type} newValue) internal {
         ${_type} oldValue = s_${_name};
         s_${_name} = newValue;
-        emit Change${capitalizedName}(oldValue, newValue);
+        emit Change${capitalizedName}(msg.sender, oldValue, newValue);
     }
   `;
 }
 
-const vars = {
-  // poolAddress: "address",
-  id: "int8",
-  // minFundingCapacity: "uint256",
-  // maxFundingCapacity: "uint256",
-};
+const vars = [
+  "string name",
+  "string token",
+  "address stableCoinContractAddress",
+  "address feeSharingContractAddress",
+  "uint minFundingCapacity",
+  "uint maxFundingCapacity",
+  "int64 fundingPeriodSeconds",
+  "int64 lendingTermSeconds",
+  "address borrowerAddress",
+  "uint borrowerTotalInterestRateWad",
+  "uint collateralRatioWad",
+  "uint defaultPenalty",
+  "uint penaltyRateWad",
+];
 
-for (const [name, type] of Object.entries(vars)) {
-  console.log(genDefinition(type, name));
+const vars2 = [
+  "uint8 tranchesCount",
+  "address[] memory trancheVaultAddresses",
+  "uint[] memory trancheAPYsWads",
+  "uint[] memory trancheBoostedAPYsWads",
+  "uint[] memory trancheCoveragesWads",
+];
+
+const vars3 = [
+  "address firstLossCapitalVaultAddress",
+  "address[] memory trancheVaultAddresses",
+];
+
+for (let v of vars3) {
+  const split = v.split(" ");
+  const _name = split.pop();
+  const _type = split.join(" ");
+  console.log(genDefinition(_type, _name));
 }

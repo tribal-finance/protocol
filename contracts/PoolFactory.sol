@@ -23,14 +23,19 @@ contract PoolFactory is OwnableUpgradeable {
     );
 
     struct PoolRecord {
-        address poolAddress;
-        address secondPoolAddress;
-        address implementationAddress;
         string name;
         string tokenName;
+        address poolAddress;
+        address firstLossCapitalVaultAddress;
+        address firstTrancheVaultAddress;
+        address secondTrancheVaultAddress;
+        address poolImplementationAddress;
+        address trancheVaultImplementationAddress;
     }
 
-    address public implementationAddress;
+    address public poolImplementationAddress;
+    address public trancheVaultImplementationAddress;
+
     PoolRecord[] public poolRegistry;
 
     function initialize() public initializer {
@@ -38,8 +43,15 @@ contract PoolFactory is OwnableUpgradeable {
     }
 
     /// @dev sets implementation for future pool deployments
-    function setImplementation(address implementation) external onlyOwner {
-        implementationAddress = implementation;
+    function setPoolImplementation(address implementation) external onlyOwner {
+        poolImplementationAddress = implementation;
+    }
+
+    /// @dev sets implementation for future tranche vault deployments
+    function setTrancheVaultImplementation(
+        address implementation
+    ) external onlyOwner {
+        trancheVaultImplementationAddress = implementation;
     }
 
     /// @dev returns last deployed pool record
@@ -70,69 +82,7 @@ contract PoolFactory is OwnableUpgradeable {
         uint lenderAPY_,
         uint borrowerAPY_,
         address borrowerAddress_
-    ) external onlyOwner returns (address) {
-        address poolAddress = Clones.clone(implementationAddress);
-        _initPoolAndTransferOwnership(
-            poolAddress,
-            poolName_,
-            symbol,
-            underlying,
-            poolTarget,
-            poolDuration,
-            lenderAPY_,
-            borrowerAPY_,
-            borrowerAddress_
-        );
+    ) external onlyOwner returns (address) {}
 
-        PoolRecord memory pool = PoolRecord(
-            poolAddress,
-            address(0),
-            implementationAddress,
-            poolName_,
-            symbol
-        );
-
-        poolRegistry.push(pool);
-
-        emit PoolDeployed(
-            owner(),
-            poolAddress,
-            address(0),
-            implementationAddress,
-            poolName_,
-            symbol,
-            poolTarget,
-            poolDuration,
-            lenderAPY_,
-            borrowerAPY_,
-            borrowerAddress_
-        );
-
-        return poolAddress;
-    }
-
-    function _initPoolAndTransferOwnership(
-        address poolAddress,
-        string memory poolName_,
-        string memory symbol,
-        IERC20Upgradeable underlying,
-        uint poolTarget,
-        uint64 poolDuration,
-        uint lenderAPY_,
-        uint borrowerAPY_,
-        address borrowerAddress_
-    ) internal {
-        LendingPool newPool = LendingPool(poolAddress);
-        newPool.initialize(
-            poolName_,
-            symbol,
-            underlying,
-            poolTarget,
-            poolDuration,
-            lenderAPY_,
-            borrowerAPY_,
-            borrowerAddress_
-        );
-        newPool.transferOwnership(msg.sender);
-    }
+    function _initPoolAndTransferOwnership() internal {}
 }
