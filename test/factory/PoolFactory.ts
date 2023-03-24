@@ -38,7 +38,9 @@ describe("PoolFactory", function () {
 
       it("sets deployer as a contract owner", async () => {
         let { deployer, firstLossCapitalVault } = await fixture();
-        expect(await firstLossCapitalVault.owner()).to.equal(deployer.address);
+        expect(await firstLossCapitalVault.owner()).to.equal(
+          await deployer.getAddress()
+        );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity * collateralRatio", async () => {
@@ -66,7 +68,9 @@ describe("PoolFactory", function () {
 
       it("sets deployer as a contract owner", async () => {
         let { deployer, firstTrancheVault } = await fixture();
-        expect(await firstTrancheVault.owner()).to.equal(deployer.address);
+        expect(await firstTrancheVault.owner()).to.equal(
+          await deployer.getAddress()
+        );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity", async () => {

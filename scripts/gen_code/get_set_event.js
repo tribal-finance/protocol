@@ -43,7 +43,13 @@ const vars3 = [
   "address[] memory trancheVaultAddresses",
 ];
 
-for (let v of vars3) {
+const vars4 = [
+  "bool withdrawEnabled",
+  "bool depositEnabled",
+  "bool transferEnabled",
+];
+
+for (let v of vars4) {
   const split = v.split(" ");
   const _name = split.pop();
   const _type = split.join(" ");

@@ -68,19 +68,95 @@ contract BaseVault is
         _setMaxFundingCapacity(newValue);
     }
 
+    /* withdrawEnabled */
+    bool private s_withdrawEnabled;
+    event ChangeWithdrawEnabled(
+        address indexed actor,
+        bool oldValue,
+        bool newValue
+    );
+
+    function withdrawEnabled() public view returns (bool) {
+        return s_withdrawEnabled;
+    }
+
+    function _setWithdrawEnabled(bool newValue) internal {
+        bool oldValue = s_withdrawEnabled;
+        s_withdrawEnabled = newValue;
+        emit ChangeWithdrawEnabled(msg.sender, oldValue, newValue);
+    }
+
+    /* depositEnabled */
+    bool private s_depositEnabled;
+    event ChangeDepositEnabled(
+        address indexed actor,
+        bool oldValue,
+        bool newValue
+    );
+
+    function depositEnabled() public view returns (bool) {
+        return s_depositEnabled;
+    }
+
+    function _setDepositEnabled(bool newValue) internal {
+        bool oldValue = s_depositEnabled;
+        s_depositEnabled = newValue;
+        emit ChangeDepositEnabled(msg.sender, oldValue, newValue);
+    }
+
+    /* transferEnabled */
+    bool private s_transferEnabled;
+    event ChangeTransferEnabled(
+        address indexed actor,
+        bool oldValue,
+        bool newValue
+    );
+
+    function transferEnabled() public view returns (bool) {
+        return s_transferEnabled;
+    }
+
+    function _setTransferEnabled(bool newValue) internal {
+        bool oldValue = s_transferEnabled;
+        s_transferEnabled = newValue;
+        emit ChangeTransferEnabled(msg.sender, oldValue, newValue);
+    }
+
     /*////////////////////////////////////////////////
       Modifiers
     ////////////////////////////////////////////////*/
     modifier onlyPool() {
-        require(_msgSender() == poolAddress(), "TV: onlyPool");
+        require(_msgSender() == poolAddress(), "Vault: onlyPool");
         _;
+    }
+
+    modifier onlyOwnerOrPool() {
+        require(
+            _msgSender() == poolAddress() || _msgSender() == owner(),
+            "Vault: onlyOwnerOrPool"
+        );
     }
 
     modifier onlyWhitelist() {
         require(
             _isWhitelisted(_msgSender()),
-            "TV: TODO: whitelists are not implemented yet."
+            "Vault: TODO: whitelists are not implemented yet."
         );
+        _;
+    }
+
+    modifier whenWithdrawEnabled() {
+        require(withdrawEnabled(), "Vault: withdraw disabled");
+        _;
+    }
+
+    modifier whenDepositEnabled() {
+        require(depositEnabled(), "Vault: deposit disabled");
+        _;
+    }
+
+    modifier whenTransferEnabled() {
+        require(transferEnabled(), "Vault: transfer disabled");
         _;
     }
 
@@ -99,7 +175,7 @@ contract BaseVault is
         string memory _symbol,
         address underlying
     ) internal onlyInitializing {
-        require(_minCapacity <= _maxCapacity, "TV: min > max");
+        require(_minCapacity <= _maxCapacity, "Vault: min > max");
         _setPoolAddress(_poolAddress);
         _setMinFundingCapacity(_minCapacity);
         _setMaxFundingCapacity(_maxCapacity);
@@ -112,6 +188,36 @@ contract BaseVault is
     /*////////////////////////////////////////////////
         ADMIN METHODS
     ////////////////////////////////////////////////*/
+
+    /** @dev enables deposits to the vault */
+    function enableDeposits() external onlyOwnerOrPool {
+        _setDepositEnabled(true);
+    }
+
+    /** @dev disables deposits to the vault */
+    function disableDeposits() external onlyOwnerOrPool {
+        _setDepositEnabled(false);
+    }
+
+    /** @dev enables withdrawals from the vault*/
+    function enableWithdrawals() external onlyOwnerOrPool {
+        _setWithdrawEnabled(true);
+    }
+
+    /** @dev disables withdrawals from the vault*/
+    function disableWithdrawals() external onlyOwnerOrPool {
+        _setWithdrawEnabled(false);
+    }
+
+    /** @dev enables vault token transfers */
+    function enableTransfers() external onlyOwnerOrPool {
+        _setTransferEnabled(true);
+    }
+
+    /** @dev disables vault token transfers */
+    function disableTransfers() external onlyOwnerOrPool {
+        _setTransferEnabled(false);
+    }
 
     /** @dev Pauses the pool */
     function pause() external onlyOwner {
@@ -135,7 +241,15 @@ contract BaseVault is
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual override whenNotPaused onlyWhitelist returns (uint256) {
+    )
+        public
+        virtual
+        override
+        whenNotPaused
+        onlyWhitelist
+        whenDepositEnabled
+        returns (uint256)
+    {
         return super.deposit(assets, receiver);
     }
 
@@ -143,7 +257,15 @@ contract BaseVault is
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual override whenNotPaused onlyWhitelist returns (uint256) {
+    )
+        public
+        virtual
+        override
+        whenNotPaused
+        onlyWhitelist
+        whenDepositEnabled
+        returns (uint256)
+    {
         return super.mint(shares, receiver);
     }
 
@@ -158,7 +280,7 @@ contract BaseVault is
         uint256 assets,
         address receiver,
         address owner
-    ) public override whenNotPaused onlyWhitelist returns (uint256) {
+    ) public override whenNotPaused whenWithdrawEnabled returns (uint256) {
         return super.withdraw(assets, receiver, owner);
     }
 
@@ -167,7 +289,7 @@ contract BaseVault is
         uint256 shares,
         address receiver,
         address owner
-    ) public override whenNotPaused onlyWhitelist returns (uint256) {
+    ) public override whenNotPaused whenWithdrawEnabled returns (uint256) {
         return super.redeem(shares, receiver, owner);
     }
 
@@ -177,7 +299,7 @@ contract BaseVault is
      *  @return maximum amount of assets that can be deposited to the pool
      */
     function maxDeposit(address) public view override returns (uint256) {
-        if (paused()) {
+        if (paused() || !depositEnabled()) {
             return 0;
         }
         if (totalAssets() >= maxFundingCapacity()) {
@@ -198,7 +320,7 @@ contract BaseVault is
 
     /** @dev See {IERC4626-maxWithdraw}. */
     function maxWithdraw(address owner) public view override returns (uint256) {
-        if (paused()) {
+        if (paused() || !withdrawEnabled()) {
             return 0;
         }
         return
@@ -207,7 +329,7 @@ contract BaseVault is
 
     /** @dev See {IERC4626-maxRedeem}. */
     function maxRedeem(address owner) public view override returns (uint256) {
-        if (paused()) {
+        if (paused() || !withdrawEnabled()) {
             return 0;
         }
         return balanceOf(owner);
@@ -232,7 +354,11 @@ contract BaseVault is
     /*////////////////////////////////////////////////
         ERC20Upgradeable overrides
     ////////////////////////////////////////////////*/
-    function _transfer(address, address, uint256) internal pure override {
+    function _transfer(
+        address,
+        address,
+        uint256
+    ) internal pure override whenNotPaused whenTransferEnabled {
         revert("Transfers are not implemented");
     }
 }
