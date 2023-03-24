@@ -135,6 +135,7 @@ contract BaseVault is
             _msgSender() == poolAddress() || _msgSender() == owner(),
             "Vault: onlyOwnerOrPool"
         );
+        _;
     }
 
     modifier onlyWhitelist() {
@@ -358,7 +359,7 @@ contract BaseVault is
         address,
         address,
         uint256
-    ) internal pure override whenNotPaused whenTransferEnabled {
+    ) internal override whenNotPaused whenTransferEnabled {
         revert("Transfers are not implemented");
     }
 }
