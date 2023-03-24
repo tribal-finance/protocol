@@ -5,8 +5,11 @@ import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "../pool/ILendingPool.sol";
 import "../pool/LendingPool.sol";
+import "../vaults/TrancheVault.sol";
+import "../vaults/FirstLossCapitalVault.sol";
 
 contract PoolFactory is OwnableUpgradeable {
     struct PoolRecord {
@@ -74,18 +77,16 @@ contract PoolFactory is OwnableUpgradeable {
     ) external onlyOwner returns (address) {
         address poolAddress = Clones.clone(poolImplementationAddress);
 
-        address[] memory trancheVaultAddresses = new address[](
-            params.tranchesCount
+        address[] memory trancheVaultAddresses = _deployTrancheVaults(
+            params,
+            poolAddress,
+            _msgSender()
         );
 
-        for (uint8 i; i < params.tranchesCount; ++i) {
-            trancheVaultAddresses[i] = Clones.clone(
-                trancheVaultImplementationAddress
-            );
-        }
-
-        address firstLossCapitalVaultAddress = Clones.clone(
-            firstLossCapitalVaultImplementationAddress
+        address firstLossCapitalVaultAddress = _deployFLCVault(
+            params,
+            poolAddress,
+            _msgSender()
         );
 
         ILendingPool(poolAddress).initialize(
@@ -111,5 +112,68 @@ contract PoolFactory is OwnableUpgradeable {
         poolRegistry.push(record);
 
         return poolAddress;
+    }
+
+    function _deployTrancheVaults(
+        ILendingPool.LendingPoolParams calldata params,
+        address poolAddress,
+        address ownerAddress
+    ) internal returns (address[] memory trancheVaultAddresses) {
+        trancheVaultAddresses = new address[](params.tranchesCount);
+
+        for (uint8 i; i < params.tranchesCount; ++i) {
+            trancheVaultAddresses[i] = Clones.clone(
+                trancheVaultImplementationAddress
+            );
+            string memory tokenName = string(
+                abi.encodePacked(
+                    params.name,
+                    " Tranche ",
+                    Strings.toString(uint(i)),
+                    " Token"
+                )
+            );
+            string memory symbol = string(
+                abi.encodePacked("tv", Strings.toString(uint(i)), params.token)
+            );
+            TrancheVault(trancheVaultAddresses[i]).initialize(
+                poolAddress,
+                i,
+                1, // TODO: calculate minCapacity
+                1, // TODO: calculate maxCapacity
+                tokenName,
+                symbol,
+                params.stableCoinContractAddress
+            );
+            TrancheVault(trancheVaultAddresses[i]).transferOwnership(
+                ownerAddress
+            );
+        }
+    }
+
+    function _deployFLCVault(
+        ILendingPool.LendingPoolParams calldata params,
+        address poolAddress,
+        address ownerAddress
+    ) internal returns (address firstLossCapitalVaultAddress) {
+        firstLossCapitalVaultAddress = Clones.clone(
+            firstLossCapitalVaultImplementationAddress
+        );
+
+        string memory tokenName = string(
+            abi.encodePacked(params.name, " First Loss Capital Token")
+        );
+        string memory symbol = string(abi.encodePacked("flc", params.token));
+        FirstLossCapitalVault(firstLossCapitalVaultAddress).initialize(
+            poolAddress,
+            1, // TODO: calculate minCapacity
+            1, // TODO: calculate maxCapacity
+            tokenName,
+            symbol,
+            params.stableCoinContractAddress
+        );
+        OwnableUpgradeable(firstLossCapitalVaultAddress).transferOwnership(
+            ownerAddress
+        );
     }
 }

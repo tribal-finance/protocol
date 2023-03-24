@@ -15,28 +15,28 @@ contract TrancheVault is BaseVault {
     ////////////////////////////////////////////////*/
 
     /* id */
-    int8 private s_id;
-    event ChangeId(int8 oldValue, int8 newValue);
+    uint8 private s_id;
+    event ChangeId(uint8 oldValue, uint8 newValue);
 
-    function id() public view returns (int8) {
+    function id() public view returns (uint8) {
         return s_id;
     }
 
-    function _setId(int8 newValue) internal {
-        int8 oldValue = s_id;
+    function _setId(uint8 newValue) internal {
+        uint8 oldValue = s_id;
         s_id = newValue;
         emit ChangeId(oldValue, newValue);
     }
 
     function initialize(
         address _poolAddress,
-        int8 _trancheId,
+        uint8 _trancheId,
         uint _minCapacity,
         uint _maxCapacity,
         string memory _tokenName,
         string memory _symbol,
         address underlying
-    ) external initializer onlyOwner {
+    ) external initializer {
         _baseInitializer(
             _poolAddress,
             _minCapacity,

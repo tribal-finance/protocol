@@ -21,7 +21,7 @@ contract FirstLossCapitalVault is BaseVault {
         string memory _tokenName,
         string memory _symbol,
         address underlying
-    ) external initializer onlyOwner {
+    ) external initializer {
         _baseInitializer(
             _poolAddress,
             _minCapacity,

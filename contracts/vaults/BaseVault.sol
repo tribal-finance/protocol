@@ -98,7 +98,7 @@ contract BaseVault is
         string memory _tokenName,
         string memory _symbol,
         address underlying
-    ) internal onlyOwner onlyInitializing {
+    ) internal onlyInitializing {
         require(_minCapacity <= _maxCapacity, "TV: min > max");
         _setPoolAddress(_poolAddress);
         _setMinFundingCapacity(_minCapacity);
