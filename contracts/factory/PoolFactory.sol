@@ -6,12 +6,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../pool/ILendingPool.sol";
 import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
 import "../vaults/FirstLossCapitalVault.sol";
 
 contract PoolFactory is OwnableUpgradeable {
+    using MathUpgradeable for uint;
+
     struct PoolRecord {
         string name;
         string tokenName;
@@ -73,12 +76,14 @@ contract PoolFactory is OwnableUpgradeable {
      * . See {LendingPool-initialize}
      */
     function deployPool(
-        ILendingPool.LendingPoolParams calldata params
+        ILendingPool.LendingPoolParams calldata params,
+        uint[] calldata fundingSplitWads
     ) external onlyOwner returns (address) {
         address poolAddress = Clones.clone(poolImplementationAddress);
 
         address[] memory trancheVaultAddresses = _deployTrancheVaults(
             params,
+            fundingSplitWads,
             poolAddress,
             _msgSender()
         );
@@ -116,6 +121,7 @@ contract PoolFactory is OwnableUpgradeable {
 
     function _deployTrancheVaults(
         ILendingPool.LendingPoolParams calldata params,
+        uint[] calldata fundingSplitWads,
         address poolAddress,
         address ownerAddress
     ) internal returns (address[] memory trancheVaultAddresses) {
@@ -125,24 +131,26 @@ contract PoolFactory is OwnableUpgradeable {
             trancheVaultAddresses[i] = Clones.clone(
                 trancheVaultImplementationAddress
             );
-            string memory tokenName = string(
-                abi.encodePacked(
-                    params.name,
-                    " Tranche ",
-                    Strings.toString(uint(i)),
-                    " Token"
-                )
-            );
-            string memory symbol = string(
-                abi.encodePacked("tv", Strings.toString(uint(i)), params.token)
-            );
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
-                1, // TODO: calculate minCapacity
-                1, // TODO: calculate maxCapacity
-                tokenName,
-                symbol,
+                params.minFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
+                params.maxFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
+                string(
+                    abi.encodePacked(
+                        params.name,
+                        " Tranche ",
+                        Strings.toString(uint(i)),
+                        " Token"
+                    )
+                ),
+                string(
+                    abi.encodePacked(
+                        "tv",
+                        Strings.toString(uint(i)),
+                        params.token
+                    )
+                ),
                 params.stableCoinContractAddress
             );
             TrancheVault(trancheVaultAddresses[i]).transferOwnership(
@@ -166,8 +174,8 @@ contract PoolFactory is OwnableUpgradeable {
         string memory symbol = string(abi.encodePacked("flc", params.token));
         FirstLossCapitalVault(firstLossCapitalVaultAddress).initialize(
             poolAddress,
-            1, // TODO: calculate minCapacity
-            1, // TODO: calculate maxCapacity
+            params.minFundingCapacity.mulDiv(params.collateralRatioWad, WAD),
+            params.maxFundingCapacity.mulDiv(params.collateralRatioWad, WAD),
             tokenName,
             symbol,
             params.stableCoinContractAddress
@@ -175,5 +183,22 @@ contract PoolFactory is OwnableUpgradeable {
         OwnableUpgradeable(firstLossCapitalVaultAddress).transferOwnership(
             ownerAddress
         );
+    }
+
+    function _checkFundingSplitWads(
+        ILendingPool.LendingPoolParams calldata params,
+        uint[] calldata fundingSplitWads
+    ) internal pure {
+        require(
+            fundingSplitWads.length == params.tranchesCount,
+            "fundingSplitWads length"
+        );
+
+        uint sum;
+        for (uint i; i < params.tranchesCount; ++i) {
+            sum += fundingSplitWads[i];
+        }
+
+        require(sum / WAD == 1, "splits sum");
     }
 }
