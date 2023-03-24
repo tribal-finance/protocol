@@ -346,6 +346,99 @@ abstract contract LendingPoolState {
         emit ChangeTrancheVaultAddresses(msg.sender, oldValue, newValue);
     }
 
+    /*//////////////////////////////////////
+      Some Timestamps
+    //////////////////////////////////////*/
+    /* openedAt */
+    uint64 private s_openedAt;
+    event ChangeOpenedAt(
+        address indexed actor,
+        uint64 oldValue,
+        uint64 newValue
+    );
+
+    function openedAt() public view returns (uint64) {
+        return s_openedAt;
+    }
+
+    function _setOpenedAt(uint64 newValue) internal {
+        uint64 oldValue = s_openedAt;
+        s_openedAt = newValue;
+        emit ChangeOpenedAt(msg.sender, oldValue, newValue);
+    }
+
+    /* fundedAt */
+    uint64 private s_fundedAt;
+    event ChangeFundedAt(
+        address indexed actor,
+        uint64 oldValue,
+        uint64 newValue
+    );
+
+    function fundedAt() public view returns (uint64) {
+        return s_fundedAt;
+    }
+
+    function _setFundedAt(uint64 newValue) internal {
+        uint64 oldValue = s_fundedAt;
+        s_fundedAt = newValue;
+        emit ChangeFundedAt(msg.sender, oldValue, newValue);
+    }
+
+    /* fundingFailedAt */
+    uint64 private s_fundingFailedAt;
+    event ChangeFundingFailedAt(
+        address indexed actor,
+        uint64 oldValue,
+        uint64 newValue
+    );
+
+    function fundingFailedAt() public view returns (uint64) {
+        return s_fundingFailedAt;
+    }
+
+    function _setFundingFailedAt(uint64 newValue) internal {
+        uint64 oldValue = s_fundingFailedAt;
+        s_fundingFailedAt = newValue;
+        emit ChangeFundingFailedAt(msg.sender, oldValue, newValue);
+    }
+
+    /* flcDepositedAt */
+    uint64 private s_flcDepositedAt;
+    event ChangeFlcDepositedAt(
+        address indexed actor,
+        uint64 oldValue,
+        uint64 newValue
+    );
+
+    function flcDepositedAt() public view returns (uint64) {
+        return s_flcDepositedAt;
+    }
+
+    function _setFlcDepositedAt(uint64 newValue) internal {
+        uint64 oldValue = s_flcDepositedAt;
+        s_flcDepositedAt = newValue;
+        emit ChangeFlcDepositedAt(msg.sender, oldValue, newValue);
+    }
+
+    /* repaidAt */
+    uint64 private s_repaidAt;
+    event ChangeRepaidAt(
+        address indexed actor,
+        uint64 oldValue,
+        uint64 newValue
+    );
+
+    function repaidAt() public view returns (uint64) {
+        return s_repaidAt;
+    }
+
+    function _setRepaidAt(uint64 newValue) internal {
+        uint64 oldValue = s_repaidAt;
+        s_repaidAt = newValue;
+        emit ChangeRepaidAt(msg.sender, oldValue, newValue);
+    }
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.

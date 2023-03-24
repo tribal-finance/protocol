@@ -49,7 +49,15 @@ const vars4 = [
   "bool transferEnabled",
 ];
 
-for (let v of vars4) {
+const vars5 = [
+  "uint64 openedAt",
+  "uint64 fundedAt",
+  "uint64 fundingFailedAt",
+  "uint64 flcDepositedAt",
+  "uint64 repaidAt",
+];
+
+for (let v of vars5) {
   const split = v.split(" ");
   const _name = split.pop();
   const _type = split.join(" ");

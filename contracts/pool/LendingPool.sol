@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./ILendingPool.sol";
 import "./LendingPoolState.sol";
+import "../vaults/TrancheVault.sol";
+import "../vaults/FirstLossCapitalVault.sol";
 
 contract LendingPool is
     ILendingPool,
@@ -14,6 +16,10 @@ contract LendingPool is
     PausableUpgradeable,
     LendingPoolState
 {
+    /*///////////////////////////////////
+       INITIALIZATION
+    ///////////////////////////////////*/
+
     function initialize(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
@@ -112,5 +118,57 @@ contract LendingPool is
         );
 
         // require(params.feeSharingContractAddress != address(0), "feeSharingAddress empty"); // TODO: uncomment when fee sharing is developed
+    }
+
+    /*///////////////////////////////////
+       ADMIN FUNCTIONS
+    ///////////////////////////////////*/
+
+    /** @dev Pauses the pool */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /** @dev Unpauses the pool */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /*///////////////////////////////////
+       STATE MANAGEMENT
+    ///////////////////////////////////*/
+
+    /** @dev Marks pool as opened
+     * - sets openedAt
+     * - enables deposits to the
+     */
+    function openPool() external onlyOwner {
+        for (uint i; i < trancheVaultAddresses().length; i++) {
+            _trancheVaultContracts()[i].enableDeposits();
+        }
+        _setOpenedAt(uint64(block.timestamp));
+    }
+
+    /*///////////////////////////////////
+       HELPERS
+    ///////////////////////////////////*/
+
+    function _trancheVaultContracts()
+        internal
+        returns (TrancheVault[] memory contracts)
+    {
+        address[] memory addresses = trancheVaultAddresses();
+        contracts = new TrancheVault[](addresses.length);
+
+        for (uint i; i < addresses.length; ++i) {
+            contracts[i] = TrancheVault(addresses[i]);
+        }
+    }
+
+    function _firstLossCapitalVaultContract()
+        internal
+        returns (FirstLossCapitalVault c)
+    {
+        c = FirstLossCapitalVault(firstLossCapitalVaultAddress());
     }
 }
