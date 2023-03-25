@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import {
@@ -45,28 +46,32 @@ describe("PoolFactory", function () {
   describe("When unitranche pool is deployed", async () => {
     describe("First Loss Capital Vault", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { unitranchePool, firstLossCapitalVault } = await uniPoolFixture();
+        let { unitranchePool, firstLossCapitalVault } = await loadFixture(
+          uniPoolFixture
+        );
         expect(await firstLossCapitalVault.poolAddress()).to.equal(
           unitranchePool.address
         );
       });
 
       it("sets deployer as a contract owner", async () => {
-        let { deployer, firstLossCapitalVault } = await uniPoolFixture();
+        let { deployer, firstLossCapitalVault } = await loadFixture(
+          uniPoolFixture
+        );
         expect(await firstLossCapitalVault.owner()).to.equal(
           await deployer.getAddress()
         );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity * collateralRatio", async () => {
-        let { firstLossCapitalVault } = await uniPoolFixture();
+        let { firstLossCapitalVault } = await loadFixture(uniPoolFixture);
         expect(await firstLossCapitalVault.minFundingCapacity()).to.equal(
           USDC(2000)
         );
       });
 
       it("sets maxFundingCapacity to pool.maxFundingCapacity * collateralRatio", async () => {
-        let { firstLossCapitalVault } = await uniPoolFixture();
+        let { firstLossCapitalVault } = await loadFixture(uniPoolFixture);
         expect(await firstLossCapitalVault.maxFundingCapacity()).to.equal(
           USDC(2400)
         );
@@ -75,28 +80,30 @@ describe("PoolFactory", function () {
 
     describe("First tranche", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { unitranchePool, firstTrancheVault } = await uniPoolFixture();
+        let { unitranchePool, firstTrancheVault } = await loadFixture(
+          uniPoolFixture
+        );
         expect(await firstTrancheVault.poolAddress()).to.equal(
           unitranchePool.address
         );
       });
 
       it("sets deployer as a contract owner", async () => {
-        let { deployer, firstTrancheVault } = await uniPoolFixture();
+        let { deployer, firstTrancheVault } = await loadFixture(uniPoolFixture);
         expect(await firstTrancheVault.owner()).to.equal(
           await deployer.getAddress()
         );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity", async () => {
-        let { firstTrancheVault } = await uniPoolFixture();
+        let { firstTrancheVault } = await loadFixture(uniPoolFixture);
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
           USDC(10000)
         );
       });
 
       it("sets maxFundingCapacity to pool.maxFundingCapacity", async () => {
-        let { firstTrancheVault } = await uniPoolFixture();
+        let { firstTrancheVault } = await loadFixture(uniPoolFixture);
         expect(await firstTrancheVault.maxFundingCapacity()).to.equal(
           USDC(12000)
         );
@@ -107,28 +114,32 @@ describe("PoolFactory", function () {
   describe("When duo tranche pool is deployed", async () => {
     describe("First Loss Capital Vault", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { duotranchePool, firstLossCapitalVault } = await duoPoolFixture();
+        let { duotranchePool, firstLossCapitalVault } = await loadFixture(
+          duoPoolFixture
+        );
         expect(await firstLossCapitalVault.poolAddress()).to.equal(
           duotranchePool.address
         );
       });
 
       it("sets deployer as a contract owner", async () => {
-        let { deployer, firstLossCapitalVault } = await duoPoolFixture();
+        let { deployer, firstLossCapitalVault } = await loadFixture(
+          duoPoolFixture
+        );
         expect(await firstLossCapitalVault.owner()).to.equal(
           await deployer.getAddress()
         );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity * collateralRatio", async () => {
-        let { firstLossCapitalVault } = await duoPoolFixture();
+        let { firstLossCapitalVault } = await loadFixture(duoPoolFixture);
         expect(await firstLossCapitalVault.minFundingCapacity()).to.equal(
           USDC(2000)
         );
       });
 
       it("sets maxFundingCapacity to pool.maxFundingCapacity * collateralRatio", async () => {
-        let { firstLossCapitalVault } = await duoPoolFixture();
+        let { firstLossCapitalVault } = await loadFixture(duoPoolFixture);
         expect(await firstLossCapitalVault.maxFundingCapacity()).to.equal(
           USDC(2400)
         );
@@ -137,28 +148,30 @@ describe("PoolFactory", function () {
 
     describe("First tranche", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { duotranchePool, firstTrancheVault } = await duoPoolFixture();
+        let { duotranchePool, firstTrancheVault } = await loadFixture(
+          duoPoolFixture
+        );
         expect(await firstTrancheVault.poolAddress()).to.equal(
           duotranchePool.address
         );
       });
 
       it("sets deployer as a contract owner", async () => {
-        let { deployer, firstTrancheVault } = await duoPoolFixture();
+        let { deployer, firstTrancheVault } = await loadFixture(duoPoolFixture);
         expect(await firstTrancheVault.owner()).to.equal(
           await deployer.getAddress()
         );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity * split", async () => {
-        let { firstTrancheVault } = await duoPoolFixture();
+        let { firstTrancheVault } = await loadFixture(duoPoolFixture);
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
           USDC(10000 * 0.8)
         );
       });
 
       it("sets maxFundingCapacity to pool.maxFundingCapacity", async () => {
-        let { firstTrancheVault } = await duoPoolFixture();
+        let { firstTrancheVault } = await loadFixture(duoPoolFixture);
         expect(await firstTrancheVault.maxFundingCapacity()).to.equal(
           USDC(12000 * 0.8)
         );

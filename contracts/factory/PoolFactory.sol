@@ -12,7 +12,7 @@ import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
 import "../vaults/FirstLossCapitalVault.sol";
 
-// import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 contract PoolFactory is OwnableUpgradeable {
     using MathUpgradeable for uint;

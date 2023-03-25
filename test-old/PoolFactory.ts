@@ -3,7 +3,10 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { BigNumberish } from "ethers";
-import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
+import setupUSDC, {
+  USDC_PRECISION,
+  USDC_ADDRESS_6,
+} from "../test/helpers/usdc";
 
 const { parseUnits } = ethers.utils;
 
