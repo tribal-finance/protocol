@@ -155,6 +155,7 @@ contract LendingPool is
 
     function _trancheVaultContracts()
         internal
+        view
         returns (TrancheVault[] memory contracts)
     {
         address[] memory addresses = trancheVaultAddresses();
@@ -167,6 +168,7 @@ contract LendingPool is
 
     function _firstLossCapitalVaultContract()
         internal
+        view
         returns (FirstLossCapitalVault c)
     {
         c = FirstLossCapitalVault(firstLossCapitalVaultAddress());

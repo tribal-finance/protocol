@@ -133,6 +133,62 @@ export async function deployUnitranchePool(
   };
 }
 
+export async function deployDuotranchePool(
+  poolFactory: PoolFactory,
+  deployer: Signer,
+  borrower: Signer,
+  lenders: Array<Signer>,
+  poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
+  fundingSplitWads = [WAD(0.8), WAD(0.2)]
+) {
+  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = Object.assign(
+    DEFAULT_LENDING_POOL_PARAMS,
+    {
+      borrowerAddress: await borrower.getAddress(),
+      tranchesCount: 2,
+      trancheAPYsWads: [WAD(0.1), WAD(0.12)],
+      trancheBoostedAPYsWads: [WAD(0.1), WAD(0.15)],
+      trancheCoveragesWads: [WAD(1), WAD(0)],
+    },
+    poolInitParamsOverrides
+  );
+
+  await poolFactory.deployPool(lendingPoolParams, fundingSplitWads);
+
+  const lastDeployedPoolRecord = await poolFactory.lastDeployedPoolRecord();
+
+  const duotranchePool = await ethers.getContractAt(
+    "LendingPool",
+    lastDeployedPoolRecord.poolAddress
+  );
+
+  const firstLossCapitalVault = await ethers.getContractAt(
+    "FirstLossCapitalVault",
+    lastDeployedPoolRecord.firstLossCapitalVaultAddress
+  );
+
+  const firstTrancheVault = await ethers.getContractAt(
+    "TrancheVault",
+    lastDeployedPoolRecord.firstTrancheVaultAddress
+  );
+
+  const secondTrancheVault = await ethers.getContractAt(
+    "TrancheVault",
+    lastDeployedPoolRecord.secondTrancheVaultAddress
+  );
+
+  return {
+    deployer,
+    borrower,
+    lenders,
+    poolFactory,
+    duotranchePool,
+    firstLossCapitalVault,
+    firstTrancheVault,
+    secondTrancheVault,
+  };
+}
+
 // export type CommonInput = {
 //   deployer: Signer;
 //   lender1: Signer;
