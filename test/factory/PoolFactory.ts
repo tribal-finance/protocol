@@ -46,11 +46,11 @@ describe("PoolFactory", function () {
   describe("When unitranche pool is deployed", async () => {
     describe("First Loss Capital Vault", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { unitranchePool, firstLossCapitalVault } = await loadFixture(
+        let { lendingPool, firstLossCapitalVault } = await loadFixture(
           uniPoolFixture
         );
         expect(await firstLossCapitalVault.poolAddress()).to.equal(
-          unitranchePool.address
+          lendingPool.address
         );
       });
 
@@ -80,11 +80,11 @@ describe("PoolFactory", function () {
 
     describe("First tranche", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { unitranchePool, firstTrancheVault } = await loadFixture(
+        let { lendingPool, firstTrancheVault } = await loadFixture(
           uniPoolFixture
         );
         expect(await firstTrancheVault.poolAddress()).to.equal(
-          unitranchePool.address
+          lendingPool.address
         );
       });
 
@@ -114,11 +114,11 @@ describe("PoolFactory", function () {
   describe("When duo tranche pool is deployed", async () => {
     describe("First Loss Capital Vault", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { duotranchePool, firstLossCapitalVault } = await loadFixture(
+        let { lendingPool, firstLossCapitalVault } = await loadFixture(
           duoPoolFixture
         );
         expect(await firstLossCapitalVault.poolAddress()).to.equal(
-          duotranchePool.address
+          lendingPool.address
         );
       });
 
@@ -148,11 +148,11 @@ describe("PoolFactory", function () {
 
     describe("First tranche", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { duotranchePool, firstTrancheVault } = await loadFixture(
+        let { lendingPool, firstTrancheVault } = await loadFixture(
           duoPoolFixture
         );
         expect(await firstTrancheVault.poolAddress()).to.equal(
-          duotranchePool.address
+          lendingPool.address
         );
       });
 

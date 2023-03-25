@@ -145,6 +145,7 @@ contract LendingPool is
     function openPool() external onlyOwner {
         for (uint i; i < trancheVaultAddresses().length; i++) {
             _trancheVaultContracts()[i].enableDeposits();
+            _trancheVaultContracts()[i].enableWithdrawals();
         }
         _setOpenedAt(uint64(block.timestamp));
     }

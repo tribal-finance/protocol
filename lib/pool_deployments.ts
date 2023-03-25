@@ -99,37 +99,23 @@ export async function deployUnitranchePool(
     DEFAULT_LENDING_POOL_PARAMS,
     {
       borrowerAddress: await borrower.getAddress(),
+      tranchesCount: 1,
+      trancheAPYsWads: [WAD(0.1)],
+      trancheBoostedAPYsWads: [WAD(0.1)],
+      trancheCoveragesWads: [WAD(1)],
     },
     poolInitParamsOverrides
   );
 
   await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
-
-  const lastDeployedPoolRecord = await poolFactory.lastDeployedPoolRecord();
-
-  const unitranchePool = await ethers.getContractAt(
-    "LendingPool",
-    lastDeployedPoolRecord.poolAddress
-  );
-
-  const firstLossCapitalVault = await ethers.getContractAt(
-    "FirstLossCapitalVault",
-    lastDeployedPoolRecord.firstLossCapitalVaultAddress
-  );
-
-  const firstTrancheVault = await ethers.getContractAt(
-    "TrancheVault",
-    lastDeployedPoolRecord.firstTrancheVaultAddress
-  );
+  const deployedContracts = await _getDeployedContracts(poolFactory);
 
   return {
     deployer,
     borrower,
     lenders,
     poolFactory,
-    unitranchePool,
-    firstLossCapitalVault,
-    firstTrancheVault,
+    ...deployedContracts,
   };
 }
 
@@ -154,10 +140,20 @@ export async function deployDuotranchePool(
   );
 
   await poolFactory.deployPool(lendingPoolParams, fundingSplitWads);
+  const deployedContracts = await _getDeployedContracts(poolFactory);
 
+  return {
+    deployer,
+    borrower,
+    lenders,
+    poolFactory,
+    ...deployedContracts,
+  };
+}
+
+export async function _getDeployedContracts(poolFactory: PoolFactory) {
   const lastDeployedPoolRecord = await poolFactory.lastDeployedPoolRecord();
-
-  const duotranchePool = await ethers.getContractAt(
+  const lendingPool = await ethers.getContractAt(
     "LendingPool",
     lastDeployedPoolRecord.poolAddress
   );
@@ -178,11 +174,7 @@ export async function deployDuotranchePool(
   );
 
   return {
-    deployer,
-    borrower,
-    lenders,
-    poolFactory,
-    duotranchePool,
+    lendingPool,
     firstLossCapitalVault,
     firstTrancheVault,
     secondTrancheVault,
