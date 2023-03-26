@@ -17,6 +17,26 @@ contract LendingPool is
     LendingPoolState
 {
     /*///////////////////////////////////
+       MODIFIERS
+    ///////////////////////////////////*/
+    modifier authTrancheVault(uint8 id) {
+        require(id < trancheVaultAddresses().length, "invalid trancheVault id");
+        require(
+            trancheVaultAddresses()[id] == _msgSender(),
+            "trancheVault auth"
+        );
+        _;
+    }
+
+    modifier authFirstLossCapitalVault() {
+        require(
+            firstLossCapitalVaultAddress() == _msgSender(),
+            "FLC vault auth"
+        );
+        _;
+    }
+
+    /*///////////////////////////////////
        INITIALIZATION
     ///////////////////////////////////*/
 
@@ -149,6 +169,21 @@ contract LendingPool is
         }
         _setOpenedAt(uint64(block.timestamp));
     }
+
+    /*///////////////////////////////////
+       COMMUNICATION WITH VAULTS
+    ///////////////////////////////////*/
+    function onTrancheDeposit(
+        uint8 trancheId,
+        address depositorAddress,
+        uint amount
+    ) external authTrancheVault(trancheId) {}
+
+    function onTrancheWithdraw(
+        uint8 trancheId,
+        address depositorAddress,
+        uint amount
+    ) external authTrancheVault(trancheId) {}
 
     /*///////////////////////////////////
        HELPERS

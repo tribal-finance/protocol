@@ -235,23 +235,35 @@ interface ILendingPool {
     ) external;
 
     /*///////////////////////////////////
-       Admin functions
+       State management
     ///////////////////////////////////*/
+    enum Stages {
+        INITIAL,
+        OPEN,
+        FUNDED,
+        FUNDING_FAILED,
+        BORROWED,
+        BORROWER_INTEREST_REPAID,
+        DILINQUENT,
+        REPAID,
+        DEFAULTED
+    }
+
     function openPool() external;
 
     /*///////////////////////////////////
        Tranche notification functions
     ///////////////////////////////////*/
 
-    // function onTrancheDeposit(
-    //     uint8 trancheId,
-    //     address depositorAddress,
-    //     uint amount
-    // ) external;
+    function onTrancheDeposit(
+        uint8 trancheId,
+        address receiverAddress,
+        uint amount
+    ) external;
 
-    // function onTrancheWithdraw(
-    //     uint8 trancheId,
-    //     address depositorAddress,
-    //     uint amount
-    // ) external;
+    function onTrancheWithdraw(
+        uint8 trancheId,
+        address ownerAddress,
+        uint amount
+    ) external;
 }

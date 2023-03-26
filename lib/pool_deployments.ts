@@ -95,17 +95,17 @@ export async function deployUnitranchePool(
   poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
   fundingSplitWads = [WAD(1)]
 ) {
-  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = Object.assign(
-    DEFAULT_LENDING_POOL_PARAMS,
-    {
+  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = {
+    ...DEFAULT_LENDING_POOL_PARAMS,
+    ...{
       borrowerAddress: await borrower.getAddress(),
       tranchesCount: 1,
       trancheAPYsWads: [WAD(0.1)],
       trancheBoostedAPYsWads: [WAD(0.1)],
       trancheCoveragesWads: [WAD(1)],
     },
-    poolInitParamsOverrides
-  );
+    ...poolInitParamsOverrides,
+  };
 
   await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
   const deployedContracts = await _getDeployedContracts(poolFactory);
@@ -127,17 +127,18 @@ export async function deployDuotranchePool(
   poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
   fundingSplitWads = [WAD(0.8), WAD(0.2)]
 ) {
-  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = Object.assign(
-    DEFAULT_LENDING_POOL_PARAMS,
-    {
+  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = {
+    ...{},
+    ...DEFAULT_LENDING_POOL_PARAMS,
+    ...{
       borrowerAddress: await borrower.getAddress(),
       tranchesCount: 2,
       trancheAPYsWads: [WAD(0.1), WAD(0.12)],
       trancheBoostedAPYsWads: [WAD(0.1), WAD(0.15)],
       trancheCoveragesWads: [WAD(1), WAD(0)],
     },
-    poolInitParamsOverrides
-  );
+    ...poolInitParamsOverrides,
+  };
 
   await poolFactory.deployPool(lendingPoolParams, fundingSplitWads);
   const deployedContracts = await _getDeployedContracts(poolFactory);

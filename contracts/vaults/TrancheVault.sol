@@ -7,7 +7,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./BaseVault.sol";
+import "../pool/ILendingPool.sol";
 
 contract TrancheVault is BaseVault {
     /*////////////////////////////////////////////////
@@ -46,5 +48,65 @@ contract TrancheVault is BaseVault {
             underlying
         );
         _setId(_trancheId);
+    }
+
+    /*///////////////////////////////////////
+      ERC4626Upgradeable overrides
+    ///////////////////////////////////////*/
+
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
+        // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
+        // calls the vault, which is assumed not malicious.
+        //
+        // Conclusion: we need to do the transfer before we mint so that any reentrancy would happen before the
+        // assets are transferred and before the shares are minted, which is a valid state.
+        // slither-disable-next-line reentrancy-no-eth
+        SafeERC20Upgradeable.safeTransferFrom(
+            IERC20Upgradeable(asset()),
+            caller,
+            address(this),
+            assets
+        );
+        _mint(receiver, shares);
+
+        emit Deposit(caller, receiver, assets, shares);
+        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
+    }
+
+    /**
+     * @dev Withdraw/redeem common workflow.
+     */
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        if (caller != owner) {
+            _spendAllowance(owner, caller, shares);
+        }
+
+        // If _asset is ERC777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
+        // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
+        // calls the vault, which is assumed not malicious.
+        //
+        // Conclusion: we need to do the transfer after the burn so that any reentrancy would happen after the
+        // shares are burned and after the assets are transferred, which is a valid state.
+        _burn(owner, shares);
+        SafeERC20Upgradeable.safeTransfer(
+            IERC20Upgradeable(asset()),
+            receiver,
+            assets
+        );
+
+        emit Withdraw(caller, receiver, owner, assets, shares);
+        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
     }
 }
