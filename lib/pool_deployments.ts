@@ -14,9 +14,11 @@ import { ethers } from "hardhat";
 import type { BigNumberish, Signer } from "ethers";
 import type {
   ERC20Upgradeable,
+  FirstLossCapitalVault,
   ILendingPool,
   LendingPool,
   PoolFactory,
+  TrancheVault,
 } from "../typechain-types";
 import type { IUSDC } from "../typechain-types/contracts/IUSDC";
 import { pool } from "../typechain-types/contracts";
@@ -93,7 +95,9 @@ export async function deployUnitranchePool(
   borrower: Signer,
   lenders: Array<Signer>,
   poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
-  fundingSplitWads = [WAD(1)]
+  afterDeploy?: (
+    contracts: DeployedContractsType
+  ) => Promise<DeployedContractsType>
 ) {
   const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = {
     ...DEFAULT_LENDING_POOL_PARAMS,
@@ -110,6 +114,10 @@ export async function deployUnitranchePool(
   await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
   const deployedContracts = await _getDeployedContracts(poolFactory);
 
+  if (afterDeploy) {
+    await afterDeploy(deployedContracts);
+  }
+
   return {
     deployer,
     borrower,
@@ -125,7 +133,9 @@ export async function deployDuotranchePool(
   borrower: Signer,
   lenders: Array<Signer>,
   poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
-  fundingSplitWads = [WAD(0.8), WAD(0.2)]
+  afterDeploy?: (
+    contracts: DeployedContractsType
+  ) => Promise<DeployedContractsType>
 ) {
   const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = {
     ...{},
@@ -140,8 +150,12 @@ export async function deployDuotranchePool(
     ...poolInitParamsOverrides,
   };
 
-  await poolFactory.deployPool(lendingPoolParams, fundingSplitWads);
+  await poolFactory.deployPool(lendingPoolParams, [WAD(0.8), WAD(0.2)]);
   const deployedContracts = await _getDeployedContracts(poolFactory);
+
+  if (afterDeploy) {
+    await afterDeploy(deployedContracts);
+  }
 
   return {
     deployer,
@@ -152,7 +166,16 @@ export async function deployDuotranchePool(
   };
 }
 
-export async function _getDeployedContracts(poolFactory: PoolFactory) {
+export type DeployedContractsType = {
+  lendingPool: LendingPool;
+  firstLossCapitalVault: FirstLossCapitalVault;
+  firstTrancheVault: TrancheVault;
+  secondTrancheVault: TrancheVault;
+};
+
+export async function _getDeployedContracts(
+  poolFactory: PoolFactory
+): Promise<DeployedContractsType> {
   const lastDeployedPoolRecord = await poolFactory.lastDeployedPoolRecord();
   const lendingPool = await ethers.getContractAt(
     "LendingPool",

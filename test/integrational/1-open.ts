@@ -10,6 +10,7 @@ import {
 import { USDC, WAD } from "../helpers/conversion";
 import {
   deployDuotranchePool,
+  DeployedContractsType,
   deployFactoryAndImplementations,
   deployUnitranchePool,
   _getDeployedContracts,
@@ -27,14 +28,19 @@ describe("When Pool moves to Open state", function () {
       lenders
     );
 
+    const afterDeploy = async (contracts: DeployedContractsType) => {
+      await contracts.lendingPool.connect(deployer).openPool();
+      return contracts;
+    };
+
     const data = await deployUnitranchePool(
       poolFactory,
       deployer,
       borrower,
-      lenders
+      lenders,
+      {},
+      afterDeploy
     );
-
-    await data.lendingPool.connect(deployer).openPool();
 
     return { ...data, ...(await _getDeployedContracts(poolFactory)) };
   }
@@ -50,11 +56,18 @@ describe("When Pool moves to Open state", function () {
       lenders
     );
 
+    const afterDeploy = async (contracts: DeployedContractsType) => {
+      await contracts.lendingPool.connect(deployer).openPool();
+      return contracts;
+    };
+
     const data = await deployDuotranchePool(
       poolFactory,
       deployer,
       borrower,
-      lenders
+      lenders,
+      {},
+      afterDeploy
     );
 
     await data.lendingPool.connect(deployer).openPool();
@@ -102,7 +115,7 @@ describe("When Pool moves to Open state", function () {
     });
 
     describe("Second Tranche vault", async () => {
-      it.only("does allows withdrawals and deposits", async () => {
+      it("does allows withdrawals and deposits", async () => {
         const { secondTrancheVault } = await loadFixture(duoPoolFixture);
         expect(await secondTrancheVault.depositEnabled()).to.eq(true);
         expect(await secondTrancheVault.withdrawEnabled()).to.eq(true);
