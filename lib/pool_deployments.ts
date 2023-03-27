@@ -111,7 +111,9 @@ export async function deployUnitranchePool(
     ...poolInitParamsOverrides,
   };
 
-  await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
+  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
+  await tx.wait();
+
   const deployedContracts = await _getDeployedContracts(poolFactory);
 
   if (afterDeploy) {
@@ -150,7 +152,12 @@ export async function deployDuotranchePool(
     ...poolInitParamsOverrides,
   };
 
-  await poolFactory.deployPool(lendingPoolParams, [WAD(0.8), WAD(0.2)]);
+  const tx = await poolFactory.deployPool(lendingPoolParams, [
+    WAD(0.8),
+    WAD(0.2),
+  ]);
+
+  await tx.wait();
   const deployedContracts = await _getDeployedContracts(poolFactory);
 
   if (afterDeploy) {

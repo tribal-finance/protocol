@@ -1,14 +1,9 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import dotenv from "dotenv";
 import {
-  CommonInput,
-  deploy5daysFoundedPool,
-  deployBorrowedFullInterestRepaidPool,
-  deployBorrowedHalveInterestRepaidPool,
-  deployBorrowedPool,
-  deployFoundedPool,
-  deployHalveFoundedPool,
-  deployOpenPool,
+  deployDuotranchePool,
+  DeployedContractsType,
+  deployUnitranchePool,
 } from "../../lib/pool_deployments";
 
 dotenv.config();
@@ -21,60 +16,44 @@ async function main() {
     process.env.GOERLI_USDC_ADDRESS!
   );
 
-  const PoolFactory = await ethers.getContractAt(
+  const poolFactoryContract = await ethers.getContractAt(
     "PoolFactory",
     process.env.GOERLI_POOL_FACTORY_ADDRESS!
   );
 
-  const commonInput: CommonInput = {
+  // 1. Unitranche Pool
+  // const cs = await deployUnitranchePool(
+  //   poolFactoryContract,
+  //   deployer,
+  //   borrower,
+  //   [lender1, lender2],
+  //   {
+  //     stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
+  //     fundingPeriodSeconds: 30 * 24 * 60 * 60,
+  //   },
+  //   async (contracts: DeployedContractsType) => {
+  //     await contracts.lendingPool.connect(deployer).openPool();
+  //     return contracts;
+  //   }
+  // );
+  // console.log("Deployed Unitranche Pool:", cs.lendingPool.address);
+
+  // 2. Duotranche Pool
+  const cs = await deployDuotranchePool(
+    poolFactoryContract,
     deployer,
-    lender1,
-    lender2,
     borrower,
-    usdcContract: USDCContract,
-    poolFactoryContract: PoolFactory,
-  };
-
-  // // 1. Open pool
-  // console.log("=== 1. Open pool");
-  // const openPoolAddress = await deployOpenPool(commonInput);
-  // console.log({ openPoolAddress });
-
-  // // 2. halve founded pool
-  // console.log("=== 2. halve founded pool");
-  // const halveFoundedPoolAddress = await deployHalveFoundedPool(commonInput);
-  // console.log({ halveFoundedPoolAddress });
-
-  // // 3. founded pool
-  // console.log("=== 3. founded pool");
-  // const foundedPoolAddress = await deployFoundedPool(commonInput);
-  // console.log({ foundedPoolAddress });
-
-  // 4. borrowed pool
-  // console.log("=== 4. borrowed pool");
-  // const borrowedPoolAddress = await deployBorrowedPool(commonInput);
-  // console.log({ borrowedPoolAddress });
-
-  // 5. borrowed halve interst repaid pool
-  // console.log("=== 5. borrowed halve interst repaid pool");
-  // const borrowedHalveInterestRepaidPoolAddress =
-  //   await deployBorrowedHalveInterestRepaidPool(commonInput);
-  // console.log({ borrowedHalveInterestRepaidPoolAddress });
-
-  // // 6. borrowed full interst repaid pool
-  console.log("=== 6. borrowed full interst repaid pool");
-  const borrowedFullInterestRepaidPoolAddress =
-    await deployBorrowedFullInterestRepaidPool(commonInput);
-  console.log({ borrowedFullInterestRepaidPoolAddress });
-
-  // 7. 5 days funded pool
-  // console.log("=== 7. 5 days founded pool");
-  // for (let i = 0; i < 5; i++) {
-  //   const fivedaysfoundedPoolAddress = await deploy5daysFoundedPool(
-  //     commonInput
-  //   );
-  //   console.log({ fivedaysfoundedPoolAddress });
-  // }
+    [lender1, lender2],
+    {
+      stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
+      fundingPeriodSeconds: 30 * 24 * 60 * 60,
+    },
+    async (contracts: DeployedContractsType) => {
+      await contracts.lendingPool.connect(deployer).openPool();
+      return contracts;
+    }
+  );
+  console.log("Deployed Duotranche Pool:", cs.lendingPool.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

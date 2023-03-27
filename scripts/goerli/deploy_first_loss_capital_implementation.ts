@@ -2,13 +2,14 @@ import { ethers, upgrades } from "hardhat";
 import dotenv from "dotenv";
 
 dotenv.config();
-const { parseUnits } = ethers.utils;
 
 async function main() {
-  const TrancheVault = await ethers.getContractFactory("TrancheVault");
-  const trancheVault = await TrancheVault.deploy();
+  const FirstLossCapitalVault = await ethers.getContractFactory(
+    "FirstLossCapitalVault"
+  );
+  const flcVault = await FirstLossCapitalVault.deploy();
 
-  console.log(`TrancheVault deployed to ${trancheVault.address}`);
+  console.log(`FirstLossCapitalVault deployed to ${flcVault.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
