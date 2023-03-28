@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -158,8 +158,8 @@ contract LendingPool is
        STATE MANAGEMENT
     ///////////////////////////////////*/
 
-    /** @dev Marks pool as opened
-     * - sets openedAt
+    /** @notice Marks the pool as opened. This function has to be called by *owner* when
+     * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
     function adminOpenPool() external onlyOwner {
@@ -170,7 +170,10 @@ contract LendingPool is
         _setOpenedAt(uint64(block.timestamp));
     }
 
-    function adminCheckPoolIsFunded() external onlyOwner {}
+    /** @notice Checks whether the pool was funded successfully or not.
+     *  this function is expected to be called by *owner* once the funding period ends
+     */
+    function adminTransitionToFundedState() external onlyOwner {}
 
     /*///////////////////////////////////
        Lender functions

@@ -29,7 +29,7 @@ describe("When Pool moves to Open state", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).openPool();
+      await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     };
 
@@ -57,7 +57,7 @@ describe("When Pool moves to Open state", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).openPool();
+      await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     };
 
@@ -70,7 +70,7 @@ describe("When Pool moves to Open state", function () {
       afterDeploy
     );
 
-    await data.lendingPool.connect(deployer).openPool();
+    await data.lendingPool.connect(deployer).adminOpenPool();
 
     return { ...data, ...(await _getDeployedContracts(poolFactory)) };
   }

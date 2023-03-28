@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 /** @dev Lending pool interface.
  *
@@ -258,7 +258,7 @@ interface ILendingPool {
     /** @dev Checks if the pool was funded or not
      * - moves the pool into FUNDED or FUNDING_FAILED state
      */
-    function adminCheckPoolIsFunded() external;
+    function adminTransitionToFundedState() external;
 
     /*///////////////////////////////////
        Lender functions

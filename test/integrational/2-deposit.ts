@@ -30,7 +30,7 @@ describe("When Lender deposits to Open state pool", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).openPool();
+      await contracts.lendingPool.connect(deployer).adminOpenPool();
       await usdc
         .connect(lender1)
         .approve(contracts.firstTrancheVault.address, USDC(10000));
@@ -64,7 +64,7 @@ describe("When Lender deposits to Open state pool", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).openPool();
+      await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     };
 
@@ -77,7 +77,7 @@ describe("When Lender deposits to Open state pool", function () {
       afterDeploy
     );
 
-    await data.lendingPool.connect(deployer).openPool();
+    await data.lendingPool.connect(deployer).adminOpenPool();
 
     return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
   }

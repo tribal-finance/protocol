@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 
 import "hardhat/console.sol";
 
-/** @dev manages whitelisted borrowers and lenders
+/**
+ * @title Authority Whitelist smart contract
+ * @notice this contract manages a whitelists for all the borrowers and lenders
  */
 contract Authority is OwnableUpgradeable {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
@@ -14,26 +16,29 @@ contract Authority is OwnableUpgradeable {
     EnumerableSetUpgradeable.AddressSet whitelistedBorrowers;
     EnumerableSetUpgradeable.AddressSet whitelistedLenders;
 
-    /** @dev initializer */
+    /// @dev initializer
     function initialize() external initializer {
         __Ownable_init();
     }
 
-    /** @dev adds borrower address to the whitelist.
+    /**
+     * @notice adds borrower address to the whitelist.
      * @param a address to add to the whitelist
      */
     function addBorrower(address a) external onlyOwner {
         whitelistedBorrowers.add(a);
     }
 
-    /** @dev removes borrower address from the whitelist.
+    /**
+     * @notice removes borrower address from the whitelist.
      * @param a address to remove from the whitelist
      */
     function removeBorrower(address a) external onlyOwner {
         whitelistedBorrowers.remove(a);
     }
 
-    /** @dev checks if the borrower address is in the whitelist.
+    /**
+     * @notice checks if the borrower address is in the whitelist.
      * @param a address to check
      * @return true if the address is in the whitelist
      */
@@ -41,7 +46,7 @@ contract Authority is OwnableUpgradeable {
         return whitelistedBorrowers.contains(a);
     }
 
-    /** @dev returns array of all whitelisted borrowers  */
+    /// @notice returns array of all whitelisted borrower addresses.
     function allBorrowers() external view returns (address[] memory) {
         uint length = whitelistedBorrowers.length();
         address[] memory addresses = new address[](length);
@@ -52,21 +57,24 @@ contract Authority is OwnableUpgradeable {
         return addresses;
     }
 
-    /** @dev adds lenders address to the whitelist.
+    /**
+     * @notice adds lenders address to the whitelist.
      * @param a address to add to the whitelist
      */
     function addLender(address a) external onlyOwner {
         whitelistedLenders.add(a);
     }
 
-    /** @dev removes lenders address from the whitelist.
+    /**
+     * @notice removes lenders address from the whitelist.
      * @param a address to remove from the whitelist
      */
     function removeLender(address a) external onlyOwner {
         whitelistedLenders.remove(a);
     }
 
-    /** @dev checks if the lender address is in the whitelist.
+    /**
+     * @notice checks if the lender address is in the whitelist.
      * @param a address to check
      * @return true if the address is in the whitelist
      */
@@ -74,7 +82,7 @@ contract Authority is OwnableUpgradeable {
         return whitelistedLenders.contains(a);
     }
 
-    /** @dev returns array of all whitelisted lender addresses  */
+    /// @notice returns array of all whitelisted lender addresses
     function allLenders() external view returns (address[] memory) {
         uint length = whitelistedLenders.length();
         address[] memory addresses = new address[](length);

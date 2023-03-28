@@ -32,7 +32,7 @@ async function main() {
       fundingPeriodSeconds: 30 * 24 * 60 * 60,
     },
     async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).openPool();
+      await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     }
   );
@@ -49,7 +49,7 @@ async function main() {
   //     fundingPeriodSeconds: 30 * 24 * 60 * 60,
   //   },
   //   async (contracts: DeployedContractsType) => {
-  //     await contracts.lendingPool.connect(deployer).openPool();
+  //     await contracts.lendingPool.connect(deployer).adminOpenPool();
   //     return contracts;
   //   }
   // );

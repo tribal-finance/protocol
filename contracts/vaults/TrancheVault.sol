@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -29,6 +29,10 @@ contract TrancheVault is BaseVault {
         s_id = newValue;
         emit ChangeId(oldValue, newValue);
     }
+
+    /*///////////////////////////////////////
+      ERC4626Upgradeable overrides
+    ///////////////////////////////////////*/
 
     function initialize(
         address _poolAddress,
