@@ -160,9 +160,9 @@ contract LendingPool is
 
     /** @dev Marks pool as opened
      * - sets openedAt
-     * - enables deposits to the
+     * - enables deposits and withdrawals to tranche vaults
      */
-    function openPool() external onlyOwner {
+    function adminOpenPool() external onlyOwner {
         for (uint i; i < trancheVaultAddresses().length; i++) {
             _trancheVaultContracts()[i].enableDeposits();
             _trancheVaultContracts()[i].enableWithdrawals();
@@ -170,9 +170,70 @@ contract LendingPool is
         _setOpenedAt(uint64(block.timestamp));
     }
 
+    function adminCheckPoolIsFunded() external onlyOwner {}
+
+    /*///////////////////////////////////
+       Lender functions
+    ///////////////////////////////////*/
+    function lenderTotalApyWad(address) external view returns (uint) {
+        return 0;
+    }
+
+    function lenderTotalAdjustedApyWad(address) external view returns (uint) {
+        return 0;
+    }
+
+    function lenderWithdrawRewardsByTranche(uint trancheId) external {
+        revert("not implemented");
+    }
+
+    function lenderRewardsByTrancheGeneratedByDate(
+        uint trancheId
+    ) external view returns (uint) {
+        return 0;
+    }
+
+    function lenderRewardsByTrancheWithdrawable(
+        uint trancheId
+    ) external view returns (uint) {
+        return 0;
+    }
+
+    function lenderWithdrawAllRewards() external {
+        revert("not implemented");
+    }
+
+    function lenderAllRewadsGeneratedByDate() external {
+        revert("not implemented");
+    }
+
+    function lenderAllRewardsWithdrawable() external {
+        revert("not implemented");
+    }
+
+    /*///////////////////////////////////
+       Borrower functions
+    ///////////////////////////////////*/
+    function borrow() external {
+        revert("not implemented");
+    }
+
+    function borrowerOutstandingInterest() external view returns (uint) {
+        return 0;
+    }
+
+    function borrowerPayInterest(uint assets) external {
+        revert("not implemented");
+    }
+
+    function borrowerRepayPrincipal() external {
+        revert("not implemented");
+    }
+
     /*///////////////////////////////////
        COMMUNICATION WITH VAULTS
     ///////////////////////////////////*/
+
     function onTrancheDeposit(
         uint8 trancheId,
         address depositorAddress,
@@ -184,6 +245,16 @@ contract LendingPool is
         address depositorAddress,
         uint amount
     ) external authTrancheVault(trancheId) {}
+
+    function onFirstLossCapitalDeposit(
+        address receiverAddress,
+        uint amount
+    ) external authFirstLossCapitalVault {}
+
+    function onFirstLossCapitalWithdraw(
+        address ownerAddress,
+        uint amount
+    ) external authFirstLossCapitalVault {}
 
     /*///////////////////////////////////
        HELPERS

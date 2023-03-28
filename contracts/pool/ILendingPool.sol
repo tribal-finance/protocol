@@ -249,7 +249,50 @@ interface ILendingPool {
         DEFAULTED
     }
 
-    function openPool() external;
+    /** @dev Marks pool as opened
+     * - sets openedAt
+     * - enables deposits and withdrawals to tranche vaults
+     */
+    function adminOpenPool() external;
+
+    /** @dev Checks if the pool was funded or not
+     * - moves the pool into FUNDED or FUNDING_FAILED state
+     */
+    function adminCheckPoolIsFunded() external;
+
+    /*///////////////////////////////////
+       Lender functions
+    ///////////////////////////////////*/
+    function lenderTotalApyWad(address) external view returns (uint);
+
+    function lenderTotalAdjustedApyWad(address) external view returns (uint);
+
+    function lenderWithdrawRewardsByTranche(uint trancheId) external;
+
+    function lenderRewardsByTrancheGeneratedByDate(
+        uint trancheId
+    ) external view returns (uint);
+
+    function lenderRewardsByTrancheWithdrawable(
+        uint trancheId
+    ) external view returns (uint);
+
+    function lenderWithdrawAllRewards() external;
+
+    function lenderAllRewadsGeneratedByDate() external;
+
+    function lenderAllRewardsWithdrawable() external;
+
+    /*///////////////////////////////////
+       Borrower functions
+    ///////////////////////////////////*/
+    function borrow() external;
+
+    function borrowerOutstandingInterest() external view returns (uint);
+
+    function borrowerPayInterest(uint assets) external;
+
+    function borrowerRepayPrincipal() external;
 
     /*///////////////////////////////////
        Tranche notification functions
@@ -263,6 +306,16 @@ interface ILendingPool {
 
     function onTrancheWithdraw(
         uint8 trancheId,
+        address ownerAddress,
+        uint amount
+    ) external;
+
+    function onFirstLossCapitalDeposit(
+        address receiverAddress,
+        uint amount
+    ) external;
+
+    function onFirstLossCapitalWithdraw(
         address ownerAddress,
         uint amount
     ) external;
