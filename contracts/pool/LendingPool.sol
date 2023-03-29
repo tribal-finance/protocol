@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
@@ -16,6 +16,14 @@ contract LendingPool is
     PausableUpgradeable,
     LendingPoolState
 {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
+    /*///////////////////////////////////
+       CONSTANTS
+    ///////////////////////////////////*/
+    uint internal constant WAD = 10 ** 18;
+    uint internal constant YEAR = 365 * 24 * 60 * 60;
+
     /*///////////////////////////////////
        MODIFIERS
     ///////////////////////////////////*/
@@ -78,6 +86,7 @@ contract LendingPool is
         __Pausable_init();
     }
 
+    /// @dev validates initializer params
     function _validateInitParams(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
@@ -168,6 +177,7 @@ contract LendingPool is
             _trancheVaultContracts()[i].enableWithdrawals();
         }
         _setOpenedAt(uint64(block.timestamp));
+        emit PoolOpen();
     }
 
     /** @notice Checks whether the pool was funded successfully or not.
@@ -176,8 +186,29 @@ contract LendingPool is
     function adminTransitionToFundedState() external onlyOwner {}
 
     /*///////////////////////////////////
-       Lender functions
+       Lender stakes
     ///////////////////////////////////*/
+
+    // @notice  Returns amount of stablecoins deposited to a pool tranche
+    function lenderStakedAssetsByTranche(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        return s_trancheRewardables[trancheId][lenderAddress].stakedAssets;
+    }
+
+    // @notice  Returns amount of stablecoins deposited across all the pool tranches
+    function lenderAllStakedAssets(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint totalAssets) {
+        totalAssets = 0;
+        for (uint i; i < tranchesCount(); ++i) {
+            totalAssets += s_trancheRewardables[trancheId][lenderAddress]
+                .stakedAssets;
+        }
+    }
+
     function lenderTotalApyWad(address) external view returns (uint) {
         return 0;
     }
@@ -189,6 +220,10 @@ contract LendingPool is
     function lenderWithdrawRewardsByTranche(uint trancheId) external {
         revert("not implemented");
     }
+
+    /*///////////////////////////////////
+       Lender rewards
+    ///////////////////////////////////*/
 
     function lenderRewardsByTrancheGeneratedByDate(
         uint trancheId
@@ -237,23 +272,46 @@ contract LendingPool is
        COMMUNICATION WITH VAULTS
     ///////////////////////////////////*/
 
+    /// @dev TrancheVault will call that callback function when a lender deposits assets
     function onTrancheDeposit(
         uint8 trancheId,
         address depositorAddress,
         uint amount
-    ) external authTrancheVault(trancheId) {}
+    ) external authTrancheVault(trancheId) {
+        Rewardable storage rewardable = s_trancheRewardables[trancheId][
+            depositorAddress
+        ];
 
+        s_lenders.add(depositorAddress);
+        rewardable.stakedAssets += amount;
+        rewardable.start = uint64(block.timestamp);
+    }
+
+    /// @dev TrancheVault will call that callback function when a lender withdraws assets
     function onTrancheWithdraw(
         uint8 trancheId,
         address depositorAddress,
         uint amount
-    ) external authTrancheVault(trancheId) {}
+    ) external authTrancheVault(trancheId) {
+        Rewardable storage rewardable = s_trancheRewardables[trancheId][
+            depositorAddress
+        ];
 
+        assert(rewardable.stakedAssets >= amount);
+
+        rewardable.stakedAssets -= amount;
+        if (rewardable.stakedAssets == 0) {
+            s_lenders.remove(depositorAddress);
+        }
+    }
+
+    /// @dev FirstLossCapitalVault will call that callback function when a borrower deposits assets
     function onFirstLossCapitalDeposit(
         address receiverAddress,
         uint amount
     ) external authFirstLossCapitalVault {}
 
+    /// @dev FirstLossCapitalVault will call that callback function when a borrower witdraws assets
     function onFirstLossCapitalWithdraw(
         address ownerAddress,
         uint amount

@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /** @dev state variables + getters, setters and events for LendingPool
  */
 abstract contract LendingPoolState {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     /*//////////////////////////////////////
-      Initial parameters
+      Initializer parameters
     //////////////////////////////////////*/
 
     /* name */
@@ -438,6 +442,21 @@ abstract contract LendingPoolState {
         s_repaidAt = newValue;
         emit ChangeRepaidAt(msg.sender, oldValue, newValue);
     }
+
+    /*//////////////////////////////////////
+      Lenders & Rewards
+    //////////////////////////////////////*/
+    struct Rewardable {
+        uint stakedAssets;
+        uint64 start;
+        bool isBoosted;
+    }
+
+    EnumerableSet.AddressSet internal s_lenders;
+
+    /// @dev trancheId => (lenderAddress => RewardableRecord)
+    mapping(uint8 => mapping(address => Rewardable))
+        internal s_trancheRewardables;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

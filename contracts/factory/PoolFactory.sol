@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -91,56 +91,43 @@ contract PoolFactory is OwnableUpgradeable {
         ILendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads
     ) external onlyOwner returns (address) {
-        address poolAddress = Clones.clone(poolImplementationAddress);
+        address poolAddress = clonePool();
 
-        emit PoolCloned(poolAddress, poolImplementationAddress);
-
-        address[] memory trancheVaultAddresses = _deployTrancheVaults(
+        address[] memory trancheVaultAddresses = deployTrancheVaults(
             params,
             fundingSplitWads,
             poolAddress,
             _msgSender()
         );
 
-        address firstLossCapitalVaultAddress = _deployFLCVault(
+        address firstLossCapitalVaultAddress = deployFlcVault(
             params,
             poolAddress,
             _msgSender()
         );
 
-        ILendingPool(poolAddress).initialize(
+        initializePoolAndCreatePoolRecord(
+            poolAddress,
             params,
             trancheVaultAddresses,
             firstLossCapitalVaultAddress,
             address(0)
         );
-        OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
-
-        PoolRecord memory record = PoolRecord(
-            params.name,
-            params.token,
-            poolAddress,
-            firstLossCapitalVaultAddress,
-            trancheVaultAddresses[0],
-            trancheVaultAddresses.length > 1
-                ? trancheVaultAddresses[1]
-                : address(0),
-            poolImplementationAddress,
-            trancheVaultImplementationAddress
-        );
-        poolRegistry.push(record);
-
-        emit PoolDeployed(_msgSender(), record);
 
         return poolAddress;
     }
 
-    function _deployTrancheVaults(
+    function clonePool() public onlyOwner returns (address poolAddress) {
+        poolAddress = Clones.clone(poolImplementationAddress);
+        emit PoolCloned(poolAddress, poolImplementationAddress);
+    }
+
+    function deployTrancheVaults(
         ILendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads,
         address poolAddress,
         address ownerAddress
-    ) internal returns (address[] memory trancheVaultAddresses) {
+    ) public onlyOwner returns (address[] memory trancheVaultAddresses) {
         trancheVaultAddresses = new address[](params.tranchesCount);
 
         for (uint8 i; i < params.tranchesCount; ++i) {
@@ -180,11 +167,11 @@ contract PoolFactory is OwnableUpgradeable {
         }
     }
 
-    function _deployFLCVault(
+    function deployFlcVault(
         ILendingPool.LendingPoolParams calldata params,
         address poolAddress,
         address ownerAddress
-    ) internal returns (address firstLossCapitalVaultAddress) {
+    ) public onlyOwner returns (address firstLossCapitalVaultAddress) {
         firstLossCapitalVaultAddress = Clones.clone(
             firstLossCapitalVaultImplementationAddress
         );
@@ -209,6 +196,38 @@ contract PoolFactory is OwnableUpgradeable {
         OwnableUpgradeable(firstLossCapitalVaultAddress).transferOwnership(
             ownerAddress
         );
+    }
+
+    function initializePoolAndCreatePoolRecord(
+        address poolAddress,
+        ILendingPool.LendingPoolParams calldata params,
+        address[] memory trancheVaultAddresses,
+        address firstLossCapitalVaultAddress,
+        address feeSharingContractAddress
+    ) public onlyOwner {
+        ILendingPool(poolAddress).initialize(
+            params,
+            trancheVaultAddresses,
+            firstLossCapitalVaultAddress,
+            feeSharingContractAddress
+        );
+        OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
+
+        PoolRecord memory record = PoolRecord(
+            params.name,
+            params.token,
+            poolAddress,
+            firstLossCapitalVaultAddress,
+            trancheVaultAddresses[0],
+            trancheVaultAddresses.length > 1
+                ? trancheVaultAddresses[1]
+                : address(0),
+            poolImplementationAddress,
+            trancheVaultImplementationAddress
+        );
+        poolRegistry.push(record);
+
+        emit PoolDeployed(_msgSender(), record);
     }
 
     function _checkFundingSplitWads(

@@ -112,9 +112,7 @@ export async function deployUnitranchePool(
   };
 
   console.log("Deploying LendingPool...");
-  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)], {
-    gasLimit: 30000000,
-  });
+  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
   console.log("transaction hash: " + tx.hash);
   await tx.wait();
   console.log("LendingPool deployed.");

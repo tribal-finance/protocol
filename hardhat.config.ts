@@ -6,12 +6,13 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-contract-sizer";
 import "hardhat-docgen";
 import dotenv from "dotenv";
+import { ethers } from "ethers";
 
 dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
+    version: "0.8.18",
     settings: {
       optimizer: {
         enabled: true,
@@ -32,6 +33,7 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.GOERLI_ALCHEMY_API_KEY}`,
+      gasPrice: ethers.utils.parseUnits("300", "gwei").toNumber(),
       accounts: [
         process.env.GOERLI_DEPLOYER_KEY!,
         process.env.GOERLI_LENDER1_KEY!,
