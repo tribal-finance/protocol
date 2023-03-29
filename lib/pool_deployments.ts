@@ -111,13 +111,22 @@ export async function deployUnitranchePool(
     ...poolInitParamsOverrides,
   };
 
-  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
+  console.log("Deploying LendingPool...");
+  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)], {
+    gasLimit: 30000000,
+  });
+  console.log("transaction hash: " + tx.hash);
   await tx.wait();
+  console.log("LendingPool deployed.");
 
+  console.log("Fetching the contracts...");
   const deployedContracts = await _getDeployedContracts(poolFactory);
+  console.log("Contracts fetched.");
 
   if (afterDeploy) {
+    console.log("Deploying afterDeploy...");
     await afterDeploy(deployedContracts);
+    console.log("afterDeploy done.");
   }
 
   return {

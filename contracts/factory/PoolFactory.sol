@@ -29,6 +29,17 @@ contract PoolFactory is OwnableUpgradeable {
 
     uint private constant WAD = 10 ** 18;
 
+    event PoolCloned(address indexed addr, address implementationAddress);
+    event TrancheVaultCloned(
+        address indexed addr,
+        address implementationAddress
+    );
+    event FirstLossCapitalPoolCloned(
+        address indexed addr,
+        address implementationAddress
+    );
+    event PoolDeployed(address indexed deployer, PoolRecord record);
+
     address public poolImplementationAddress;
     address public firstLossCapitalVaultImplementationAddress;
     address public trancheVaultImplementationAddress;
@@ -82,6 +93,8 @@ contract PoolFactory is OwnableUpgradeable {
     ) external onlyOwner returns (address) {
         address poolAddress = Clones.clone(poolImplementationAddress);
 
+        emit PoolCloned(poolAddress, poolImplementationAddress);
+
         address[] memory trancheVaultAddresses = _deployTrancheVaults(
             params,
             fundingSplitWads,
@@ -117,6 +130,8 @@ contract PoolFactory is OwnableUpgradeable {
         );
         poolRegistry.push(record);
 
+        emit PoolDeployed(_msgSender(), record);
+
         return poolAddress;
     }
 
@@ -132,6 +147,11 @@ contract PoolFactory is OwnableUpgradeable {
             trancheVaultAddresses[i] = Clones.clone(
                 trancheVaultImplementationAddress
             );
+            emit TrancheVaultCloned(
+                trancheVaultAddresses[i],
+                trancheVaultImplementationAddress
+            );
+
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
@@ -166,6 +186,11 @@ contract PoolFactory is OwnableUpgradeable {
         address ownerAddress
     ) internal returns (address firstLossCapitalVaultAddress) {
         firstLossCapitalVaultAddress = Clones.clone(
+            firstLossCapitalVaultImplementationAddress
+        );
+
+        emit FirstLossCapitalPoolCloned(
+            firstLossCapitalVaultAddress,
             firstLossCapitalVaultImplementationAddress
         );
 

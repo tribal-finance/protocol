@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "../vaults/BaseVault.sol";
+
 contract BaseVaultTest is BaseVault {
     function initialize(
         address _poolAddress,
