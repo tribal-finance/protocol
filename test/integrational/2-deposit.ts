@@ -89,6 +89,32 @@ describe("When Lender deposits to Open state pool", function () {
         await firstTrancheVault.balanceOf(await lenders[0].getAddress())
       ).to.eq(USDC(10000));
     });
+
+    it("increases lenderStakedAssetsByTranche", async function () {
+      const { lenders, firstTrancheVault, lendingPool } =
+        await uniPoolFixture();
+      expect(
+        await lendingPool.lenderStakedAssetsByTranche(
+          await lenders[0].getAddress(),
+          0
+        )
+      ).to.eq(USDC(10000));
+    });
+
+    it("increases lenderAllStakedAssets", async function () {
+      const { lenders, firstTrancheVault, lendingPool } =
+        await uniPoolFixture();
+      expect(
+        await lendingPool.lenderAllStakedAssets(await lenders[0].getAddress())
+      ).to.eq(USDC(10000));
+    });
+
+    it("calculates lenderTotalApyWad", async function () {
+      const { lenders, lendingPool } = await uniPoolFixture();
+      expect(
+        await lendingPool.lenderTotalApyWad(await lenders[0].getAddress())
+      ).to.eq((await lendingPool.trancheAPYsWads())[0]);
+    });
   });
 
   describe("When duotranche pool opens", function () {});

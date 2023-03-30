@@ -199,26 +199,37 @@ contract LendingPool is
 
     // @notice  Returns amount of stablecoins deposited across all the pool tranches
     function lenderAllStakedAssets(
-        address lenderAddress,
-        uint8 trancheId
+        address lenderAddress
     ) public view returns (uint totalAssets) {
         totalAssets = 0;
-        for (uint i; i < tranchesCount(); ++i) {
-            totalAssets += s_trancheRewardables[trancheId][lenderAddress]
+        for (uint8 i; i < tranchesCount(); ++i) {
+            totalAssets += s_trancheRewardables[i][lenderAddress]
                 .stakedAssets;
         }
     }
 
-    function lenderTotalApyWad(address) external view returns (uint) {
-        return 0;
+    function lenderTotalApyWad(address lenderAddress) public view returns (uint) {
+        uint weightedApysWad = 0;
+        uint totalAssets = 0;
+        for (uint8 i; i < tranchesCount(); ++i) {
+            Rewardable storage rewardable = s_trancheRewardables[i][lenderAddress];
+            totalAssets += rewardable.stakedAssets;
+            if (rewardable.isBoosted) {
+                weightedApysWad += trancheBoostedAPYsWads()[i] * rewardable.stakedAssets;
+            } else {
+                weightedApysWad += trancheAPYsWads()[i] * rewardable.stakedAssets;
+            }
+        }
+
+        if (totalAssets == 0) { 
+            return 0;
+        }
+
+        return weightedApysWad / totalAssets;
     }
 
-    function lenderTotalAdjustedApyWad(address) external view returns (uint) {
+    function lenderTotalAdjustedApyWad(address) public view returns (uint) {
         return 0;
-    }
-
-    function lenderWithdrawRewardsByTranche(uint trancheId) external {
-        revert("not implemented");
     }
 
     /*///////////////////////////////////
@@ -235,6 +246,10 @@ contract LendingPool is
         uint trancheId
     ) external view returns (uint) {
         return 0;
+    }
+
+    function lenderWithdrawRewardsByTranche(uint trancheId) external {
+        revert("not implemented");
     }
 
     function lenderWithdrawAllRewards() external {

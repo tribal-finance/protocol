@@ -36,7 +36,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   minFundingCapacity: USDC(10000),
   maxFundingCapacity: USDC(12000),
   fundingPeriodSeconds: 24 * 60 * 60,
-  lendingTermSeconds: 12 * 30 * 24 * 60 * 60,
+  lendingTermSeconds: 3 * 30 * 24 * 60 * 60,
   borrowerTotalInterestRateWad: WAD(0.15),
   collateralRatioWad: WAD(0.2),
   defaultPenalty: 0,
@@ -111,20 +111,13 @@ export async function deployUnitranchePool(
     ...poolInitParamsOverrides,
   };
 
-  console.log("Deploying LendingPool...");
   const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
-  console.log("transaction hash: " + tx.hash);
   await tx.wait();
-  console.log("LendingPool deployed.");
 
-  console.log("Fetching the contracts...");
   const deployedContracts = await _getDeployedContracts(poolFactory);
-  console.log("Contracts fetched.");
 
   if (afterDeploy) {
-    console.log("Deploying afterDeploy...");
     await afterDeploy(deployedContracts);
-    console.log("afterDeploy done.");
   }
 
   return {
