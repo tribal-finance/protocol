@@ -33,7 +33,18 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.GOERLI_ALCHEMY_API_KEY}`,
-      gasPrice: ethers.utils.parseUnits("300", "gwei").toNumber(),
+      chainId: 5,
+      accounts: [
+        process.env.GOERLI_DEPLOYER_KEY!,
+        process.env.GOERLI_LENDER1_KEY!,
+        process.env.GOERLI_LENDER2_KEY!,
+        process.env.GOERLI_BORROWER_KEY!,
+      ],
+    },
+    fuji: {
+      url: `https://api.avax-test.network/ext/bc/C/rpc`,
+      gasPrice: 225000000000,
+      chainId: 43113,
       accounts: [
         process.env.GOERLI_DEPLOYER_KEY!,
         process.env.GOERLI_LENDER1_KEY!,
@@ -43,7 +54,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.SNOWTRACE_API_KEY,
   },
   docgen: {
     path: "./docs",
