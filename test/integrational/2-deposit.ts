@@ -65,6 +65,21 @@ describe("When Lender deposits to Open state pool", function () {
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
       await contracts.lendingPool.connect(deployer).adminOpenPool();
+      await usdc
+        .connect(lender1)
+        .approve(contracts.firstTrancheVault.address, USDC(8000));
+      await contracts.firstTrancheVault
+        .connect(lender1)
+        .deposit(USDC(4000), lender1.address);
+      await contracts.firstTrancheVault
+        .connect(lender1)
+        .deposit(USDC(4000), lender1.address);
+      await usdc
+        .connect(lender2)
+        .approve(contracts.secondTrancheVault.address, USDC(2000));
+      await contracts.secondTrancheVault
+        .connect(lender2)
+        .deposit(USDC(2000), lender2.address);
       return contracts;
     };
 
@@ -117,5 +132,56 @@ describe("When Lender deposits to Open state pool", function () {
     });
   });
 
-  describe("When duotranche pool opens", function () {});
+  describe("When duotranche pool opens", function () {
+    it("increases lenders balances", async function () {
+      const { lenders, firstTrancheVault, secondTrancheVault } =
+        await duoPoolFixture();
+      expect(
+        await firstTrancheVault.balanceOf(await lenders[0].getAddress())
+      ).to.eq(USDC(8000));
+      expect(
+        await secondTrancheVault.balanceOf(await lenders[1].getAddress())
+      ).to.eq(USDC(2000));
+    });
+
+    it("increases lenderStakedAssetsByTranche", async function () {
+      const { lenders, firstTrancheVault, lendingPool } =
+        await duoPoolFixture();
+      expect(
+        await lendingPool.lenderStakedAssetsByTranche(
+          await lenders[0].getAddress(),
+          0
+        )
+      ).to.eq(USDC(8000));
+      expect(
+        await lendingPool.lenderStakedAssetsByTranche(
+          await lenders[1].getAddress(),
+          1
+        )
+      ).to.eq(USDC(2000));
+    });
+
+    it("increases lenderAllStakedAssets", async function () {
+      const { lenders, firstTrancheVault, lendingPool } =
+        await duoPoolFixture();
+      expect(
+        await lendingPool.lenderAllStakedAssets(await lenders[0].getAddress())
+      ).to.eq(USDC(8000));
+      expect(
+        await lendingPool.lenderAllStakedAssets(await lenders[1].getAddress())
+      ).to.eq(USDC(2000));
+    });
+
+    it("calculates lenderTotalApyWad", async function () {
+      const { lenders, lendingPool } = await duoPoolFixture();
+
+      expect(
+        await lendingPool.lenderTotalApyWad(await lenders[0].getAddress())
+      ).to.eq((await lendingPool.trancheAPYsWads())[0]);
+
+      expect(
+        await lendingPool.lenderTotalApyWad(await lenders[1].getAddress())
+      ).to.eq((await lendingPool.trancheAPYsWads())[1]);
+    });
+  });
 });
