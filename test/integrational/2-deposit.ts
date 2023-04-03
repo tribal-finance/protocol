@@ -162,11 +162,18 @@ describe("When Lender deposits to Open state pool", function () {
     });
 
     it("increases lenderAllStakedAssets", async function () {
-      const { lenders, firstTrancheVault, lendingPool } =
+      const { lenders, usdc, secondTrancheVault, lendingPool } =
         await duoPoolFixture();
+      const lender1 = lenders[0];
+      await usdc
+        .connect(lender1)
+        .approve(secondTrancheVault.address, USDC(100));
+      await secondTrancheVault
+        .connect(lender1)
+        .deposit(USDC(100), await lender1.getAddress());
       expect(
         await lendingPool.lenderAllStakedAssets(await lenders[0].getAddress())
-      ).to.eq(USDC(8000));
+      ).to.eq(USDC(8100));
       expect(
         await lendingPool.lenderAllStakedAssets(await lenders[1].getAddress())
       ).to.eq(USDC(2000));
