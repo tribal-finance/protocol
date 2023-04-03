@@ -446,6 +446,23 @@ abstract contract LendingPoolState {
     /*//////////////////////////////////////
       Lenders & Rewards
     //////////////////////////////////////*/
+    uint private s_collectedAssets;
+    event ChangeCollectedAssets(
+        address indexed actor,
+        uint oldValue,
+        uint newValue
+    );
+
+    function collectedAssets() public view returns (uint) {
+        return s_collectedAssets;
+    }
+
+    function _setCollectedAssets(uint newValue) internal {
+        uint oldValue = s_collectedAssets;
+        s_collectedAssets = newValue;
+        emit ChangeCollectedAssets(msg.sender, oldValue, newValue);
+    }
+
     struct Rewardable {
         uint stakedAssets;
         uint64 start;

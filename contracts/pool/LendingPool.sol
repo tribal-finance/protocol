@@ -167,6 +167,26 @@ contract LendingPool is
        STATE MANAGEMENT
     ///////////////////////////////////*/
 
+    function currentState() public view returns (string memory) {
+        if (repaidAt() != 0) {
+            return "Repaid";
+        }
+        if (flcDepositedAt() != 0) {
+            return "First Loss Capital Deposited";
+        }
+        if (fundingFailedAt() != 0) {
+            return "Funding Failed";
+        }
+        if (fundedAt() != 0) {
+            return "Funded";
+        }
+        if (openedAt() != 0) {
+            return "Open";
+        }
+
+        return "Initial";
+    }
+
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
@@ -183,45 +203,87 @@ contract LendingPool is
     /** @notice Checks whether the pool was funded successfully or not.
      *  this function is expected to be called by *owner* once the funding period ends
      */
-    function adminTransitionToFundedState() external onlyOwner {}
+    function adminTransitionToFundedState() external onlyOwner {
+        if (allDepositedAssets() >= minFundingCapacity()) {
+            _setFundedAt(uint64(block.timestamp));
+            _setCollectedAssets(allDepositedAssets());
+            emit PoolFunded();
+        } else {
+            _setFundingFailedAt(uint64(block.timestamp));
+            emit PoolFundingFailed();
+        }
+    }
 
     /*///////////////////////////////////
        Lender stakes
     ///////////////////////////////////*/
 
-    // @notice  Returns amount of stablecoins deposited to a pool tranche
-    function lenderStakedAssetsByTranche(
+    // @notice  Returns amount of stablecoins deposited to a pool tranche by all the lenders
+    function depositedAssetsByTranche(
+        uint8 trancheId
+    ) public view returns (uint) {
+        uint stakedAssets = 0;
+        for (uint i; i < s_lenders.length(); ++i) {
+            address lenderAddress = s_lenders.at(i);
+            stakedAssets += s_trancheRewardables[trancheId][lenderAddress]
+                .stakedAssets;
+        }
+        return stakedAssets;
+    }
+
+    function allDepositedAssets() public view returns (uint) {
+        // @notice  Returns amount of stablecoins deposited to all pool tranches by all the lenders
+        uint stakedAssets = 0;
+        for (uint i; i < s_lenders.length(); ++i) {
+            address lenderAddress = s_lenders.at(i);
+            for (uint8 trancheId; trancheId < tranchesCount(); ++trancheId) {
+                stakedAssets += s_trancheRewardables[trancheId][lenderAddress]
+                    .stakedAssets;
+            }
+        }
+        return stakedAssets;
+    }
+
+    // @notice  Returns amount of stablecoins deposited to a pool tranche by a lender
+    function lenderDepositedAssetsByTranche(
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
         return s_trancheRewardables[trancheId][lenderAddress].stakedAssets;
     }
 
-    // @notice  Returns amount of stablecoins deposited across all the pool tranches
-    function lenderAllStakedAssets(
+    // @notice  Returns amount of stablecoins deposited across all the pool tranches by a lender;
+    function lenderAllDepositedAssets(
         address lenderAddress
     ) public view returns (uint totalAssets) {
         totalAssets = 0;
         for (uint8 i; i < tranchesCount(); ++i) {
-            totalAssets += s_trancheRewardables[i][lenderAddress]
-                .stakedAssets;
+            totalAssets += s_trancheRewardables[i][lenderAddress].stakedAssets;
         }
     }
 
-    function lenderTotalApyWad(address lenderAddress) public view returns (uint) {
+    function lenderTotalApyWad(
+        address lenderAddress
+    ) public view returns (uint) {
         uint weightedApysWad = 0;
         uint totalAssets = 0;
         for (uint8 i; i < tranchesCount(); ++i) {
-            Rewardable storage rewardable = s_trancheRewardables[i][lenderAddress];
+            Rewardable storage rewardable = s_trancheRewardables[i][
+                lenderAddress
+            ];
             totalAssets += rewardable.stakedAssets;
             if (rewardable.isBoosted) {
-                weightedApysWad += trancheBoostedAPYsWads()[i] * rewardable.stakedAssets;
+                weightedApysWad +=
+                    trancheBoostedAPYsWads()[i] *
+                    rewardable.stakedAssets;
             } else {
-                weightedApysWad += trancheAPYsWads()[i] * rewardable.stakedAssets;
+                weightedApysWad +=
+                    trancheAPYsWads()[i] *
+                    rewardable.stakedAssets;
             }
         }
 
-        if (totalAssets == 0) { 
+        if (totalAssets == 0) {
             return 0;
         }
 
