@@ -75,9 +75,10 @@ describe("Marking the pool as Funded", function () {
 
   describe("Open unitranche pool gets .adminTransitionToFundedState() call", function () {
     context("when there is not enough funding", function () {
-      it("sets fundingFailedAt", async function () {
+      async function notEnoughFundingUnipoolFixture() {
+        const data = await loadFixture(uniPoolFixture);
         const { usdc, deployer, lenders, lendingPool, firstTrancheVault } =
-          await loadFixture(uniPoolFixture);
+          data;
         const [lender1] = lenders;
         await usdc
           .connect(lender1)
@@ -87,15 +88,45 @@ describe("Marking the pool as Funded", function () {
           .deposit(USDC(3000), await lender1.getAddress());
         await lendingPool.connect(deployer).adminTransitionToFundedState();
 
+        return data;
+      }
+
+      it("sets fundingFailedAt", async function () {
+        const { lendingPool } = await loadFixture(
+          notEnoughFundingUnipoolFixture
+        );
         expect(await lendingPool.fundedAt()).to.be.equal(0);
         expect(await lendingPool.fundingFailedAt()).not.to.be.equal(0);
+      });
+
+      describe("first loss capital vault", async function () {
+        it("has disabled deposits, withdraws, and transfers", async function () {
+          const { firstLossCapitalVault, lendingPool } = await loadFixture(
+            notEnoughFundingUnipoolFixture
+          );
+          expect(await firstLossCapitalVault.depositEnabled()).to.eq(false);
+          expect(await firstLossCapitalVault.withdrawEnabled()).to.eq(false);
+          expect(await firstLossCapitalVault.transferEnabled()).to.eq(false);
+        });
+      });
+
+      describe("first tranche vault", async function () {
+        it("has disabled deposits and transfers. it has enabled withdrawals", async function () {
+          const { firstTrancheVault, lendingPool } = await loadFixture(
+            notEnoughFundingUnipoolFixture
+          );
+          expect(await firstTrancheVault.depositEnabled()).to.eq(false);
+          expect(await firstTrancheVault.withdrawEnabled()).to.eq(true);
+          expect(await firstTrancheVault.transferEnabled()).to.eq(false);
+        });
       });
     });
 
     context("when there is enough funding", function () {
-      it("sets fundedAt", async function () {
+      async function enoughFundingUnipoolFixture() {
+        const data = await loadFixture(uniPoolFixture);
         const { usdc, deployer, lenders, lendingPool, firstTrancheVault } =
-          await loadFixture(uniPoolFixture);
+          data;
         const [lender1] = lenders;
         const toDeposit = await lendingPool.minFundingCapacity();
 
@@ -107,25 +138,44 @@ describe("Marking the pool as Funded", function () {
           .deposit(toDeposit, await lender1.getAddress());
         await lendingPool.connect(deployer).adminTransitionToFundedState();
 
+        return data;
+      }
+
+      it("sets fundedAt", async function () {
+        const { lendingPool } = await loadFixture(enoughFundingUnipoolFixture);
         expect(await lendingPool.fundedAt()).not.to.be.equal(0);
         expect(await lendingPool.fundingFailedAt()).to.be.equal(0);
       });
 
       it("sets collectedAssets", async function () {
-        const { usdc, deployer, lenders, lendingPool, firstTrancheVault } =
-          await loadFixture(uniPoolFixture);
-        const [lender1] = lenders;
-        const toDeposit = await lendingPool.minFundingCapacity();
+        const { lendingPool } = await loadFixture(enoughFundingUnipoolFixture);
+        expect(await lendingPool.fundedAt()).not.to.be.equal(0);
+        expect(await lendingPool.fundingFailedAt()).to.be.equal(0);
+        expect(await lendingPool.collectedAssets()).to.be.equal(
+          await lendingPool.minFundingCapacity()
+        );
+      });
 
-        await usdc
-          .connect(lender1)
-          .approve(firstTrancheVault.address, toDeposit);
-        await firstTrancheVault
-          .connect(lender1)
-          .deposit(toDeposit, await lender1.getAddress());
-        await lendingPool.connect(deployer).adminTransitionToFundedState();
+      describe("first loss capital vault", async function () {
+        it("has deposits enabled, withdraws disabled, transfers disabled", async function () {
+          const { firstLossCapitalVault } = await loadFixture(
+            enoughFundingUnipoolFixture
+          );
+          expect(await firstLossCapitalVault.depositEnabled()).to.eq(true);
+          expect(await firstLossCapitalVault.withdrawEnabled()).to.eq(false);
+          expect(await firstLossCapitalVault.transferEnabled()).to.eq(false);
+        });
+      });
 
-        expect(await lendingPool.collectedAssets()).to.be.equal(toDeposit);
+      describe("first tranche vault", async function () {
+        it("has deposits disabled, withdraws disabled, transfers disabled", async function () {
+          const { firstTrancheVault } = await loadFixture(
+            enoughFundingUnipoolFixture
+          );
+          expect(await firstTrancheVault.depositEnabled()).to.eq(false);
+          expect(await firstTrancheVault.withdrawEnabled()).to.eq(false);
+          expect(await firstTrancheVault.transferEnabled()).to.eq(false);
+        });
       });
     });
   });

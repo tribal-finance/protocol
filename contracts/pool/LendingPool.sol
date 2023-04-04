@@ -208,9 +208,20 @@ contract LendingPool is
         if (allDepositedAssets() >= minFundingCapacity()) {
             _setFundedAt(uint64(block.timestamp));
             _setCollectedAssets(allDepositedAssets());
+
+            for (uint i; i < trancheVaultAddresses().length; i++) {
+                _trancheVaultContracts()[i].disableDeposits();
+                _trancheVaultContracts()[i].disableWithdrawals();
+            }
+
+            _firstLossCapitalVaultContract().enableDeposits();
             emit PoolFunded();
         } else {
             _setFundingFailedAt(uint64(block.timestamp));
+            for (uint i; i < trancheVaultAddresses().length; i++) {
+                _trancheVaultContracts()[i].disableDeposits();
+                _trancheVaultContracts()[i].enableWithdrawals();
+            }
             emit PoolFundingFailed();
         }
     }
