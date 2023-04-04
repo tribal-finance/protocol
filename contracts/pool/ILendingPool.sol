@@ -242,6 +242,7 @@ interface ILendingPool {
         OPEN,
         FUNDED,
         FUNDING_FAILED,
+        FLC_DEPOSITED,
         BORROWED,
         BORROWER_INTEREST_REPAID,
         DILINQUENT,

@@ -167,24 +167,25 @@ contract LendingPool is
        STATE MANAGEMENT
     ///////////////////////////////////*/
 
-    function currentState() public view returns (string memory) {
+    /// @notice This function returns the current stage of the pool
+    function currentStage() public view returns (Stages stage) {
         if (repaidAt() != 0) {
-            return "Repaid";
+            return Stages.REPAID;
         }
         if (flcDepositedAt() != 0) {
-            return "First Loss Capital Deposited";
+            return Stages.FLC_DEPOSITED;
         }
         if (fundingFailedAt() != 0) {
-            return "Funding Failed";
+            return Stages.FUNDING_FAILED;
         }
         if (fundedAt() != 0) {
-            return "Funded";
+            return Stages.FUNDED;
         }
         if (openedAt() != 0) {
-            return "Open";
+            return Stages.OPEN;
         }
 
-        return "Initial";
+        return Stages.INITIAL;
     }
 
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
