@@ -15,6 +15,7 @@ import {
   deployUnitranchePool,
   _getDeployedContracts,
 } from "../../lib/pool_deployments";
+import STAGES from "../helpers/stages";
 
 describe("When Pool moves to Open state", function () {
   async function uniPoolFixture() {
@@ -76,6 +77,10 @@ describe("When Pool moves to Open state", function () {
   }
 
   describe("When unitranche pool opens", function () {
+    it("is in OPEN stage", async () => {
+      const { lendingPool } = await loadFixture(uniPoolFixture);
+      expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
+    });
     describe("Fist loss capital vault", async () => {
       it("does not allow withdrawals, deposits and transfers", async () => {
         const { firstLossCapitalVault } = await loadFixture(uniPoolFixture);

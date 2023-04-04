@@ -13,6 +13,7 @@ import {
   _getDeployedContracts,
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
+import STAGES from "../helpers/stages";
 
 describe("Marking the pool as Funded", function () {
   async function uniPoolFixture() {
@@ -91,6 +92,15 @@ describe("Marking the pool as Funded", function () {
         return data;
       }
 
+      it("is in FUNDING_FAILED stage", async () => {
+        const { lendingPool } = await loadFixture(
+          notEnoughFundingUnipoolFixture
+        );
+        expect(await lendingPool.currentStage()).to.equal(
+          STAGES.FUNDING_FAILED
+        );
+      });
+
       it("sets fundingFailedAt", async function () {
         const { lendingPool } = await loadFixture(
           notEnoughFundingUnipoolFixture
@@ -140,6 +150,11 @@ describe("Marking the pool as Funded", function () {
 
         return data;
       }
+
+      it("is in FUNDED stage", async () => {
+        const { lendingPool } = await loadFixture(enoughFundingUnipoolFixture);
+        expect(await lendingPool.currentStage()).to.equal(STAGES.FUNDED);
+      });
 
       it("sets fundedAt", async function () {
         const { lendingPool } = await loadFixture(enoughFundingUnipoolFixture);

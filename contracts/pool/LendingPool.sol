@@ -214,7 +214,13 @@ contract LendingPool is
                 _trancheVaultContracts()[i].disableWithdrawals();
             }
 
+            uint flcDepositTarget = (collectedAssets() * collateralRatioWad()) /
+                WAD;
+            _firstLossCapitalVaultContract().poolSetDepositTarget(
+                flcDepositTarget
+            );
             _firstLossCapitalVaultContract().enableDeposits();
+
             emit PoolFunded();
         } else {
             _setFundingFailedAt(uint64(block.timestamp));

@@ -31,4 +31,18 @@ contract FirstLossCapitalVault is BaseVault {
             underlying
         );
     }
+
+    function poolSetDepositTarget(uint _depositTarget) external onlyPool {
+        require(
+            _depositTarget >= minFundingCapacity(),
+            "deposit target < minFundingCapacity"
+        );
+        require(
+            _depositTarget <= maxFundingCapacity(),
+            "deposit target > maxFundingCapacity"
+        );
+
+        _setMinFundingCapacity(_depositTarget);
+        _setMaxFundingCapacity(_depositTarget);
+    }
 }
