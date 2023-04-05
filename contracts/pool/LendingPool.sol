@@ -324,26 +324,17 @@ contract LendingPool is
         return weightedApysWad / totalAssets;
     }
 
-    function lenderTotalAdjustedApyWad(address) public view returns (uint) {
-        return 0;
+    function lenderTotalAdjustedApyWad(
+        address lenderAddress
+    ) public view returns (uint) {
+        return
+            (lenderTotalApyWad(lenderAddress) * uint(lendingTermSeconds())) /
+            YEAR;
     }
 
     /*///////////////////////////////////
        Lender rewards
     ///////////////////////////////////*/
-
-    function lenderRewardsByTrancheGeneratedByDate(
-        uint trancheId
-    ) external view returns (uint) {
-        return 0;
-    }
-
-    function lenderRewardsByTrancheWithdrawable(
-        uint trancheId
-    ) external view returns (uint) {
-        return 0;
-    }
-
     function lenderWithdrawRewardsByTranche(uint trancheId) external {
         revert("not implemented");
     }
@@ -352,12 +343,65 @@ contract LendingPool is
         revert("not implemented");
     }
 
-    function lenderAllRewadsGeneratedByDate() external {
-        revert("not implemented");
+    /* VIEWS */
+
+    function lenderTotalExpectedRewardsByTranche(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
+        return
+            (r.stakedAssets * _adjustedTrancheAPYWad(trancheId, r.isBoosted)) /
+            WAD;
     }
 
-    function lenderAllRewardsWithdrawable() external {
-        revert("not implemented");
+    function lenderRewardsByTrancheProjectedByDate(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        if (fundedAt() < block.timestamp) {
+            return 0;
+        }
+        uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
+        return
+            (lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId) *
+                secondsElapsed) / lendingTermSeconds();
+    }
+
+    function lenderRewardsByTrancheGeneratedByDate(
+        address lenderAddress,
+        uint8 trancheId
+    ) external view returns (uint) {
+        return s_generatedRewards[trancheId][lenderAddress];
+    }
+
+    function lenderRewardsByTranchePaidByDate(
+        address lenderAddress,
+        uint8 trancheId
+    ) external view returns (uint) {
+        return s_repaidRewards[trancheId][lenderAddress];
+    }
+
+    function lenderRewardsByTrancheWithdrawable(
+        address lenderAddress,
+        uint8 trancheId
+    ) external view returns (uint) {
+        return
+            s_generatedRewards[trancheId][lenderAddress] -
+            s_repaidRewards[trancheId][lenderAddress];
+    }
+
+    function _adjustedTrancheAPYWad(
+        uint8 trancheId,
+        bool isBoosted
+    ) internal view returns (uint) {
+        if (isBoosted) {
+            return (trancheAPYsWads()[trancheId] * lendingTermSeconds()) / YEAR;
+        } else {
+            return
+                (trancheBoostedAPYsWads()[trancheId] * lendingTermSeconds()) /
+                YEAR;
+        }
     }
 
     /*///////////////////////////////////
@@ -381,20 +425,94 @@ contract LendingPool is
         emit BorrowerBorrow(borrowerAddress(), total);
     }
 
-    function borrowerOutstandingInterest() external view returns (uint) {
-        return 0;
-    }
-
     function borrowerPayInterest(uint assets) external {
-        revert("not implemented");
+        SafeERC20Upgradeable.safeTransferFrom(
+            IERC20Upgradeable(stableCoinContractAddress()),
+            _msgSender(),
+            address(this),
+            assets
+        );
+
+        uint assetsToSendToFeeSharing = assets;
+
+        for (uint8 trancheId; trancheId < tranchesCount(); ++trancheId) {
+            uint shareAdjustedBooostedAPYWad = (_adjustedTrancheAPYWad(
+                trancheId,
+                true
+            ) * assets) / borrowerExpectedInterest();
+            uint shareAdjustedAPYWad = (_adjustedTrancheAPYWad(
+                trancheId,
+                false
+            ) * assets) / borrowerExpectedInterest();
+
+            for (uint i; i < s_lenders.length(); ++i) {
+                address lenderAddress = s_lenders.at(i);
+                Rewardable storage r = s_trancheRewardables[trancheId][
+                    lenderAddress
+                ];
+                uint rewardedAssets = r.isBoosted
+                    ? ((shareAdjustedBooostedAPYWad * r.stakedAssets) / WAD)
+                    : ((shareAdjustedAPYWad * r.stakedAssets) / WAD);
+                s_generatedRewards[trancheId][lenderAddress] += rewardedAssets;
+                assetsToSendToFeeSharing -= rewardedAssets;
+            }
+        }
+
+        _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
+        emit BorrowerPayInterest(
+            borrowerAddress(),
+            assets,
+            assets - assetsToSendToFeeSharing,
+            assetsToSendToFeeSharing
+        );
     }
 
-    function borrowerRepayPrincipal() external {
-        revert("not implemented");
+    function weightedAllLendersRewardRateWad() public view returns (uint) {
+        uint expectedRewards = 0;
+        uint stakes = 0;
+        for (uint8 trancheId; trancheId < tranchesCount(); ++trancheId) {
+            for (uint i; i < s_lenders.length(); ++i) {
+                address lenderAddress = s_lenders.at(i);
+                Rewardable storage r = s_trancheRewardables[trancheId][
+                    lenderAddress
+                ];
+                stakes += r.stakedAssets;
+                uint rewards = ((_adjustedTrancheAPYWad(
+                    trancheId,
+                    r.isBoosted
+                ) * r.stakedAssets) / WAD);
+                expectedRewards += rewards;
+            }
+        }
+
+        return expectedRewards / stakes;
     }
+
+    function borrowerRepayPrincipal() external {}
 
     function firstLossCapitalDepositTarget() public view returns (uint) {
         return (collectedAssets() * collateralRatioWad()) / WAD;
+    }
+
+    /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
+     *  @return interest amount of assets to be repaid
+     */
+    function borrowerExpectedInterest() public view returns (uint) {
+        return (collectedAssets() * borrowerAdjustedInterestRateWad()) / WAD;
+    }
+
+    /** @dev outstanding borrower interest = expectedBorrowerInterest - borrowerInterestAlreadyPaid
+     *  @return interest amount of outstanding assets to be repaid
+     */
+    function borrowerOutstandingInterest() external view returns (uint) {
+        return borrowerExpectedInterest() - borrowerInterestRepaid();
+    }
+
+    /** @dev adjusted borrower interest rate = APR * duration / 365 days
+     *  @return adj borrower interest rate adjusted by duration of the loan
+     */
+    function borrowerAdjustedInterestRateWad() public view returns (uint adj) {
+        adj = (borrowerTotalInterestRateWad() * lendingTermSeconds()) / YEAR;
     }
 
     /*///////////////////////////////////

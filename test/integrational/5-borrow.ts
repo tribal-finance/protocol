@@ -38,6 +38,7 @@ describe("Borrowing", function () {
         await contracts.firstTrancheVault
           .connect(lender1)
           .deposit(toDeposit, await lender1.getAddress());
+
         await contracts.lendingPool
           .connect(deployer)
           .adminTransitionToFundedState();
@@ -84,6 +85,90 @@ describe("Borrowing", function () {
     it("moves the pool to borrowed state", async function () {
       const { borrower, usdc, firstLossCapitalVault, lendingPool } =
         await loadFixture(uniPoolFixture);
+
+      await lendingPool.connect(borrower).borrow();
+      expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);
+    });
+  });
+
+  context("from duotranche pool", function () {
+    async function duoPoolFixture() {
+      const { signers, usdc } = await testSetup();
+      const [deployer, lender1, lender2, lender3, borrower] = signers;
+      const lenders = [lender1, lender2, lender3];
+
+      const poolFactory: PoolFactory = await deployFactoryAndImplementations(
+        deployer,
+        borrower,
+        lenders
+      );
+
+      const afterDeploy = async (contracts: DeployedContractsType) => {
+        await contracts.lendingPool.connect(deployer).adminOpenPool();
+        await usdc
+          .connect(lender1)
+          .approve(contracts.firstTrancheVault.address, USDC(8000));
+        await contracts.firstTrancheVault
+          .connect(lender1)
+          .deposit(USDC(4000), lender1.address);
+        await contracts.firstTrancheVault
+          .connect(lender1)
+          .deposit(USDC(4000), lender1.address);
+        await usdc
+          .connect(lender2)
+          .approve(contracts.secondTrancheVault.address, USDC(2000));
+        await contracts.secondTrancheVault
+          .connect(lender2)
+          .deposit(USDC(2000), lender2.address);
+
+        await contracts.lendingPool
+          .connect(deployer)
+          .adminTransitionToFundedState();
+
+        const flcToDeposit =
+          await contracts.lendingPool.firstLossCapitalDepositTarget();
+
+        await usdc
+          .connect(borrower)
+          .approve(contracts.firstLossCapitalVault.address, flcToDeposit);
+
+        await contracts.firstLossCapitalVault
+          .connect(borrower)
+          .deposit(flcToDeposit, await borrower.getAddress());
+
+        return contracts;
+      };
+
+      const data = await deployDuotranchePool(
+        poolFactory,
+        deployer,
+        borrower,
+        lenders,
+        {},
+        afterDeploy
+      );
+
+      await data.lendingPool.connect(deployer).adminOpenPool();
+
+      return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
+    }
+
+    it("sends money the borrower way", async function () {
+      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
+        await loadFixture(duoPoolFixture);
+
+      const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
+      await lendingPool.connect(borrower).borrow();
+      const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
+
+      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(
+        await lendingPool.collectedAssets()
+      );
+    });
+
+    it("moves the pool to borrowed state", async function () {
+      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
+        await loadFixture(duoPoolFixture);
 
       await lendingPool.connect(borrower).borrow();
       expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);

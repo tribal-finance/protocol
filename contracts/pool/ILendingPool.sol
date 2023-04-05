@@ -196,7 +196,12 @@ interface ILendingPool {
 
     event BorrowerBorrow(address indexed borrower, uint amount);
 
-    event BorrowerPayInterest(address indexed borrower, uint amount);
+    event BorrowerPayInterest(
+        address indexed borrower,
+        uint amount,
+        uint lendersDistributedAmount,
+        uint feeSharingContractAmount
+    );
     event BorrowerPayPenalty(address indexed borrower, uint amount);
     event BorrowerRepayPrincipal(address indexed borrower, uint amount);
     event BorrowerWithdrawFirstLossCapital(
@@ -214,8 +219,8 @@ interface ILendingPool {
         address stableCoinContractAddress;
         uint minFundingCapacity;
         uint maxFundingCapacity;
-        int64 fundingPeriodSeconds;
-        int64 lendingTermSeconds;
+        uint64 fundingPeriodSeconds;
+        uint64 lendingTermSeconds;
         address borrowerAddress;
         uint borrowerTotalInterestRateWad;
         uint collateralRatioWad;
@@ -269,20 +274,6 @@ interface ILendingPool {
     function lenderTotalAdjustedApyWad(address) external view returns (uint);
 
     function lenderWithdrawRewardsByTranche(uint trancheId) external;
-
-    function lenderRewardsByTrancheGeneratedByDate(
-        uint trancheId
-    ) external view returns (uint);
-
-    function lenderRewardsByTrancheWithdrawable(
-        uint trancheId
-    ) external view returns (uint);
-
-    function lenderWithdrawAllRewards() external;
-
-    function lenderAllRewadsGeneratedByDate() external;
-
-    function lenderAllRewardsWithdrawable() external;
 
     /*///////////////////////////////////
        Borrower functions

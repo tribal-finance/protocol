@@ -36,7 +36,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   minFundingCapacity: USDC(10000),
   maxFundingCapacity: USDC(12000),
   fundingPeriodSeconds: 24 * 60 * 60,
-  lendingTermSeconds: 3 * 30 * 24 * 60 * 60,
+  lendingTermSeconds: (365 * 24 * 60 * 60) / 2, // 1/2 of a year
   borrowerTotalInterestRateWad: WAD(0.15),
   collateralRatioWad: WAD(0.2),
   defaultPenalty: 0,

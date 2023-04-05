@@ -95,37 +95,37 @@ abstract contract LendingPoolState {
     }
 
     /* fundingPeriodSeconds */
-    int64 private s_fundingPeriodSeconds;
+    uint64 private s_fundingPeriodSeconds;
     event ChangeFundingPeriodSeconds(
         address indexed actor,
-        int64 oldValue,
-        int64 newValue
+        uint64 oldValue,
+        uint64 newValue
     );
 
-    function fundingPeriodSeconds() public view returns (int64) {
+    function fundingPeriodSeconds() public view returns (uint64) {
         return s_fundingPeriodSeconds;
     }
 
-    function _setFundingPeriodSeconds(int64 newValue) internal {
-        int64 oldValue = s_fundingPeriodSeconds;
+    function _setFundingPeriodSeconds(uint64 newValue) internal {
+        uint64 oldValue = s_fundingPeriodSeconds;
         s_fundingPeriodSeconds = newValue;
         emit ChangeFundingPeriodSeconds(msg.sender, oldValue, newValue);
     }
 
     /* lendingTermSeconds */
-    int64 private s_lendingTermSeconds;
+    uint64 private s_lendingTermSeconds;
     event ChangeLendingTermSeconds(
         address indexed actor,
-        int64 oldValue,
-        int64 newValue
+        uint64 oldValue,
+        uint64 newValue
     );
 
-    function lendingTermSeconds() public view returns (int64) {
+    function lendingTermSeconds() public view returns (uint64) {
         return s_lendingTermSeconds;
     }
 
-    function _setLendingTermSeconds(int64 newValue) internal {
-        int64 oldValue = s_lendingTermSeconds;
+    function _setLendingTermSeconds(uint64 newValue) internal {
+        uint64 oldValue = s_lendingTermSeconds;
         s_lendingTermSeconds = newValue;
         emit ChangeLendingTermSeconds(msg.sender, oldValue, newValue);
     }
@@ -462,7 +462,7 @@ abstract contract LendingPoolState {
     }
 
     /*//////////////////////////////////////
-      Lenders & Rewards
+      Interests & Yields
     //////////////////////////////////////*/
     uint private s_collectedAssets;
     event ChangeCollectedAssets(
@@ -481,6 +481,24 @@ abstract contract LendingPoolState {
         emit ChangeCollectedAssets(msg.sender, oldValue, newValue);
     }
 
+    /* borrowerInterestRepaid */
+    uint private s_borrowerInterestRepaid;
+    event ChangeBorrowerInterestRepaid(
+        address indexed actor,
+        uint oldValue,
+        uint newValue
+    );
+
+    function borrowerInterestRepaid() public view returns (uint) {
+        return s_borrowerInterestRepaid;
+    }
+
+    function _setBorrowerInterestRepaid(uint newValue) internal {
+        uint oldValue = s_borrowerInterestRepaid;
+        s_borrowerInterestRepaid = newValue;
+        emit ChangeBorrowerInterestRepaid(msg.sender, oldValue, newValue);
+    }
+
     struct Rewardable {
         uint stakedAssets;
         uint64 start;
@@ -492,6 +510,12 @@ abstract contract LendingPoolState {
     /// @dev trancheId => (lenderAddress => RewardableRecord)
     mapping(uint8 => mapping(address => Rewardable))
         internal s_trancheRewardables;
+
+    /// @dev trancheId => (lenderAddress => generated)
+    mapping(uint8 => mapping(address => uint)) internal s_generatedRewards;
+
+    /// @dev trancheId => (lenderAddress => generated)
+    mapping(uint8 => mapping(address => uint)) internal s_repaidRewards;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
