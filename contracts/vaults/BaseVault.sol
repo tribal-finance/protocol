@@ -230,6 +230,15 @@ contract BaseVault is
         _unpause();
     }
 
+    /** @dev called by the pool in order to send underlying assets to the borrower*/
+    function sendAssets(address receiver, uint assets) external onlyPool {
+        SafeERC20Upgradeable.safeTransfer(
+            IERC20Upgradeable(asset()),
+            receiver,
+            assets
+        );
+    }
+
     /*////////////////////////////////////////////////
         ERC-4626 Overrides
     ////////////////////////////////////////////////*/

@@ -361,7 +361,19 @@ contract LendingPool is
        Borrower functions
     ///////////////////////////////////*/
     function borrow() external {
-        revert("not implemented");
+        uint total = 0;
+
+        for (uint8 i; i < tranchesCount(); ++i) {
+            TrancheVault trancheContract = _trancheVaultContracts()[i];
+            trancheContract.sendAssets(
+                borrowerAddress(),
+                trancheContract.totalAssets()
+            );
+
+            total += trancheContract.totalAssets();
+        }
+
+        emit BorrowerBorrow(borrowerAddress(), total);
     }
 
     function borrowerOutstandingInterest() external view returns (uint) {
