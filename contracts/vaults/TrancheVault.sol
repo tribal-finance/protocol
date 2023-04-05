@@ -31,7 +31,7 @@ contract TrancheVault is BaseVault {
     }
 
     /*///////////////////////////////////////
-      ERC4626Upgradeable overrides
+      Initializer
     ///////////////////////////////////////*/
 
     function initialize(
@@ -78,9 +78,9 @@ contract TrancheVault is BaseVault {
             assets
         );
         _mint(receiver, shares);
+        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
-        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
     }
 
     /**
@@ -103,8 +103,8 @@ contract TrancheVault is BaseVault {
             receiver,
             assets
         );
+        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
-        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
     }
 }

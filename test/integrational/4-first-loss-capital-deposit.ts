@@ -55,4 +55,21 @@ describe("Depositing First Loss Capital", function () {
 
     return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
   }
+
+  it("moves pool to FLC_DEPOSITED stage", async function () {
+    const { borrower, usdc, firstLossCapitalVault, lendingPool } =
+      await loadFixture(uniPoolFixture);
+
+    const toDeposit = await lendingPool.firstLossCapitalDepositTarget();
+
+    await usdc
+      .connect(borrower)
+      .approve(firstLossCapitalVault.address, toDeposit);
+
+    await firstLossCapitalVault
+      .connect(borrower)
+      .deposit(toDeposit, await borrower.getAddress());
+
+    expect(await lendingPool.currentStage()).to.eq(STAGES.FLC_DEPOSITED);
+  });
 });

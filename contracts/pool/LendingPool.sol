@@ -206,30 +206,43 @@ contract LendingPool is
      */
     function adminTransitionToFundedState() external onlyOwner {
         if (allDepositedAssets() >= minFundingCapacity()) {
-            _setFundedAt(uint64(block.timestamp));
-            _setCollectedAssets(allDepositedAssets());
-
-            for (uint i; i < trancheVaultAddresses().length; i++) {
-                _trancheVaultContracts()[i].disableDeposits();
-                _trancheVaultContracts()[i].disableWithdrawals();
-            }
-
-            uint flcDepositTarget = (collectedAssets() * collateralRatioWad()) /
-                WAD;
-            _firstLossCapitalVaultContract().poolSetDepositTarget(
-                flcDepositTarget
-            );
-            _firstLossCapitalVaultContract().enableDeposits();
-
-            emit PoolFunded();
+            _transitionToFundedStage();
         } else {
-            _setFundingFailedAt(uint64(block.timestamp));
-            for (uint i; i < trancheVaultAddresses().length; i++) {
-                _trancheVaultContracts()[i].disableDeposits();
-                _trancheVaultContracts()[i].enableWithdrawals();
-            }
-            emit PoolFundingFailed();
+            _transitionToFundingFailedStage();
         }
+    }
+
+    function _transitionToFundedStage() internal {
+        _setFundedAt(uint64(block.timestamp));
+        _setCollectedAssets(allDepositedAssets());
+
+        for (uint i; i < trancheVaultAddresses().length; i++) {
+            _trancheVaultContracts()[i].disableDeposits();
+            _trancheVaultContracts()[i].disableWithdrawals();
+        }
+
+        _firstLossCapitalVaultContract().poolSetDepositTarget(
+            firstLossCapitalDepositTarget()
+        );
+        _firstLossCapitalVaultContract().enableDeposits();
+
+        emit PoolFunded();
+    }
+
+    function _transitionToFundingFailedStage() internal {
+        _setFundingFailedAt(uint64(block.timestamp));
+        for (uint i; i < trancheVaultAddresses().length; i++) {
+            _trancheVaultContracts()[i].disableDeposits();
+            _trancheVaultContracts()[i].enableWithdrawals();
+        }
+        emit PoolFundingFailed();
+    }
+
+    function _transitionToFlcDepositedStage(uint amount) internal {
+        _firstLossCapitalVaultContract().disableDeposits();
+        _firstLossCapitalVaultContract().disableWithdrawals();
+        _setFlcDepositedAt(uint64(block.timestamp));
+        emit BorrowerDepositFirstLossCapital(borrowerAddress(), amount);
     }
 
     /*///////////////////////////////////
@@ -363,6 +376,10 @@ contract LendingPool is
         revert("not implemented");
     }
 
+    function firstLossCapitalDepositTarget() public view returns (uint) {
+        return (collectedAssets() * collateralRatioWad()) / WAD;
+    }
+
     /*///////////////////////////////////
        COMMUNICATION WITH VAULTS
     ///////////////////////////////////*/
@@ -404,7 +421,11 @@ contract LendingPool is
     function onFirstLossCapitalDeposit(
         address receiverAddress,
         uint amount
-    ) external authFirstLossCapitalVault {}
+    ) external authFirstLossCapitalVault {
+        if (amount == firstLossCapitalDepositTarget()) {
+            _transitionToFlcDepositedStage(amount);
+        }
+    }
 
     /// @dev FirstLossCapitalVault will call that callback function when a borrower witdraws assets
     function onFirstLossCapitalWithdraw(
