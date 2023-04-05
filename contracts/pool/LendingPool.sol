@@ -172,6 +172,9 @@ contract LendingPool is
         if (repaidAt() != 0) {
             return Stages.REPAID;
         }
+        if (borrowedAt() != 0) {
+            return Stages.BORROWED;
+        }
         if (flcDepositedAt() != 0) {
             return Stages.FLC_DEPOSITED;
         }
@@ -372,6 +375,8 @@ contract LendingPool is
 
             total += trancheContract.totalAssets();
         }
+
+        _setBorrowedAt(uint64(block.timestamp));
 
         emit BorrowerBorrow(borrowerAddress(), total);
     }

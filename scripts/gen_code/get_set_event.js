@@ -57,7 +57,11 @@ const vars5 = [
   "uint64 repaidAt",
 ];
 
-for (let v of vars5) {
+const vars6 = [
+  "uint64 borrowedAt",
+]
+
+for (let v of vars6) {
   const split = v.split(" ");
   const _name = split.pop();
   const _type = split.join(" ");

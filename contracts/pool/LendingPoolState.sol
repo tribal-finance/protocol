@@ -425,6 +425,24 @@ abstract contract LendingPoolState {
         emit ChangeFlcDepositedAt(msg.sender, oldValue, newValue);
     }
 
+    /* borrowedAt */
+    uint64 private s_borrowedAt;
+    event ChangeBorrowedAt(
+        address indexed actor,
+        uint64 oldValue,
+        uint64 newValue
+    );
+
+    function borrowedAt() public view returns (uint64) {
+        return s_borrowedAt;
+    }
+
+    function _setBorrowedAt(uint64 newValue) internal {
+        uint64 oldValue = s_borrowedAt;
+        s_borrowedAt = newValue;
+        emit ChangeBorrowedAt(msg.sender, oldValue, newValue);
+    }
+
     /* repaidAt */
     uint64 private s_repaidAt;
     event ChangeRepaidAt(

@@ -80,5 +80,13 @@ describe("Borrowing", function () {
         await lendingPool.collectedAssets()
       );
     });
+
+    it("moves the pool to borrowed state", async function () {
+      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
+        await loadFixture(uniPoolFixture);
+
+      await lendingPool.connect(borrower).borrow();
+      expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);
+    });
   });
 });
