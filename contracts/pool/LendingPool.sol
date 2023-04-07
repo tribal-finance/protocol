@@ -532,6 +532,8 @@ contract LendingPool is
         s_lenders.add(depositorAddress);
         rewardable.stakedAssets += amount;
         rewardable.start = uint64(block.timestamp);
+
+        emit LenderDeposit(depositorAddress, trancheId, amount);
     }
 
     /// @dev TrancheVault will call that callback function when a lender withdraws assets
@@ -550,6 +552,7 @@ contract LendingPool is
         if (rewardable.stakedAssets == 0) {
             s_lenders.remove(depositorAddress);
         }
+        emit LenderWithdraw(depositorAddress, trancheId, amount);
     }
 
     /// @dev FirstLossCapitalVault will call that callback function when a borrower deposits assets
