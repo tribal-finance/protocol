@@ -12,3 +12,6 @@ const STAGES = {
 };
 
 export default STAGES;
+
+const flipped = Object.entries(STAGES).map(([key, value]) => [value, key]);
+export const STAGES_LOOKUP = Object.fromEntries(flipped);

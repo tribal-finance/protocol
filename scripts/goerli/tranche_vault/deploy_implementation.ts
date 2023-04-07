@@ -20,7 +20,7 @@ async function main() {
     process.env.GOERLI_POOL_FACTORY_ADDRESS
   );
 
-  poolFactory.setFirstLossCapitalVaultImplementation(tv.address);
+  await poolFactory.setTrancheVaultImplementation(tv.address);
   console.log("implementation address is set on poolFactory");
 }
 

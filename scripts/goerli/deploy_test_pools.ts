@@ -29,10 +29,10 @@ async function main() {
   //   [lender1, lender2],
   //   {
   //     stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
-  //     fundingPeriodSeconds: 30 * 24 * 60 * 60,
+  //     // fundingPeriodSeconds: 15 * 24 * 60 * 60,
   //   },
   //   async (contracts: DeployedContractsType) => {
-  //     await contracts.lendingPool.connect(deployer).adminOpenPool();
+  //     // await contracts.lendingPool.connect(deployer).adminOpenPool();
   //     return contracts;
   //   }
   // );
@@ -46,10 +46,10 @@ async function main() {
     [lender1, lender2],
     {
       stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
-      fundingPeriodSeconds: 30 * 24 * 60 * 60,
+      // fundingPeriodSeconds: 30 * 24 * 60 * 60,
     },
     async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).adminOpenPool();
+      // await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     }
   );

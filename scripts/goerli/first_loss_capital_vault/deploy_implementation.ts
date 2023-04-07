@@ -24,7 +24,7 @@ async function main() {
     process.env.GOERLI_POOL_FACTORY_ADDRESS
   );
 
-  poolFactory.setFirstLossCapitalVaultImplementation(flcv.address);
+  await poolFactory.setFirstLossCapitalVaultImplementation(flcv.address);
   console.log("implementation address is set on poolFactory");
 }
 

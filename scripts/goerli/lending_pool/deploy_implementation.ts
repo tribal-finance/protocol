@@ -20,7 +20,7 @@ async function main() {
     process.env.GOERLI_POOL_FACTORY_ADDRESS
   );
 
-  poolFactory.setPoolImplementation(lp.address);
+  await poolFactory.setPoolImplementation(lp.address);
   console.log("implementation address is set on poolFactory");
 }
 

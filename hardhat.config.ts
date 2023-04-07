@@ -54,7 +54,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: process.env.SNOWTRACE_API_KEY,
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
   docgen: {
     path: "./docs",
