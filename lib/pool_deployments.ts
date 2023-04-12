@@ -44,6 +44,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   tranchesCount: 1,
   trancheAPYsWads: [WAD(0.1)],
   trancheBoostedAPYsWads: [WAD(0.1)],
+  trancheBoostedRatioWads: [WAD(2.0)],
   trancheCoveragesWads: [WAD(1)],
 };
 export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.2), WAD(0.8)];

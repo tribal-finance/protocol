@@ -233,6 +233,7 @@ interface ILendingPool {
         uint8 tranchesCount;
         uint[] trancheAPYsWads;
         uint[] trancheBoostedAPYsWads;
+        uint[] trancheBoostRatios;
         uint[] trancheCoveragesWads;
     }
 
@@ -276,8 +277,6 @@ interface ILendingPool {
     function lenderTotalApyWad(address) external view returns (uint);
 
     function lenderTotalAdjustedApyWad(address) external view returns (uint);
-
-    function lenderWithdrawRewardsByTranche(uint trancheId) external;
 
     /*///////////////////////////////////
        Borrower functions

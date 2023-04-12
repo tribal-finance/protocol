@@ -274,6 +274,24 @@ abstract contract LendingPoolState {
         emit ChangeTrancheBoostedAPYsWads(msg.sender, oldValue, newValue);
     }
 
+    /* trancheBoostedRatioWads */
+    uint[] private s_trancheBoostRatios;
+    event ChangeTrancheBoostRatios(
+        address indexed actor,
+        uint[] oldValue,
+        uint[] newValue
+    );
+
+    function trancheBoostRatios() public view returns (uint[] memory) {
+        return s_trancheBoostRatios;
+    }
+
+    function _setTrancheBoostRatios(uint[] calldata newValue) internal {
+        uint[] memory oldValue = s_trancheBoostRatios;
+        s_trancheBoostRatios = newValue;
+        emit ChangeTrancheBoostRatios(msg.sender, oldValue, newValue);
+    }
+
     /* trancheCoverages */
     uint[] private s_trancheCoveragesWads;
     event ChangeTrancheCoveragesWads(
@@ -519,8 +537,8 @@ abstract contract LendingPoolState {
 
     struct Rewardable {
         uint stakedAssets;
+        uint boostedTokens;
         uint64 start;
-        bool isBoosted;
     }
 
     EnumerableSet.AddressSet internal s_lenders;

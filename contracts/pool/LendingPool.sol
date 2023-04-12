@@ -76,6 +76,7 @@ contract LendingPool is
         _setTranchesCount(params.tranchesCount);
         _setTrancheAPYsWads(params.trancheAPYsWads);
         _setTrancheBoostedAPYsWads(params.trancheBoostedAPYsWads);
+        _setTrancheBoostRatios(params.trancheBoostRatios);
         _setTrancheCoveragesWads(params.trancheCoveragesWads);
 
         _setTrancheVaultAddresses(_trancheVaultAddresses);
@@ -306,15 +307,13 @@ contract LendingPool is
                 lenderAddress
             ];
             totalAssets += rewardable.stakedAssets;
-            if (rewardable.isBoosted) {
-                weightedApysWad +=
-                    trancheBoostedAPYsWads()[i] *
-                    rewardable.stakedAssets;
-            } else {
-                weightedApysWad +=
-                    trancheAPYsWads()[i] *
-                    rewardable.stakedAssets;
-            }
+            // if (rewardable.isBoosted) {
+            //     weightedApysWad +=
+            //         trancheBoostedAPYsWads()[i] *
+            //         rewardable.stakedAssets;
+            // } else {
+            weightedApysWad += trancheAPYsWads()[i] * rewardable.stakedAssets;
+            // }
         }
 
         if (totalAssets == 0) {
@@ -359,9 +358,7 @@ contract LendingPool is
         uint8 trancheId
     ) public view returns (uint) {
         Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
-        return
-            (r.stakedAssets * _adjustedTrancheAPYWad(trancheId, r.isBoosted)) /
-            WAD;
+        return (r.stakedAssets * _adjustedTrancheAPYWad(r)) / WAD;
     }
 
     function lenderRewardsByTrancheProjectedByDate(
@@ -380,7 +377,7 @@ contract LendingPool is
     function lenderRewardsByTrancheGeneratedByDate(
         address lenderAddress,
         uint8 trancheId
-    ) external view returns (uint) {
+    ) public view returns (uint) {
         return s_generatedRewards[trancheId][lenderAddress];
     }
 
@@ -401,16 +398,11 @@ contract LendingPool is
     }
 
     function _adjustedTrancheAPYWad(
-        uint8 trancheId,
-        bool isBoosted
+        uint trancheId,
+        Rewardable r
     ) internal view returns (uint) {
-        if (isBoosted) {
-            return (trancheAPYsWads()[trancheId] * lendingTermSeconds()) / YEAR;
-        } else {
-            return
-                (trancheBoostedAPYsWads()[trancheId] * lendingTermSeconds()) /
-                YEAR;
-        }
+        //
+        return (trancheAPYsWads()[trancheId] * lendingTermSeconds()) / YEAR;
     }
 
     /*///////////////////////////////////
@@ -444,29 +436,6 @@ contract LendingPool is
         );
 
         uint assetsToSendToFeeSharing = assets;
-
-        for (uint8 trancheId; trancheId < tranchesCount(); ++trancheId) {
-            uint shareAdjustedBooostedAPYWad = (_adjustedTrancheAPYWad(
-                trancheId,
-                true
-            ) * assets) / borrowerExpectedInterest();
-            uint shareAdjustedAPYWad = (_adjustedTrancheAPYWad(
-                trancheId,
-                false
-            ) * assets) / borrowerExpectedInterest();
-
-            for (uint i; i < s_lenders.length(); ++i) {
-                address lenderAddress = s_lenders.at(i);
-                Rewardable storage r = s_trancheRewardables[trancheId][
-                    lenderAddress
-                ];
-                uint rewardedAssets = r.isBoosted
-                    ? ((shareAdjustedBooostedAPYWad * r.stakedAssets) / WAD)
-                    : ((shareAdjustedAPYWad * r.stakedAssets) / WAD);
-                s_generatedRewards[trancheId][lenderAddress] += rewardedAssets;
-                assetsToSendToFeeSharing -= rewardedAssets;
-            }
-        }
 
         _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
         emit BorrowerPayInterest(
