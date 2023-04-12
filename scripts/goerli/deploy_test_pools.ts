@@ -22,38 +22,38 @@ async function main() {
   );
 
   // 1. Unitranche Pool
-  // const cs = await deployUnitranchePool(
-  //   poolFactoryContract,
-  //   deployer,
-  //   borrower,
-  //   [lender1, lender2],
-  //   {
-  //     stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
-  //     // fundingPeriodSeconds: 15 * 24 * 60 * 60,
-  //   },
-  //   async (contracts: DeployedContractsType) => {
-  //     // await contracts.lendingPool.connect(deployer).adminOpenPool();
-  //     return contracts;
-  //   }
-  // );
-  // console.log("Deployed Unitranche Pool:", cs.lendingPool.address);
-
-  // 2. Duotranche Pool
-  const cs = await deployDuotranchePool(
+  const cs = await deployUnitranchePool(
     poolFactoryContract,
     deployer,
     borrower,
     [lender1, lender2],
     {
       stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
-      // fundingPeriodSeconds: 30 * 24 * 60 * 60,
+      // fundingPeriodSeconds: 15 * 24 * 60 * 60,
     },
     async (contracts: DeployedContractsType) => {
       // await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     }
   );
-  console.log("Deployed Duotranche Pool:", cs.lendingPool.address);
+  console.log("Deployed Unitranche Pool:", cs.lendingPool.address);
+
+  // 2. Duotranche Pool
+  // const cs = await deployDuotranchePool(
+  //   poolFactoryContract,
+  //   deployer,
+  //   borrower,
+  //   [lender1, lender2],
+  //   {
+  //     stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
+  //     // fundingPeriodSeconds: 30 * 24 * 60 * 60,
+  //   },
+  //   async (contracts: DeployedContractsType) => {
+  //     // await contracts.lendingPool.connect(deployer).adminOpenPool();
+  //     return contracts;
+  //   }
+  // );
+  // console.log("Deployed Duotranche Pool:", cs.lendingPool.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -359,7 +359,7 @@ contract LendingPool is
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
-        if (fundedAt() < block.timestamp) {
+        if (fundedAt() > block.timestamp) {
             return 0;
         }
         uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
@@ -421,6 +421,7 @@ contract LendingPool is
         }
 
         _setBorrowedAt(uint64(block.timestamp));
+        _setBorrowedAmount(total);
 
         emit BorrowerBorrow(borrowerAddress(), total);
     }

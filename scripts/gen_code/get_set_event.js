@@ -58,8 +58,9 @@ const vars5 = [
 ];
 
 const vars6 = [
-  "uint borrowerInterestRepaid",
-]
+  // "uint borrowerInterestRepaid",
+  "uint borrowedAmount",
+];
 
 for (let v of vars6) {
   const split = v.split(" ");

@@ -11,7 +11,7 @@ import { lendingPoolSol } from "../../typechain-types/contracts/old";
 
 dotenv.config();
 
-const LENDING_POOL_ADDRESS = "0x4770d3515652dc64a7B53828bd980c571c23aa1C";
+const LENDING_POOL_ADDRESS = "0x015950dF326428700c43503D641dC1E974F2b954";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -129,15 +129,15 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  tx = await USDCContract.connect(borrower).approve(
-    poolContract.address,
-    USDC(150)
-  );
-  await tx.wait();
-  console.log("approved interst spend");
-  tx = await poolContract.connect(borrower).borrowerPayInterest(USDC(150));
-  await tx.wait();
-  console.log("deposited interest money");
+  // tx = await USDCContract.connect(borrower).approve(
+  //   poolContract.address,
+  //   USDC(150)
+  // );
+  // await tx.wait();
+  // console.log("approved interst spend");
+  // tx = await poolContract.connect(borrower).borrowerPayInterest(USDC(150));
+  // await tx.wait();
+  // console.log("deposited interest money");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

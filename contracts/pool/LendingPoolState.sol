@@ -481,6 +481,24 @@ abstract contract LendingPoolState {
         emit ChangeCollectedAssets(msg.sender, oldValue, newValue);
     }
 
+    /* borrowedAmount */
+    uint private s_borrowedAmount;
+    event ChangeBorrowedAmount(
+        address indexed actor,
+        uint oldValue,
+        uint newValue
+    );
+
+    function borrowedAmount() public view returns (uint) {
+        return s_borrowedAmount;
+    }
+
+    function _setBorrowedAmount(uint newValue) internal {
+        uint oldValue = s_borrowedAmount;
+        s_borrowedAmount = newValue;
+        emit ChangeBorrowedAmount(msg.sender, oldValue, newValue);
+    }
+
     /* borrowerInterestRepaid */
     uint private s_borrowerInterestRepaid;
     event ChangeBorrowerInterestRepaid(
