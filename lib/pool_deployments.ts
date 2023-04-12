@@ -33,6 +33,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   name: "Test Pool",
   token: "TST",
   stableCoinContractAddress: USDC_ADDRESS_6,
+  platformTokenContractAddress: USDC_ADDRESS_6,
   minFundingCapacity: USDC(10000),
   maxFundingCapacity: USDC(12000),
   fundingPeriodSeconds: 24 * 60 * 60,
@@ -44,7 +45,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   tranchesCount: 1,
   trancheAPYsWads: [WAD(0.1)],
   trancheBoostedAPYsWads: [WAD(0.1)],
-  trancheBoostedRatioWads: [WAD(2.0)],
+  trancheBoostRatios: [10 ** 12],
   trancheCoveragesWads: [WAD(1)],
 };
 export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.2), WAD(0.8)];
@@ -148,6 +149,7 @@ export async function deployDuotranchePool(
       tranchesCount: 2,
       trancheAPYsWads: [WAD(0.1), WAD(0.12)],
       trancheBoostedAPYsWads: [WAD(0.1), WAD(0.15)],
+      trancheBoostRatios: [10 ** 12, 10 ** 12],
       trancheCoveragesWads: [WAD(1), WAD(0)],
     },
     ...poolInitParamsOverrides,

@@ -64,6 +64,7 @@ contract LendingPool is
         _setName(params.name);
         _setToken(params.token);
         _setStableCoinContractAddress(params.stableCoinContractAddress);
+        _setPlatformTokenContractAddress(params.platformTokenContractAddress);
         _setMinFundingCapacity(params.minFundingCapacity);
         _setMaxFundingCapacity(params.maxFundingCapacity);
         _setFundingPeriodSeconds(params.fundingPeriodSeconds);
@@ -223,6 +224,7 @@ contract LendingPool is
             tv.sendAssetsToPool(tv.totalAssets());
         }
 
+        // TODO: ditch the FLC vault all together?
         _firstLossCapitalVaultContract().enableDeposits();
 
         emit PoolFunded();
@@ -240,6 +242,37 @@ contract LendingPool is
     /*///////////////////////////////////
        Lender stakes
     ///////////////////////////////////*/
+    function lenderTotalAprWad(
+        address lenderAddress
+    ) public view returns (uint) {
+        uint weightedApysWad = 0;
+        uint totalAssets = 0;
+        for (uint8 i; i < tranchesCount(); ++i) {
+            Rewardable storage rewardable = s_trancheRewardables[i][
+                lenderAddress
+            ];
+            totalAssets += rewardable.stakedAssets;
+            weightedApysWad += (lenderEffectiveAprByTranche(lenderAddress, i) *
+                rewardable.stakedAssets);
+        }
+
+        if (totalAssets == 0) {
+            return 0;
+        }
+
+        return weightedApysWad / totalAssets;
+    }
+
+    /** @notice As tranches can be partly boosted by platform tokens,
+     *  this will return the effective APR taking into account all the deposited USDC + platform tokens
+     */
+    function lenderEffectiveAprByTranche(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        return trancheAPYsWads()[trancheId];
+        // TODO: take into account deposited tribal tokens
+    }
 
     // @notice  Returns amount of stablecoins deposited to a pool tranche by a lender
     function lenderDepositedAssetsByTranche(

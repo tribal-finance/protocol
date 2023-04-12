@@ -131,7 +131,7 @@ describe("When Lender deposits to Open state pool", function () {
     it("calculates lenderTotalApyWad", async function () {
       const { lenders, lendingPool } = await loadFixture(uniPoolFixture);
       expect(
-        await lendingPool.lenderTotalApyWad(await lenders[0].getAddress())
+        await lendingPool.lenderTotalAprWad(await lenders[0].getAddress())
       ).to.eq((await lendingPool.trancheAPYsWads())[0]);
     });
   });
@@ -190,11 +190,11 @@ describe("When Lender deposits to Open state pool", function () {
       const { lenders, lendingPool } = await loadFixture(duoPoolFixture);
 
       expect(
-        await lendingPool.lenderTotalApyWad(await lenders[0].getAddress())
+        await lendingPool.lenderTotalAprWad(await lenders[0].getAddress())
       ).to.eq((await lendingPool.trancheAPYsWads())[0]);
 
       expect(
-        await lendingPool.lenderTotalApyWad(await lenders[1].getAddress())
+        await lendingPool.lenderTotalAprWad(await lenders[1].getAddress())
       ).to.eq((await lendingPool.trancheAPYsWads())[1]);
     });
   });

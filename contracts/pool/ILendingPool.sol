@@ -221,6 +221,7 @@ interface ILendingPool {
         string name;
         string token;
         address stableCoinContractAddress;
+        address platformTokenContractAddress;
         uint minFundingCapacity;
         uint maxFundingCapacity;
         uint64 fundingPeriodSeconds;

@@ -58,6 +58,24 @@ abstract contract LendingPoolState {
         emit ChangeStableCoinContractAddress(msg.sender, oldValue, newValue);
     }
 
+    /* platformTokenContractAddress */
+    address private s_platformTokenContractAddress;
+    event ChangePlatformTokenContractAddress(
+        address indexed actor,
+        address oldValue,
+        address newValue
+    );
+
+    function platformTokenContractAddress() public view returns (address) {
+        return s_platformTokenContractAddress;
+    }
+
+    function _setPlatformTokenContractAddress(address newValue) internal {
+        address oldValue = s_platformTokenContractAddress;
+        s_platformTokenContractAddress = newValue;
+        emit ChangePlatformTokenContractAddress(msg.sender, oldValue, newValue);
+    }
+
     /* minFundingCapacity */
     uint private s_minFundingCapacity;
     event ChangeMinFundingCapacity(
