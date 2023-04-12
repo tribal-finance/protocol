@@ -180,7 +180,11 @@ interface ILendingPool {
         uint256 amount
     );
 
-    event LenderWithdrawYield(address indexed lender, uint256 amount);
+    event LenderWithdrawInterest(
+        address indexed lender,
+        uint8 indexed trancheId,
+        uint256 amount
+    );
 
     event LenderBoostAPY(
         address indexed lender,
