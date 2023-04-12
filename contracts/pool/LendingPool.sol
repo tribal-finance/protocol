@@ -333,21 +333,21 @@ contract LendingPool is
         uint8 trancheId
     ) public view returns (uint) {
         return
-            (lenderTotalExpectedRewardsByTranche() * borrowerInterestRepaid()) /
-            borrowerExpectedInterest();
+            (lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId) *
+                borrowerInterestRepaid()) / borrowerExpectedInterest();
     }
 
     function lenderRewardsByTrancheRedeemed(
         address lenderAddress,
         uint8 trancheId
-    ) external view returns (uint) {
+    ) public view returns (uint) {
         return s_trancheRewardables[trancheId][lenderAddress].redeemedRewards;
     }
 
     function lenderRewardsByTrancheRedeemable(
         address lenderAddress,
         uint8 trancheId
-    ) external view returns (uint) {
+    ) public view returns (uint) {
         return
             lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId) -
             lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
@@ -499,7 +499,7 @@ contract LendingPool is
 
     function _emitLenderTrancheRewardsChange(
         address lenderAddress,
-        uint trancheId
+        uint8 trancheId
     ) internal {
         emit LenderTrancheRewardsChange(
             lenderAddress,
