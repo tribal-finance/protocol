@@ -43,17 +43,6 @@ describe("Borrowing", function () {
           .connect(deployer)
           .adminTransitionToFundedState();
 
-        const flcToDeposit =
-          await contracts.lendingPool.firstLossCapitalDepositTarget();
-
-        await usdc
-          .connect(borrower)
-          .approve(contracts.firstLossCapitalVault.address, flcToDeposit);
-
-        await contracts.firstLossCapitalVault
-          .connect(borrower)
-          .deposit(flcToDeposit, await borrower.getAddress());
-
         return contracts;
       };
 
@@ -69,7 +58,7 @@ describe("Borrowing", function () {
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }
 
-    it("sends money the borrower way", async function () {
+    it("sends collected assets minus flc the borrower way", async function () {
       const { borrower, usdc, firstLossCapitalVault, lendingPool } =
         await loadFixture(uniPoolFixture);
 
@@ -77,9 +66,8 @@ describe("Borrowing", function () {
       await lendingPool.connect(borrower).borrow();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
 
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(
-        await lendingPool.collectedAssets()
-      );
+      // 10.000 - 20%
+      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(USDC(8000));
     });
 
     it("moves the pool to borrowed state", async function () {
@@ -125,17 +113,6 @@ describe("Borrowing", function () {
           .connect(deployer)
           .adminTransitionToFundedState();
 
-        const flcToDeposit =
-          await contracts.lendingPool.firstLossCapitalDepositTarget();
-
-        await usdc
-          .connect(borrower)
-          .approve(contracts.firstLossCapitalVault.address, flcToDeposit);
-
-        await contracts.firstLossCapitalVault
-          .connect(borrower)
-          .deposit(flcToDeposit, await borrower.getAddress());
-
         return contracts;
       };
 
@@ -153,7 +130,7 @@ describe("Borrowing", function () {
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }
 
-    it("sends money the borrower way", async function () {
+    it("sends collected assets minus collateral value the borrower way", async function () {
       const { borrower, usdc, firstLossCapitalVault, lendingPool } =
         await loadFixture(duoPoolFixture);
 
@@ -161,9 +138,8 @@ describe("Borrowing", function () {
       await lendingPool.connect(borrower).borrow();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
 
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(
-        await lendingPool.collectedAssets()
-      );
+      // 10000 - 20% collateral value
+      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(USDC(8000));
     });
 
     it("moves the pool to borrowed state", async function () {

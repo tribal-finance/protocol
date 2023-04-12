@@ -242,6 +242,7 @@ contract LendingPool is
     /*///////////////////////////////////
        Lender stakes
     ///////////////////////////////////*/
+    /// @notice weighted APR
     function lenderTotalAprWad(
         address lenderAddress
     ) public view returns (uint) {
@@ -252,8 +253,10 @@ contract LendingPool is
                 lenderAddress
             ];
             totalAssets += rewardable.stakedAssets;
-            weightedApysWad += (lenderEffectiveAprByTranche(lenderAddress, i) *
-                rewardable.stakedAssets);
+            weightedApysWad += (lenderEffectiveAprByTrancheWad(
+                lenderAddress,
+                i
+            ) * rewardable.stakedAssets);
         }
 
         if (totalAssets == 0) {
@@ -266,7 +269,7 @@ contract LendingPool is
     /** @notice As tranches can be partly boosted by platform tokens,
      *  this will return the effective APR taking into account all the deposited USDC + platform tokens
      */
-    function lenderEffectiveAprByTranche(
+    function lenderEffectiveAprByTrancheWad(
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
@@ -295,15 +298,20 @@ contract LendingPool is
     /*///////////////////////////////////
        Lender rewards
     ///////////////////////////////////*/
-    function lenderWithdrawRewardsByTranche(uint8 trancheId) external {}
+    function lenderWithdrawRewardsByTranche(uint8 trancheId) external {
+        //noop
+    }
 
-    /* VIEWS */
+    /* VIEWS BY TRANCHE*/
 
     function lenderTotalExpectedRewardsByTranche(
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
-        return 0;
+        return
+            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+                lendingTermSeconds()) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheProjectedByDate(
@@ -313,30 +321,36 @@ contract LendingPool is
         if (fundedAt() > block.timestamp) {
             return 0;
         }
-        // uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
-        // TODO
-        return 0;
+        uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
+        return
+            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+                secondsElapsed) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheGeneratedByDate(
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
-        // TODO
+        return
+            (lenderTotalExpectedRewardsByTranche() * borrowerInterestRepaid()) /
+            borrowerExpectedInterest();
     }
 
-    function lenderRewardsByTranchePaidByDate(
+    function lenderRewardsByTrancheRedeemed(
         address lenderAddress,
         uint8 trancheId
     ) external view returns (uint) {
-        // TODO
+        return s_trancheRewardables[trancheId][lenderAddress].redeemedRewards;
     }
 
-    function lenderRewardsByTrancheWithdrawable(
+    function lenderRewardsByTrancheRedeemable(
         address lenderAddress,
         uint8 trancheId
     ) external view returns (uint) {
-        return 0;
+        return
+            lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId) -
+            lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
     }
 
     /*///////////////////////////////////
@@ -433,6 +447,7 @@ contract LendingPool is
         rewardable.start = uint64(block.timestamp);
 
         emit LenderDeposit(depositorAddress, trancheId, amount);
+        _emitLenderTrancheRewardsChange(depositorAddress, trancheId);
     }
 
     /// @dev TrancheVault will call that callback function when a lender withdraws assets
@@ -454,6 +469,7 @@ contract LendingPool is
             s_lenders.remove(depositorAddress);
         }
         emit LenderWithdraw(depositorAddress, trancheId, amount);
+        _emitLenderTrancheRewardsChange(depositorAddress, trancheId);
     }
 
     /*///////////////////////////////////
@@ -479,5 +495,20 @@ contract LendingPool is
         returns (FirstLossCapitalVault c)
     {
         c = FirstLossCapitalVault(firstLossCapitalVaultAddress());
+    }
+
+    function _emitLenderTrancheRewardsChange(
+        address lenderAddress,
+        uint trancheId
+    ) internal {
+        emit LenderTrancheRewardsChange(
+            lenderAddress,
+            trancheId,
+            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId),
+            lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId),
+            lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId),
+            lenderRewardsByTrancheRedeemed(lenderAddress, trancheId),
+            lenderRewardsByTrancheRedeemable(lenderAddress, trancheId)
+        );
     }
 }

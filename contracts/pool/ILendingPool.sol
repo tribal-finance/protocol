@@ -170,13 +170,23 @@ interface ILendingPool {
     // Lender events //
     event LenderDeposit(
         address indexed lender,
-        uint indexed trancheId,
+        uint8 indexed trancheId,
         uint256 amount
+    );
+
+    event LenderTrancheRewardsChange(
+        address indexed lender,
+        uint8 indexed trancheId,
+        uint lenderEffectiveAprWad,
+        uint totalExpectedRewards,
+        uint totalGeneratedRewards,
+        uint redeemedRewards,
+        uint redeemableRewards
     );
 
     event LenderWithdraw(
         address indexed lender,
-        uint indexed trancheId,
+        uint8 indexed trancheId,
         uint256 amount
     );
 
