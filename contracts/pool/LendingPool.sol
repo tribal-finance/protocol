@@ -176,9 +176,6 @@ contract LendingPool is
         if (borrowedAt() != 0) {
             return Stages.BORROWED;
         }
-        if (flcDepositedAt() != 0) {
-            return Stages.FLC_DEPOSITED;
-        }
         if (fundingFailedAt() != 0) {
             return Stages.FUNDING_FAILED;
         }
@@ -209,7 +206,7 @@ contract LendingPool is
      *  this function is expected to be called by *owner* once the funding period ends
      */
     function adminTransitionToFundedState() external onlyOwner {
-        if (allDepositedAssets() >= minFundingCapacity()) {
+        if (collectedAssets() >= minFundingCapacity()) {
             _transitionToFundedStage();
         } else {
             _transitionToFundingFailedStage();
@@ -218,16 +215,14 @@ contract LendingPool is
 
     function _transitionToFundedStage() internal {
         _setFundedAt(uint64(block.timestamp));
-        _setCollectedAssets(allDepositedAssets());
 
-        for (uint i; i < trancheVaultAddresses().length; i++) {
-            _trancheVaultContracts()[i].disableDeposits();
-            _trancheVaultContracts()[i].disableWithdrawals();
+        for (uint i; i < _trancheVaultContracts().length; i++) {
+            TrancheVault tv = _trancheVaultContracts()[i];
+            tv.disableDeposits();
+            tv.disableWithdrawals();
+            tv.sendAssetsToPool(tv.totalAssets());
         }
 
-        _firstLossCapitalVaultContract().poolSetDepositTarget(
-            firstLossCapitalDepositTarget()
-        );
         _firstLossCapitalVaultContract().enableDeposits();
 
         emit PoolFunded();
@@ -242,42 +237,9 @@ contract LendingPool is
         emit PoolFundingFailed();
     }
 
-    function _transitionToFlcDepositedStage(uint amount) internal {
-        _firstLossCapitalVaultContract().disableDeposits();
-        _firstLossCapitalVaultContract().disableWithdrawals();
-        _setFlcDepositedAt(uint64(block.timestamp));
-        emit BorrowerDepositFirstLossCapital(borrowerAddress(), amount);
-    }
-
     /*///////////////////////////////////
        Lender stakes
     ///////////////////////////////////*/
-
-    // @notice  Returns amount of stablecoins deposited to a pool tranche by all the lenders
-    function depositedAssetsByTranche(
-        uint8 trancheId
-    ) public view returns (uint) {
-        uint stakedAssets = 0;
-        for (uint i; i < s_lenders.length(); ++i) {
-            address lenderAddress = s_lenders.at(i);
-            stakedAssets += s_trancheRewardables[trancheId][lenderAddress]
-                .stakedAssets;
-        }
-        return stakedAssets;
-    }
-
-    function allDepositedAssets() public view returns (uint) {
-        // @notice  Returns amount of stablecoins deposited to all pool tranches by all the lenders
-        uint stakedAssets = 0;
-        for (uint i; i < s_lenders.length(); ++i) {
-            address lenderAddress = s_lenders.at(i);
-            for (uint8 trancheId; trancheId < tranchesCount(); ++trancheId) {
-                stakedAssets += s_trancheRewardables[trancheId][lenderAddress]
-                    .stakedAssets;
-            }
-        }
-        return stakedAssets;
-    }
 
     // @notice  Returns amount of stablecoins deposited to a pool tranche by a lender
     function lenderDepositedAssetsByTranche(
@@ -297,59 +259,10 @@ contract LendingPool is
         }
     }
 
-    function lenderTotalApyWad(
-        address lenderAddress
-    ) public view returns (uint) {
-        uint weightedApysWad = 0;
-        uint totalAssets = 0;
-        for (uint8 i; i < tranchesCount(); ++i) {
-            Rewardable storage rewardable = s_trancheRewardables[i][
-                lenderAddress
-            ];
-            totalAssets += rewardable.stakedAssets;
-            // if (rewardable.isBoosted) {
-            //     weightedApysWad +=
-            //         trancheBoostedAPYsWads()[i] *
-            //         rewardable.stakedAssets;
-            // } else {
-            weightedApysWad += trancheAPYsWads()[i] * rewardable.stakedAssets;
-            // }
-        }
-
-        if (totalAssets == 0) {
-            return 0;
-        }
-
-        return weightedApysWad / totalAssets;
-    }
-
-    function lenderTotalAdjustedApyWad(
-        address lenderAddress
-    ) public view returns (uint) {
-        return
-            (lenderTotalApyWad(lenderAddress) * uint(lendingTermSeconds())) /
-            YEAR;
-    }
-
     /*///////////////////////////////////
        Lender rewards
     ///////////////////////////////////*/
-    function lenderWithdrawRewardsByTranche(uint8 trancheId) external {
-        uint rewards = lenderRewardsByTrancheGeneratedByDate(
-            _msgSender(),
-            trancheId
-        );
-        require(rewards > 0, "nothing to withdraw");
-        s_repaidRewards[trancheId][_msgSender()] += rewards;
-
-        SafeERC20Upgradeable.safeTransfer(
-            IERC20Upgradeable(stableCoinContractAddress()),
-            _msgSender(),
-            rewards
-        );
-
-        emit LenderWithdrawInterest(_msgSender(), trancheId, rewards);
-    }
+    function lenderWithdrawRewardsByTranche(uint8 trancheId) external {}
 
     /* VIEWS */
 
@@ -357,8 +270,7 @@ contract LendingPool is
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
-        Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
-        return (r.stakedAssets * _adjustedTrancheAPYWad(r)) / WAD;
+        return 0;
     }
 
     function lenderRewardsByTrancheProjectedByDate(
@@ -368,63 +280,56 @@ contract LendingPool is
         if (fundedAt() > block.timestamp) {
             return 0;
         }
-        uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
-        return
-            (lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId) *
-                secondsElapsed) / lendingTermSeconds();
+        // uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
+        // TODO
+        return 0;
     }
 
     function lenderRewardsByTrancheGeneratedByDate(
         address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
-        return s_generatedRewards[trancheId][lenderAddress];
+        // TODO
     }
 
     function lenderRewardsByTranchePaidByDate(
         address lenderAddress,
         uint8 trancheId
     ) external view returns (uint) {
-        return s_repaidRewards[trancheId][lenderAddress];
+        // TODO
     }
 
     function lenderRewardsByTrancheWithdrawable(
         address lenderAddress,
         uint8 trancheId
     ) external view returns (uint) {
-        return
-            s_generatedRewards[trancheId][lenderAddress] -
-            s_repaidRewards[trancheId][lenderAddress];
-    }
-
-    function _adjustedTrancheAPYWad(
-        uint trancheId,
-        Rewardable r
-    ) internal view returns (uint) {
-        //
-        return (trancheAPYsWads()[trancheId] * lendingTermSeconds()) / YEAR;
+        return 0;
     }
 
     /*///////////////////////////////////
        Borrower functions
     ///////////////////////////////////*/
     function borrow() external {
-        uint total = 0;
+        uint firstLossCapitalDepositTarget = (collectedAssets() *
+            collateralRatioWad()) / WAD;
+        uint amountToBorrow = collectedAssets() - firstLossCapitalDepositTarget;
 
-        for (uint8 i; i < tranchesCount(); ++i) {
-            TrancheVault trancheContract = _trancheVaultContracts()[i];
-            trancheContract.sendAssets(
-                borrowerAddress(),
-                trancheContract.totalAssets()
-            );
+        SafeERC20Upgradeable.safeTransfer(
+            IERC20Upgradeable(stableCoinContractAddress()),
+            borrowerAddress(),
+            amountToBorrow
+        );
 
-            total += trancheContract.totalAssets();
-        }
+        _setFlcDepositedAt(uint64(block.timestamp));
+        emit BorrowerDepositFirstLossCapital(
+            borrowerAddress(),
+            firstLossCapitalDepositTarget
+        );
 
         _setBorrowedAt(uint64(block.timestamp));
-        _setBorrowedAmount(total);
+        _setBorrowedAmount(amountToBorrow);
 
-        emit BorrowerBorrow(borrowerAddress(), total);
+        emit BorrowerBorrow(borrowerAddress(), amountToBorrow);
     }
 
     function borrowerPayInterest(uint assets) external {
@@ -446,32 +351,7 @@ contract LendingPool is
         );
     }
 
-    function weightedAllLendersRewardRateWad() public view returns (uint) {
-        uint expectedRewards = 0;
-        uint stakes = 0;
-        for (uint8 trancheId; trancheId < tranchesCount(); ++trancheId) {
-            for (uint i; i < s_lenders.length(); ++i) {
-                address lenderAddress = s_lenders.at(i);
-                Rewardable storage r = s_trancheRewardables[trancheId][
-                    lenderAddress
-                ];
-                stakes += r.stakedAssets;
-                uint rewards = ((_adjustedTrancheAPYWad(
-                    trancheId,
-                    r.isBoosted
-                ) * r.stakedAssets) / WAD);
-                expectedRewards += rewards;
-            }
-        }
-
-        return expectedRewards / stakes;
-    }
-
     function borrowerRepayPrincipal() external {}
-
-    function firstLossCapitalDepositTarget() public view returns (uint) {
-        return (collectedAssets() * collateralRatioWad()) / WAD;
-    }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid
@@ -504,12 +384,19 @@ contract LendingPool is
         address depositorAddress,
         uint amount
     ) external authTrancheVault(trancheId) {
+        // 1. find / create the rewardable
         Rewardable storage rewardable = s_trancheRewardables[trancheId][
             depositorAddress
         ];
 
+        // 2. add lender to the lenders set
         s_lenders.add(depositorAddress);
+
+        // 3. add to the staked assets
         rewardable.stakedAssets += amount;
+        _setCollectedAssets(collectedAssets() + amount);
+
+        // 4. set the start of the rewardable
         rewardable.start = uint64(block.timestamp);
 
         emit LenderDeposit(depositorAddress, trancheId, amount);
@@ -528,27 +415,13 @@ contract LendingPool is
         assert(rewardable.stakedAssets >= amount);
 
         rewardable.stakedAssets -= amount;
+        _setCollectedAssets(collectedAssets() - amount);
+
         if (rewardable.stakedAssets == 0) {
             s_lenders.remove(depositorAddress);
         }
         emit LenderWithdraw(depositorAddress, trancheId, amount);
     }
-
-    /// @dev FirstLossCapitalVault will call that callback function when a borrower deposits assets
-    function onFirstLossCapitalDeposit(
-        address receiverAddress,
-        uint amount
-    ) external authFirstLossCapitalVault {
-        if (amount == firstLossCapitalDepositTarget()) {
-            _transitionToFlcDepositedStage(amount);
-        }
-    }
-
-    /// @dev FirstLossCapitalVault will call that callback function when a borrower witdraws assets
-    function onFirstLossCapitalWithdraw(
-        address ownerAddress,
-        uint amount
-    ) external authFirstLossCapitalVault {}
 
     /*///////////////////////////////////
        HELPERS

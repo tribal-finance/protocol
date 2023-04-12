@@ -537,7 +537,8 @@ abstract contract LendingPoolState {
 
     struct Rewardable {
         uint stakedAssets;
-        uint boostedTokens;
+        uint stakedPlatformTokens;
+        uint redeemedRewards;
         uint64 start;
     }
 
@@ -546,12 +547,6 @@ abstract contract LendingPoolState {
     /// @dev trancheId => (lenderAddress => RewardableRecord)
     mapping(uint8 => mapping(address => Rewardable))
         internal s_trancheRewardables;
-
-    /// @dev trancheId => (lenderAddress => generated)
-    mapping(uint8 => mapping(address => uint)) internal s_generatedRewards;
-
-    /// @dev trancheId => (lenderAddress => generated)
-    mapping(uint8 => mapping(address => uint)) internal s_repaidRewards;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

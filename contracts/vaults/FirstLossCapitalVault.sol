@@ -74,7 +74,6 @@ contract FirstLossCapitalVault is BaseVault {
             assets
         );
         _mint(receiver, shares);
-        ILendingPool(poolAddress()).onFirstLossCapitalDeposit(receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }

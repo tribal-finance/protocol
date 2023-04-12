@@ -272,13 +272,6 @@ interface ILendingPool {
     function adminTransitionToFundedState() external;
 
     /*///////////////////////////////////
-       Lender functions
-    ///////////////////////////////////*/
-    function lenderTotalApyWad(address) external view returns (uint);
-
-    function lenderTotalAdjustedApyWad(address) external view returns (uint);
-
-    /*///////////////////////////////////
        Borrower functions
     ///////////////////////////////////*/
     function borrow() external;
@@ -301,16 +294,6 @@ interface ILendingPool {
 
     function onTrancheWithdraw(
         uint8 trancheId,
-        address ownerAddress,
-        uint amount
-    ) external;
-
-    function onFirstLossCapitalDeposit(
-        address receiverAddress,
-        uint amount
-    ) external;
-
-    function onFirstLossCapitalWithdraw(
         address ownerAddress,
         uint amount
     ) external;
