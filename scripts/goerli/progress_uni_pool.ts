@@ -7,11 +7,10 @@ import {
 } from "../../lib/pool_deployments";
 import { STAGES_LOOKUP } from "../../test/helpers/stages";
 import { USDC } from "../../test/helpers/conversion";
-import { lendingPoolSol } from "../../typechain-types/contracts/old";
 
 dotenv.config();
 
-const LENDING_POOL_ADDRESS = "0x9a1b9F876Ea1cA0230bc55c3937014555FA1891c";
+const LENDING_POOL_ADDRESS = "0xBe164661086D12F69dfEdB27ed89E6A8c811Af74";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -50,13 +49,6 @@ async function main() {
   }
   console.log("Tranche Vault Addresses: ", trancheVaultAddresses);
 
-  const flcAddress = await poolContract.firstLossCapitalVaultAddress();
-  const flcConttract = await ethers.getContractAt(
-    "FirstLossCapitalVault",
-    flcAddress
-  );
-  console.log("First loss capital address:", flcAddress);
-
   console.log(
     "Current Pool Stage:",
     STAGES_LOOKUP[await poolContract.currentStage()]
@@ -65,9 +57,9 @@ async function main() {
   let tx;
 
   /* !!!!!!!!!!!! 1. Open the Lending Pool !!!!!!!!!!!!!!!!!!!!*/
-  // tx = await poolContract.connect(deployer).adminOpenPool();
-  // tx.wait();
-  // console.log("Lending Pool Opened");
+  tx = await poolContract.connect(deployer).adminOpenPool();
+  tx.wait();
+  console.log("Lending Pool Opened");
 
   /* !!!!!!!!!!!! 2. Deposit to the Lending Pool !!!!!!!!!!!!!!!!!!!!*/
   // tx = await USDCContract.connect(lender1).approve(
@@ -83,13 +75,13 @@ async function main() {
   // console.log("deposited money");
 
   /* !!!!!!!!!!!! 3. Move to funded state !!!!!!!!!!!!!!!!!!!!*/
-  tx = await poolContract.connect(deployer).adminTransitionToFundedState();
-  await tx.wait();
-  console.log("Lending Pool Transitioned to Funded State");
-  console.log(
-    "Current Pool Stage:",
-    STAGES_LOOKUP[await poolContract.currentStage()]
-  );
+  // tx = await poolContract.connect(deployer).adminTransitionToFundedState();
+  // await tx.wait();
+  // console.log("Lending Pool Transitioned to Funded State");
+  // console.log(
+  //   "Current Pool Stage:",
+  //   STAGES_LOOKUP[await poolContract.currentStage()]
+  // );
 
   /* !!!!!!!!!!!! 5. Borrow !!!!!!!!!!!!!!!!!!!!*/
   // console.log(
@@ -109,15 +101,15 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  tx = await USDCContract.connect(borrower).approve(
-    poolContract.address,
-    USDC(150)
-  );
-  await tx.wait();
-  console.log("approved interst spend");
-  tx = await poolContract.connect(borrower).borrowerPayInterest(USDC(150));
-  await tx.wait();
-  console.log("deposited interest money");
+  // tx = await USDCContract.connect(borrower).approve(
+  //   poolContract.address,
+  //   USDC(150)
+  // );
+  // await tx.wait();
+  // console.log("approved interst spend");
+  // tx = await poolContract.connect(borrower).borrowerPayInterest(USDC(150));
+  // await tx.wait();
+  // console.log("deposited interest money");
 }
 
 // We recommend this pattern to be able to use async/await everywhere
