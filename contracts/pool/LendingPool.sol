@@ -279,6 +279,8 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
             protocolTokens
         );
         r.stakedPlatformTokens += protocolTokens;
+
+        _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
     function lenderUnlockPlatformTokensByTranche(uint8 trancheId, uint protocolTokens) external {
