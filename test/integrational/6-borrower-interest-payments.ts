@@ -93,13 +93,6 @@ describe("Interests", function () {
           USDC(750)
         );
       });
-
-      xit("console.logs", async () => {
-        const { lendingPool } = await loadFixture(uniPoolFixture);
-        const weightedAllLendersRewardRateWad =
-          await lendingPool.weightedAllLendersRewardRateWad();
-        console.log({ weightedAllLendersRewardRateWad });
-      });
     });
 
     context("after borrower pays $150 interest", async () => {
