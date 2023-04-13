@@ -19,8 +19,8 @@ import type {
   LendingPool,
   PoolFactory,
   TrancheVault,
+  TribalToken,
 } from "../typechain-types";
-import type { IUSDC } from "../typechain-types/contracts/IUSDC";
 import { pool } from "../typechain-types/contracts";
 import { USDC_ADDRESS_6 } from "../test/helpers/usdc";
 import { USDC, WAD } from "../test/helpers/conversion";
@@ -45,10 +45,28 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   tranchesCount: 1,
   trancheAPYsWads: [WAD(0.1)],
   trancheBoostedAPYsWads: [WAD(0.1)],
-  trancheBoostRatios: [10 ** 12],
+  trancheBoostRatios: [ethers.utils.parseUnits("2", 12)],
   trancheCoveragesWads: [WAD(1)],
 };
-export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.2), WAD(0.8)];
+export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.8), WAD(0.2)];
+
+export async function deployTribalToken(
+  deployer: Signer,
+  lenders: Array<Signer>
+): Promise<TribalToken> {
+  const TribalToken = await ethers.getContractFactory("TribalToken");
+  const tribalToken = await TribalToken.connect(deployer).deploy();
+  await tribalToken.deployed();
+
+  for (let lender of lenders) {
+    const tx = await tribalToken
+      .connect(deployer)
+      .mint(await lender.getAddress(), parseUnits("1000000", "ether"));
+    await tx.wait();
+  }
+
+  return tribalToken;
+}
 
 export async function deployFactoryAndImplementations(
   deployer: Signer,
@@ -107,7 +125,7 @@ export async function deployUnitranchePool(
       borrowerAddress: await borrower.getAddress(),
       tranchesCount: 1,
       trancheAPYsWads: [WAD(0.1)],
-      trancheBoostedAPYsWads: [WAD(0.1)],
+      trancheBoostedAPYsWads: [WAD(0.15)],
       trancheCoveragesWads: [WAD(1)],
     },
     ...poolInitParamsOverrides,
@@ -149,7 +167,10 @@ export async function deployDuotranchePool(
       tranchesCount: 2,
       trancheAPYsWads: [WAD(0.1), WAD(0.12)],
       trancheBoostedAPYsWads: [WAD(0.1), WAD(0.15)],
-      trancheBoostRatios: [10 ** 12, 10 ** 12],
+      trancheBoostRatios: [
+        ethers.utils.parseUnits("2", 12),
+        ethers.utils.parseUnits("2", 12),
+      ],
       trancheCoveragesWads: [WAD(1), WAD(0)],
     },
     ...poolInitParamsOverrides,

@@ -270,6 +270,7 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     }
 
     function lenderLockPlatformTokensByTranche(uint8 trancheId, uint protocolTokens) external {
+        require(protocolTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId), "lock will lead to overboost");
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(platformTokenContractAddress()),
@@ -288,10 +289,10 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     /* VIEWS BY TRANCHE*/
 
     function lenderTotalExpectedRewardsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        return
-            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-                lendingTermSeconds()) / (YEAR * WAD);
+        return (
+            lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+            lendingTermSeconds()) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheProjectedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
@@ -299,10 +300,10 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
             return 0;
         }
         uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
-        return
-            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-                secondsElapsed) / (YEAR * WAD);
+        return (
+            lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+            secondsElapsed) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
