@@ -242,6 +242,27 @@ contract LendingPool is
         emit PoolFundingFailed();
     }
 
+    function _transitionToFlcDepositedStage(uint flcAssets) internal {
+        _setFlcDepositedAt(uint64(block.timestamp));
+        emit BorrowerDepositFirstLossCapital(borrowerAddress(), flcAssets);
+    }
+
+    function _transitionToBorrowedStage() internal {
+        _setBorrowedAt(uint64(block.timestamp));
+        _setBorrowedAmount(amountToBorrow);
+
+        emit BorrowerBorrow(borrowerAddress(), amountToBorrow);
+    }
+
+    function _transitionToInterestRepaidStage() internal {
+        _setInterestRepaidAt(uint64(block.timestamp));
+    }
+
+    function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
+        _setRepaidAt(uint64(block.timestamp));
+        emit BorrowerRepayPrincipal(borrowerAddress(), repaidPrincipal);
+    }
+
     /*///////////////////////////////////
        Lender stakes
     ///////////////////////////////////*/
@@ -378,23 +399,14 @@ contract LendingPool is
         uint firstLossCapitalDepositTarget = (collectedAssets() *
             collateralRatioWad()) / WAD;
         uint amountToBorrow = collectedAssets() - firstLossCapitalDepositTarget;
-
         SafeERC20Upgradeable.safeTransfer(
             IERC20Upgradeable(stableCoinContractAddress()),
             borrowerAddress(),
             amountToBorrow
         );
-
-        _setFlcDepositedAt(uint64(block.timestamp));
-        emit BorrowerDepositFirstLossCapital(
-            borrowerAddress(),
-            firstLossCapitalDepositTarget
-        );
-
-        _setBorrowedAt(uint64(block.timestamp));
-        _setBorrowedAmount(amountToBorrow);
-
-        emit BorrowerBorrow(borrowerAddress(), amountToBorrow);
+        // NOTE: the flc stays on the contract itself
+        _transitionToFlcDepositedStage(firstLossCapitalDepositTarget);
+        _transitionToBorrowedStage(amountToBorrow);
     }
 
     function borrowerPayInterest(uint assets) external {
@@ -416,11 +428,28 @@ contract LendingPool is
         );
 
         if (borrowerOutstandingInterest() == 0) {
-            _setInterestRepaidAt(uint64(block.timestamp));
+            _transitionToInterestRepaidStage();
         }
     }
 
-    function borrowerRepayPrincipal() external {}
+    function borrowerRepayPrincipal() external {
+        SafeERC20Upgradeable.safeTransferFrom(
+            IERC20Upgradeable(stableCoinContractAddress()),
+            _msgSender(),
+            address(this),
+            borrowedAssets();
+        );
+        for (let i = 0; i < tranchesCount(); ++i) {
+            TrancheVault tv = _trancheVaultContracts()[i];
+            SafeERC20Upgradeable.safeTransfer(
+                IERC20Upgradeable(stableCoinContractAddress()),
+                address(tv),
+                tv.totalAssets()
+            )
+            tv.enableWithdrawals();
+        }
+        _transitionToPrincipalRepaidStage(borrowedAssets());
+    }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid
@@ -478,20 +507,24 @@ contract LendingPool is
         address depositorAddress,
         uint amount
     ) external authTrancheVault(trancheId) {
-        Rewardable storage rewardable = s_trancheRewardables[trancheId][
-            depositorAddress
-        ];
+        if (currentStage() == STAGES.REPAID) {
+            emit LenderWithdraw(depositorAddress, trancheId, amount);
+        } else {
+            Rewardable storage rewardable = s_trancheRewardables[trancheId][
+                depositorAddress
+            ];
 
-        assert(rewardable.stakedAssets >= amount);
+            assert(rewardable.stakedAssets >= amount);
 
-        rewardable.stakedAssets -= amount;
-        _setCollectedAssets(collectedAssets() - amount);
+            rewardable.stakedAssets -= amount;
+            _setCollectedAssets(collectedAssets() - amount);
 
-        if (rewardable.stakedAssets == 0) {
-            s_lenders.remove(depositorAddress);
+            if (rewardable.stakedAssets == 0) {
+                s_lenders.remove(depositorAddress);
+            }
+            emit LenderWithdraw(depositorAddress, trancheId, amount);
+            _emitLenderTrancheRewardsChange(depositorAddress, trancheId);
         }
-        emit LenderWithdraw(depositorAddress, trancheId, amount);
-        _emitLenderTrancheRewardsChange(depositorAddress, trancheId);
     }
 
     /*///////////////////////////////////

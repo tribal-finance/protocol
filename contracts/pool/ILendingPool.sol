@@ -216,12 +216,10 @@ interface ILendingPool {
         uint lendersDistributedAmount,
         uint feeSharingContractAmount
     );
+    event BorrowerRepaidAllInterest(address indexed borrower);
+
     event BorrowerPayPenalty(address indexed borrower, uint amount);
     event BorrowerRepayPrincipal(address indexed borrower, uint amount);
-    event BorrowerWithdrawFirstLossCapital(
-        address indexed borrower,
-        uint amount
-    );
 
     /*///////////////////////////////////
        Init functions
