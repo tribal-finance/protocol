@@ -247,9 +247,9 @@ contract LendingPool is
         emit BorrowerDepositFirstLossCapital(borrowerAddress(), flcAssets);
     }
 
-    function _transitionToBorrowedStage() internal {
+    function _transitionToBorrowedStage(uint amountToBorrow) internal {
         _setBorrowedAt(uint64(block.timestamp));
-        _setBorrowedAmount(amountToBorrow);
+        _setBorrowedAssets(amountToBorrow);
 
         emit BorrowerBorrow(borrowerAddress(), amountToBorrow);
     }
@@ -290,17 +290,6 @@ contract LendingPool is
         return weightedApysWad / totalAssets;
     }
 
-    /** @notice As tranches can be partly boosted by platform tokens,
-     *  this will return the effective APR taking into account all the deposited USDC + platform tokens
-     */
-    function lenderEffectiveAprByTrancheWad(
-        address lenderAddress,
-        uint8 trancheId
-    ) public view returns (uint) {
-        return trancheAPYsWads()[trancheId];
-        // TODO: take into account deposited tribal tokens
-    }
-
     // @notice  Returns amount of stablecoins deposited to a pool tranche by a lender
     function lenderDepositedAssetsByTranche(
         address lenderAddress,
@@ -339,6 +328,28 @@ contract LendingPool is
 
         emit LenderWithdrawInterest(_msgSender(), trancheId, toWithdraw);
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
+    }
+
+    function lenderLockPlatformTokensByTranche(
+        uint8 trancheId,
+        uint protocolTokens
+    ) external {
+        Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
+        SafeERC20Upgradeable.safeTransferFrom(
+            IERC20Upgradeable(platformTokenContractAddress()),
+            _msgSender(),
+            address(this),
+            protocolTokens
+        );
+        r.stakedPlatformTokens += protocolTokens;
+    }
+
+    function lenderUnlockPlatformTokensByTranche(
+        uint8 trancheId,
+        uint protocolTokens
+    ) external {
+        // TODO: check that the tranche is in repaid stage
+        // TODO: check that all the rewards are paid out
     }
 
     /* VIEWS BY TRANCHE*/
@@ -392,6 +403,49 @@ contract LendingPool is
             lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
     }
 
+    /** @notice As tranches can be partly boosted by platform tokens,
+     *  this will return the effective APR taking into account all the deposited USDC + platform tokens
+     */
+    function lenderEffectiveAprByTrancheWad(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
+        if (r.stakedAssets == 0) {
+            return 0;
+        }
+        uint boostedAssets = r.stakedPlatformTokens /
+            trancheBoostRatios()[trancheId];
+        /// @dev prevent more APRs than stakedAssets allow
+        if (boostedAssets > r.stakedAssets) {
+            boostedAssets = r.stakedAssets;
+        }
+        uint unBoostedAssets = r.stakedAssets - boostedAssets;
+        uint weightedAverage = (unBoostedAssets *
+            trancheAPYsWads()[trancheId] +
+            boostedAssets *
+            trancheBoostedAPYsWads()[trancheId]) / r.stakedAssets;
+        return weightedAverage;
+    }
+
+    function lenderPlatformTokensByTrancheLocked(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        return
+            s_trancheRewardables[trancheId][lenderAddress].stakedPlatformTokens;
+    }
+
+    function lenderPlatformTokensByTrancheLockable(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
+        uint maxLockablePlatformTokens = r.stakedAssets *
+            trancheBoostRatios()[trancheId];
+        return maxLockablePlatformTokens - r.stakedPlatformTokens;
+    }
+
     /*///////////////////////////////////
        Borrower functions
     ///////////////////////////////////*/
@@ -437,15 +491,15 @@ contract LendingPool is
             IERC20Upgradeable(stableCoinContractAddress()),
             _msgSender(),
             address(this),
-            borrowedAssets();
+            borrowedAssets()
         );
-        for (let i = 0; i < tranchesCount(); ++i) {
+        for (uint i; i < tranchesCount(); ++i) {
             TrancheVault tv = _trancheVaultContracts()[i];
             SafeERC20Upgradeable.safeTransfer(
                 IERC20Upgradeable(stableCoinContractAddress()),
                 address(tv),
                 tv.totalAssets()
-            )
+            );
             tv.enableWithdrawals();
         }
         _transitionToPrincipalRepaidStage(borrowedAssets());
@@ -507,7 +561,7 @@ contract LendingPool is
         address depositorAddress,
         uint amount
     ) external authTrancheVault(trancheId) {
-        if (currentStage() == STAGES.REPAID) {
+        if (currentStage() == Stages.REPAID) {
             emit LenderWithdraw(depositorAddress, trancheId, amount);
         } else {
             Rewardable storage rewardable = s_trancheRewardables[trancheId][
