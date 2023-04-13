@@ -45,13 +45,6 @@ async function main() {
   }
   console.log("Tranche Vault Addresses: ", trancheVaultAddresses);
 
-  const flcAddress = await poolContract.firstLossCapitalVaultAddress();
-  const flcConttract = await ethers.getContractAt(
-    "FirstLossCapitalVault",
-    flcAddress
-  );
-  console.log("First loss capital address:", flcAddress);
-
   console.log(
     "Current Pool Stage:",
     STAGES_LOOKUP[await poolContract.currentStage()]
@@ -102,13 +95,6 @@ async function main() {
   // console.log(
   //   "Current Pool Stage:",
   //   STAGES_LOOKUP[await poolContract.currentStage()]
-  // );
-  // console.log(
-  //   "FLC expected deposit:",
-  //   ethers.utils.formatUnits(
-  //     await poolContract.firstLossCapitalDepositTarget(),
-  //     6
-  //   )
   // );
 
   /* !!!!!!!!!!!! 4. Deposit first loss capital !!!!!!!!!!!!!!!!!!!!*/

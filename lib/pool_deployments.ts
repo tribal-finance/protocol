@@ -14,7 +14,6 @@ import { ethers } from "hardhat";
 import type { BigNumberish, Signer } from "ethers";
 import type {
   ERC20Upgradeable,
-  FirstLossCapitalVault,
   ILendingPool,
   LendingPool,
   PoolFactory,
@@ -77,14 +76,6 @@ export async function deployFactoryAndImplementations(
   const poolImplementation = await LendingPool.connect(deployer).deploy();
   await poolImplementation.deployed();
 
-  const FirstLossCapitalVault = await ethers.getContractFactory(
-    "FirstLossCapitalVault"
-  );
-  const flcImplementation = await FirstLossCapitalVault.connect(
-    deployer
-  ).deploy();
-  await flcImplementation.deployed();
-
   const TrancheVault = await ethers.getContractFactory("TrancheVault");
   const trancheVaultImplementation = await TrancheVault.connect(
     deployer
@@ -102,9 +93,6 @@ export async function deployFactoryAndImplementations(
   await poolFactory
     .connect(deployer)
     .setTrancheVaultImplementation(trancheVaultImplementation.address);
-  await poolFactory
-    .connect(deployer)
-    .setFirstLossCapitalVaultImplementation(flcImplementation.address);
 
   return poolFactory;
 }
@@ -199,7 +187,6 @@ export async function deployDuotranchePool(
 
 export type DeployedContractsType = {
   lendingPool: LendingPool;
-  firstLossCapitalVault: FirstLossCapitalVault;
   firstTrancheVault: TrancheVault;
   secondTrancheVault: TrancheVault;
 };
@@ -211,11 +198,6 @@ export async function _getDeployedContracts(
   const lendingPool = await ethers.getContractAt(
     "LendingPool",
     lastDeployedPoolRecord.poolAddress
-  );
-
-  const firstLossCapitalVault = await ethers.getContractAt(
-    "FirstLossCapitalVault",
-    lastDeployedPoolRecord.firstLossCapitalVaultAddress
   );
 
   const firstTrancheVault = await ethers.getContractAt(
@@ -230,7 +212,6 @@ export async function _getDeployedContracts(
 
   return {
     lendingPool,
-    firstLossCapitalVault,
     firstTrancheVault,
     secondTrancheVault,
   };

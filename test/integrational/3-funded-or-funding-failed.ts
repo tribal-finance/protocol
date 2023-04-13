@@ -109,17 +109,6 @@ describe("Marking the pool as Funded", function () {
         expect(await lendingPool.fundingFailedAt()).not.to.be.equal(0);
       });
 
-      describe("first loss capital vault", async function () {
-        it("has disabled deposits, withdraws, and transfers", async function () {
-          const { firstLossCapitalVault, lendingPool } = await loadFixture(
-            notEnoughFundingUnipoolFixture
-          );
-          expect(await firstLossCapitalVault.depositEnabled()).to.eq(false);
-          expect(await firstLossCapitalVault.withdrawEnabled()).to.eq(false);
-          expect(await firstLossCapitalVault.transferEnabled()).to.eq(false);
-        });
-      });
-
       describe("first tranche vault", async function () {
         it("has disabled deposits and transfers. it has enabled withdrawals", async function () {
           const { firstTrancheVault, lendingPool } = await loadFixture(
@@ -169,17 +158,6 @@ describe("Marking the pool as Funded", function () {
         expect(await lendingPool.collectedAssets()).to.be.equal(
           await lendingPool.minFundingCapacity()
         );
-      });
-
-      describe("first loss capital vault", async function () {
-        it("has deposits enabled, withdraws disabled, transfers disabled", async function () {
-          const { firstLossCapitalVault } = await loadFixture(
-            enoughFundingUnipoolFixture
-          );
-          expect(await firstLossCapitalVault.depositEnabled()).to.eq(true);
-          expect(await firstLossCapitalVault.withdrawEnabled()).to.eq(false);
-          expect(await firstLossCapitalVault.transferEnabled()).to.eq(false);
-        });
       });
 
       describe("first tranche vault", async function () {

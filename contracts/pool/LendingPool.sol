@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./ILendingPool.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
-import "../vaults/FirstLossCapitalVault.sol";
 
 contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -27,11 +26,6 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
         _;
     }
 
-    modifier authFirstLossCapitalVault() {
-        require(firstLossCapitalVaultAddress() == _msgSender(), "FLC vault auth");
-        _;
-    }
-
     /*///////////////////////////////////
        INITIALIZATION
     ///////////////////////////////////*/
@@ -39,10 +33,9 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     function initialize(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
-        address _firstLossCapitalVaultAddress,
         address _feeSharingContractAddress
     ) external initializer {
-        _validateInitParams(params, _trancheVaultAddresses, _firstLossCapitalVaultAddress, _feeSharingContractAddress);
+        _validateInitParams(params, _trancheVaultAddresses, _feeSharingContractAddress);
 
         _setName(params.name);
         _setToken(params.token);
@@ -64,7 +57,6 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
         _setTrancheCoveragesWads(params.trancheCoveragesWads);
 
         _setTrancheVaultAddresses(_trancheVaultAddresses);
-        _setFirstLossCapitalVaultAddress(_firstLossCapitalVaultAddress);
         _setFeeSharingContractAddress(_feeSharingContractAddress);
 
         __Ownable_init();
@@ -75,7 +67,6 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     function _validateInitParams(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
-        address _firstLossCapitalVaultAddress,
         address _feeSharingContractAddress
     ) internal pure {
         require(params.stableCoinContractAddress != address(0), "stableCoinContractAddress empty");
@@ -104,8 +95,6 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
                 "tranche boosted APRs < tranche APRs"
             );
         }
-
-        require(_firstLossCapitalVaultAddress != address(0), "firstLossCapitalVaultAddress == 0");
 
         // require(params.feeSharingContractAddress != address(0), "feeSharingAddress empty"); // TODO: uncomment when fee sharing is developed
     }
@@ -185,9 +174,6 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
             tv.disableWithdrawals();
             tv.sendAssetsToPool(tv.totalAssets());
         }
-
-        // TODO: ditch the FLC vault all together?
-        _firstLossCapitalVaultContract().enableDeposits();
 
         emit PoolFunded();
     }
@@ -496,10 +482,6 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
         for (uint i; i < addresses.length; ++i) {
             contracts[i] = TrancheVault(addresses[i]);
         }
-    }
-
-    function _firstLossCapitalVaultContract() internal view returns (FirstLossCapitalVault c) {
-        c = FirstLossCapitalVault(firstLossCapitalVaultAddress());
     }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {

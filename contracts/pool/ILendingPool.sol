@@ -161,7 +161,6 @@ interface ILendingPool {
     function initialize(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
-        address _firstLossCapitalVaultAddress,
         address _feeSharingContractAddress
     ) external;
 

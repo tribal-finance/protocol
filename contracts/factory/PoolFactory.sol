@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../pool/ILendingPool.sol";
 import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
-import "../vaults/FirstLossCapitalVault.sol";
 
 import "hardhat/console.sol";
 
@@ -20,7 +19,6 @@ contract PoolFactory is OwnableUpgradeable {
         string name;
         string tokenName;
         address poolAddress;
-        address firstLossCapitalVaultAddress;
         address firstTrancheVaultAddress;
         address secondTrancheVaultAddress;
         address poolImplementationAddress;
@@ -31,11 +29,9 @@ contract PoolFactory is OwnableUpgradeable {
 
     event PoolCloned(address indexed addr, address implementationAddress);
     event TrancheVaultCloned(address indexed addr, address implementationAddress);
-    event FirstLossCapitalPoolCloned(address indexed addr, address implementationAddress);
     event PoolDeployed(address indexed deployer, PoolRecord record);
 
     address public poolImplementationAddress;
-    address public firstLossCapitalVaultImplementationAddress;
     address public trancheVaultImplementationAddress;
 
     PoolRecord[] public poolRegistry;
@@ -52,10 +48,6 @@ contract PoolFactory is OwnableUpgradeable {
     /// @dev sets implementation for future tranche vault deployments
     function setTrancheVaultImplementation(address implementation) external onlyOwner {
         trancheVaultImplementationAddress = implementation;
-    }
-
-    function setFirstLossCapitalVaultImplementation(address implementation) external onlyOwner {
-        firstLossCapitalVaultImplementationAddress = implementation;
     }
 
     /// @dev returns last deployed pool record
@@ -86,13 +78,10 @@ contract PoolFactory is OwnableUpgradeable {
             _msgSender()
         );
 
-        address firstLossCapitalVaultAddress = deployFlcVault(params, poolAddress, _msgSender());
-
         initializePoolAndCreatePoolRecord(
             poolAddress,
             params,
             trancheVaultAddresses,
-            firstLossCapitalVaultAddress,
             address(0)
         );
 
@@ -129,39 +118,15 @@ contract PoolFactory is OwnableUpgradeable {
         }
     }
 
-    function deployFlcVault(
-        ILendingPool.LendingPoolParams calldata params,
-        address poolAddress,
-        address ownerAddress
-    ) public onlyOwner returns (address firstLossCapitalVaultAddress) {
-        firstLossCapitalVaultAddress = Clones.clone(firstLossCapitalVaultImplementationAddress);
-
-        emit FirstLossCapitalPoolCloned(firstLossCapitalVaultAddress, firstLossCapitalVaultImplementationAddress);
-
-        string memory tokenName = string(abi.encodePacked(params.name, " First Loss Capital Token"));
-        string memory symbol = string(abi.encodePacked("flc", params.token));
-        FirstLossCapitalVault(firstLossCapitalVaultAddress).initialize(
-            poolAddress,
-            params.minFundingCapacity.mulDiv(params.collateralRatioWad, WAD),
-            params.maxFundingCapacity.mulDiv(params.collateralRatioWad, WAD),
-            tokenName,
-            symbol,
-            params.stableCoinContractAddress
-        );
-        OwnableUpgradeable(firstLossCapitalVaultAddress).transferOwnership(ownerAddress);
-    }
-
     function initializePoolAndCreatePoolRecord(
         address poolAddress,
         ILendingPool.LendingPoolParams calldata params,
         address[] memory trancheVaultAddresses,
-        address firstLossCapitalVaultAddress,
         address feeSharingContractAddress
     ) public onlyOwner {
         ILendingPool(poolAddress).initialize(
             params,
             trancheVaultAddresses,
-            firstLossCapitalVaultAddress,
             feeSharingContractAddress
         );
         OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
@@ -170,7 +135,6 @@ contract PoolFactory is OwnableUpgradeable {
             params.name,
             params.token,
             poolAddress,
-            firstLossCapitalVaultAddress,
             trancheVaultAddresses[0],
             trancheVaultAddresses.length > 1 ? trancheVaultAddresses[1] : address(0),
             poolImplementationAddress,

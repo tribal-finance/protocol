@@ -282,20 +282,6 @@ abstract contract LendingPoolState {
         emit ChangeFeeSharingContractAddress(msg.sender, oldValue, newValue);
     }
 
-    /* firstLossCapitalVaultAddress */
-    address private s_firstLossCapitalVaultAddress;
-    event ChangeFirstLossCapitalVaultAddress(address indexed actor, address oldValue, address newValue);
-
-    function firstLossCapitalVaultAddress() public view returns (address) {
-        return s_firstLossCapitalVaultAddress;
-    }
-
-    function _setFirstLossCapitalVaultAddress(address newValue) internal {
-        address oldValue = s_firstLossCapitalVaultAddress;
-        s_firstLossCapitalVaultAddress = newValue;
-        emit ChangeFirstLossCapitalVaultAddress(msg.sender, oldValue, newValue);
-    }
-
     /* trancheVaultAddresses */
     address[] private s_trancheVaultAddresses;
     event ChangeTrancheVaultAddresses(address indexed actor, address[] oldValue, address[] newValue);

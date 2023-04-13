@@ -51,15 +51,6 @@ describe("When pool is in Initial ", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.INITIAL);
     });
 
-    describe("Fist loss capital vault", async () => {
-      it("does not allow withdrawals, deposits and transfers", async () => {
-        const { firstLossCapitalVault } = await loadFixture(uniPoolFixture);
-        expect(await firstLossCapitalVault.depositEnabled()).to.eq(false);
-        expect(await firstLossCapitalVault.withdrawEnabled()).to.eq(false);
-        expect(await firstLossCapitalVault.transferEnabled()).to.eq(false);
-      });
-    });
-
     describe("Tranche vault", async () => {
       it("does not allow withdrawals, deposits and transfers", async () => {
         const { firstTrancheVault } = await loadFixture(uniPoolFixture);
@@ -71,15 +62,6 @@ describe("When pool is in Initial ", function () {
   });
 
   describe("When duotranche pool is deployed", async () => {
-    describe("Fist loss capital vault", async () => {
-      it("does not allow withdrawals, deposits and transfers", async () => {
-        const { firstLossCapitalVault } = await loadFixture(duoPoolFixture);
-        expect(await firstLossCapitalVault.depositEnabled()).to.eq(false);
-        expect(await firstLossCapitalVault.withdrawEnabled()).to.eq(false);
-        expect(await firstLossCapitalVault.transferEnabled()).to.eq(false);
-      });
-    });
-
     describe("First Tranche vault", async () => {
       it("does not allow withdrawals, deposits and transfers", async () => {
         const { firstTrancheVault } = await loadFixture(duoPoolFixture);
