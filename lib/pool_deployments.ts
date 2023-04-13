@@ -43,8 +43,8 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   defaultPenalty: 0,
   penaltyRateWad: WAD(0.01),
   tranchesCount: 1,
-  trancheAPYsWads: [WAD(0.1)],
-  trancheBoostedAPYsWads: [WAD(0.1)],
+  trancheAPRsWads: [WAD(0.1)],
+  trancheBoostedAPRsWads: [WAD(0.1)],
   trancheBoostRatios: [ethers.utils.parseUnits("2", 12)],
   trancheCoveragesWads: [WAD(1)],
 };
@@ -124,8 +124,8 @@ export async function deployUnitranchePool(
     ...{
       borrowerAddress: await borrower.getAddress(),
       tranchesCount: 1,
-      trancheAPYsWads: [WAD(0.1)],
-      trancheBoostedAPYsWads: [WAD(0.15)],
+      trancheAPRsWads: [WAD(0.1)],
+      trancheBoostedAPRsWads: [WAD(0.15)],
       trancheCoveragesWads: [WAD(1)],
     },
     ...poolInitParamsOverrides,
@@ -165,8 +165,8 @@ export async function deployDuotranchePool(
     ...{
       borrowerAddress: await borrower.getAddress(),
       tranchesCount: 2,
-      trancheAPYsWads: [WAD(0.1), WAD(0.12)],
-      trancheBoostedAPYsWads: [WAD(0.1), WAD(0.15)],
+      trancheAPRsWads: [WAD(0.1), WAD(0.12)],
+      trancheBoostedAPRsWads: [WAD(0.1), WAD(0.15)],
       trancheBoostRatios: [
         ethers.utils.parseUnits("2", 12),
         ethers.utils.parseUnits("2", 12),

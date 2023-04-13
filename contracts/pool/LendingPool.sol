@@ -58,8 +58,8 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
         _setDefaultPenalty(params.defaultPenalty);
         _setPenaltyRateWad(params.penaltyRateWad);
         _setTranchesCount(params.tranchesCount);
-        _setTrancheAPYsWads(params.trancheAPYsWads);
-        _setTrancheBoostedAPYsWads(params.trancheBoostedAPYsWads);
+        _setTrancheAPRsWads(params.trancheAPRsWads);
+        _setTrancheBoostedAPRsWads(params.trancheBoostedAPRsWads);
         _setTrancheBoostRatios(params.trancheBoostRatios);
         _setTrancheCoveragesWads(params.trancheCoveragesWads);
 
@@ -93,14 +93,14 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
 
         require(params.tranchesCount > 0, "tranchesCount == 0");
         require(_trancheVaultAddresses.length == params.tranchesCount, "trancheAddresses length");
-        require(params.trancheAPYsWads.length == params.tranchesCount, "tranche APYs length");
-        require(params.trancheBoostedAPYsWads.length == params.tranchesCount, "tranche Boosted APYs length");
-        require(params.trancheBoostedAPYsWads.length == params.tranchesCount, "tranche Coverage APYs length");
+        require(params.trancheAPRsWads.length == params.tranchesCount, "tranche APYs length");
+        require(params.trancheBoostedAPRsWads.length == params.tranchesCount, "tranche Boosted APYs length");
+        require(params.trancheBoostedAPRsWads.length == params.tranchesCount, "tranche Coverage APYs length");
 
         for (uint i; i < params.tranchesCount; ++i) {
-            require(params.trancheAPYsWads[i] > 0, "tranche APYs == 0");
+            require(params.trancheAPRsWads[i] > 0, "tranche APYs == 0");
             require(
-                params.trancheBoostedAPYsWads[i] >= params.trancheAPYsWads[i],
+                params.trancheBoostedAPRsWads[i] >= params.trancheAPRsWads[i],
                 "tranche boosted APYs < tranche APYs"
             );
         }
@@ -339,9 +339,9 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
         }
         uint unBoostedAssets = r.stakedAssets - boostedAssets;
         uint weightedAverage = (unBoostedAssets *
-            trancheAPYsWads()[trancheId] +
+            trancheAPRsWads()[trancheId] +
             boostedAssets *
-            trancheBoostedAPYsWads()[trancheId]) / r.stakedAssets;
+            trancheBoostedAPRsWads()[trancheId]) / r.stakedAssets;
         return weightedAverage;
     }
 

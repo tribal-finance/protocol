@@ -152,8 +152,8 @@ interface ILendingPool {
         uint defaultPenalty;
         uint penaltyRateWad;
         uint8 tranchesCount;
-        uint[] trancheAPYsWads;
-        uint[] trancheBoostedAPYsWads;
+        uint[] trancheAPRsWads;
+        uint[] trancheBoostedAPRsWads;
         uint[] trancheBoostRatios;
         uint[] trancheCoveragesWads;
     }

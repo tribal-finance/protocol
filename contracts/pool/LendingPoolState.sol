@@ -208,32 +208,32 @@ abstract contract LendingPoolState {
         emit ChangeTranchesCount(msg.sender, oldValue, newValue);
     }
 
-    /* trancheAPYsWads */
-    uint[] private s_trancheAPYsWads;
-    event ChangeTrancheAPYsWads(address indexed actor, uint[] oldValue, uint[] newValue);
+    /* trancheAPRsWads */
+    uint[] private s_trancheAPRsWads;
+    event ChangeTrancheAPRsWads(address indexed actor, uint[] oldValue, uint[] newValue);
 
-    function trancheAPYsWads() public view returns (uint[] memory) {
-        return s_trancheAPYsWads;
+    function trancheAPRsWads() public view returns (uint[] memory) {
+        return s_trancheAPRsWads;
     }
 
-    function _setTrancheAPYsWads(uint[] calldata newValue) internal {
-        uint[] memory oldValue = s_trancheAPYsWads;
-        s_trancheAPYsWads = newValue;
-        emit ChangeTrancheAPYsWads(msg.sender, oldValue, newValue);
+    function _setTrancheAPRsWads(uint[] calldata newValue) internal {
+        uint[] memory oldValue = s_trancheAPRsWads;
+        s_trancheAPRsWads = newValue;
+        emit ChangeTrancheAPRsWads(msg.sender, oldValue, newValue);
     }
 
-    /* trancheBoostedAPYsWads */
-    uint[] private s_trancheBoostedAPYsWads;
-    event ChangeTrancheBoostedAPYsWads(address indexed actor, uint[] oldValue, uint[] newValue);
+    /* trancheBoostedAPRsWads */
+    uint[] private s_trancheBoostedAPRsWads;
+    event ChangeTrancheBoostedAPRsWads(address indexed actor, uint[] oldValue, uint[] newValue);
 
-    function trancheBoostedAPYsWads() public view returns (uint[] memory) {
-        return s_trancheBoostedAPYsWads;
+    function trancheBoostedAPRsWads() public view returns (uint[] memory) {
+        return s_trancheBoostedAPRsWads;
     }
 
-    function _setTrancheBoostedAPYsWads(uint[] calldata newValue) internal {
-        uint[] memory oldValue = s_trancheBoostedAPYsWads;
-        s_trancheBoostedAPYsWads = newValue;
-        emit ChangeTrancheBoostedAPYsWads(msg.sender, oldValue, newValue);
+    function _setTrancheBoostedAPRsWads(uint[] calldata newValue) internal {
+        uint[] memory oldValue = s_trancheBoostedAPRsWads;
+        s_trancheBoostedAPRsWads = newValue;
+        emit ChangeTrancheBoostedAPRsWads(msg.sender, oldValue, newValue);
     }
 
     /* trancheBoostedRatioWads */

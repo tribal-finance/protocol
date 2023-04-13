@@ -33,8 +33,8 @@ const vars = [
 const vars2 = [
   "uint8 tranchesCount",
   "address[] memory trancheVaultAddresses",
-  "uint[] memory trancheAPYsWads",
-  "uint[] memory trancheBoostedAPYsWads",
+  "uint[] memory trancheAPRsWads",
+  "uint[] memory trancheBoostedAPRsWads",
   "uint[] memory trancheCoveragesWads",
 ];
 
@@ -60,7 +60,7 @@ const vars5 = [
 const vars6 = [
   // "uint borrowerInterestRepaid",
   //"uint borrowedAmount",
-  "uint64 interestRepaidAt"
+  "uint64 interestRepaidAt",
 ];
 
 for (let v of vars6) {
