@@ -11,7 +11,7 @@ import { lendingPoolSol } from "../../typechain-types/contracts/old";
 
 dotenv.config();
 
-const LENDING_POOL_ADDRESS = "0x015950dF326428700c43503D641dC1E974F2b954";
+const LENDING_POOL_ADDRESS = "0x9a1b9F876Ea1cA0230bc55c3937014555FA1891c";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -83,33 +83,13 @@ async function main() {
   // console.log("deposited money");
 
   /* !!!!!!!!!!!! 3. Move to funded state !!!!!!!!!!!!!!!!!!!!*/
-  // tx = await poolContract.connect(deployer).adminTransitionToFundedState();
-  // await tx.wait();
-  // console.log("Lending Pool Transitioned to Funded State");
-  // console.log(
-  //   "Current Pool Stage:",
-  //   STAGES_LOOKUP[await poolContract.currentStage()]
-  // );
-  // console.log(
-  //   "FLC expected deposit:",
-  //   ethers.utils.formatUnits(
-  //     await poolContract.firstLossCapitalDepositTarget(),
-  //     6
-  //   )
-  // );
-
-  /* !!!!!!!!!!!! 4. Deposit first loss capital !!!!!!!!!!!!!!!!!!!!*/
-  // tx = await USDCContract.connect(borrower).approve(
-  //   flcConttract.address,
-  //   USDC(2000)
-  // );
-  // await tx.wait();
-  // console.log("approved FLC spend");
-  // tx = await flcConttract
-  //   .connect(borrower)
-  //   .deposit(USDC(2000), lender1.address);
-  // await tx.wait();
-  // console.log("deposited FLC money");
+  tx = await poolContract.connect(deployer).adminTransitionToFundedState();
+  await tx.wait();
+  console.log("Lending Pool Transitioned to Funded State");
+  console.log(
+    "Current Pool Stage:",
+    STAGES_LOOKUP[await poolContract.currentStage()]
+  );
 
   /* !!!!!!!!!!!! 5. Borrow !!!!!!!!!!!!!!!!!!!!*/
   // console.log(
@@ -129,15 +109,15 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  // tx = await USDCContract.connect(borrower).approve(
-  //   poolContract.address,
-  //   USDC(150)
-  // );
-  // await tx.wait();
-  // console.log("approved interst spend");
-  // tx = await poolContract.connect(borrower).borrowerPayInterest(USDC(150));
-  // await tx.wait();
-  // console.log("deposited interest money");
+  tx = await USDCContract.connect(borrower).approve(
+    poolContract.address,
+    USDC(150)
+  );
+  await tx.wait();
+  console.log("approved interst spend");
+  tx = await poolContract.connect(borrower).borrowerPayInterest(USDC(150));
+  await tx.wait();
+  console.log("deposited interest money");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -198,7 +198,7 @@ interface ILendingPool {
 
     event LenderBoostAPY(
         address indexed lender,
-        uint indexed trancheId,
+        uint8 indexed trancheId,
         uint boostedAPY
     );
 

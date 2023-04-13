@@ -49,17 +49,6 @@ describe("Interests", function () {
           .connect(deployer)
           .adminTransitionToFundedState();
 
-        const flcToDeposit =
-          await contracts.lendingPool.firstLossCapitalDepositTarget();
-
-        await usdc
-          .connect(borrower)
-          .approve(contracts.firstLossCapitalVault.address, flcToDeposit);
-
-        await contracts.firstLossCapitalVault
-          .connect(borrower)
-          .deposit(flcToDeposit, await borrower.getAddress());
-
         await contracts.lendingPool.connect(borrower).borrow();
 
         return contracts;
@@ -148,9 +137,9 @@ describe("Interests", function () {
           await lendingPool.lenderRewardsByTrancheGeneratedByDate(a, 0);
         expect(lenderRewardsByTrancheGeneratedByDate).to.equal(USDC(100));
 
-        const lenderRewardsByTrancheWithdrawable =
-          await lendingPool.lenderRewardsByTrancheWithdrawable(a, 0);
-        expect(lenderRewardsByTrancheWithdrawable).to.equal(USDC(100));
+        const lenderRewardsByTrancheRedeemable =
+          await lendingPool.lenderRewardsByTrancheRedeemable(a, 0);
+        expect(lenderRewardsByTrancheRedeemable).to.equal(USDC(100));
       });
 
       xit("console.logs", async () => {
@@ -169,7 +158,7 @@ describe("Interests", function () {
           await lendingPool.lenderRewardsByTrancheGeneratedByDate(a, 0);
 
         const lenderRewardsByTrancheWithdrawable =
-          await lendingPool.lenderRewardsByTrancheWithdrawable(a, 0);
+          await lendingPool.lenderRewardsByTrancheRedeemable(a, 0);
 
         console.log({
           lenderTotalExpectedRewardsByTranche,

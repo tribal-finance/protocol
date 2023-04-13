@@ -298,8 +298,23 @@ contract LendingPool is
     /*///////////////////////////////////
        Lender rewards
     ///////////////////////////////////*/
-    function lenderWithdrawRewardsByTranche(uint8 trancheId) external {
-        //noop
+    function lenderRedeemRewardsByTranche(uint8 trancheId) external {
+        uint toWithdraw = lenderRewardsByTrancheRedeemable(
+            _msgSender(),
+            trancheId
+        );
+        require(toWithdraw > 0, "nothing to withdraw");
+        s_trancheRewardables[trancheId][_msgSender()]
+            .redeemedRewards += toWithdraw;
+
+        SafeERC20Upgradeable.safeTransfer(
+            IERC20Upgradeable(stableCoinContractAddress()),
+            _msgSender(),
+            toWithdraw
+        );
+
+        emit LenderWithdrawInterest(_msgSender(), trancheId, toWithdraw);
+        _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
     /* VIEWS BY TRANCHE*/
