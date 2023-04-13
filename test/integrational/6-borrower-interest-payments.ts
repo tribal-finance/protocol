@@ -168,5 +168,36 @@ describe("Interests", function () {
         });
       });
     });
+
+    context(
+      "after borrower repays $750 interest (all the interest)",
+      async () => {
+        async function fullyRepaidFixture() {
+          const data = await loadFixture(uniPoolFixture);
+          const { usdc, lendingPool, borrower } = data;
+
+          await usdc.connect(borrower).approve(lendingPool.address, USDC(750));
+          await lendingPool.connect(borrower).borrowerPayInterest(USDC(750));
+
+          return data;
+        }
+
+        it("changes borrowerOutstandingInterest", async () => {
+          const { lendingPool } = await loadFixture(fullyRepaidFixture);
+
+          expect(await lendingPool.borrowerOutstandingInterest()).to.equal(
+            USDC(0)
+          );
+        });
+
+        it("changes pool current stage to INTEREST_REPAID", async () => {
+          const { lendingPool } = await loadFixture(fullyRepaidFixture);
+
+          expect(await lendingPool.currentStage()).to.equal(
+            STAGES.BORROWER_INTEREST_REPAID
+          );
+        });
+      }
+    );
   });
 });

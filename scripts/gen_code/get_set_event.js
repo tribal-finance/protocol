@@ -59,7 +59,8 @@ const vars5 = [
 
 const vars6 = [
   // "uint borrowerInterestRepaid",
-  "uint borrowedAmount",
+  //"uint borrowedAmount",
+  "uint64 interestRepaidAt"
 ];
 
 for (let v of vars6) {

@@ -174,6 +174,9 @@ contract LendingPool is
         if (repaidAt() != 0) {
             return Stages.REPAID;
         }
+        if (interestRepaidAt() != 0) {
+            return Stages.BORROWER_INTEREST_REPAID;
+        }
         if (borrowedAt() != 0) {
             return Stages.BORROWED;
         }
@@ -411,6 +414,10 @@ contract LendingPool is
             assets - assetsToSendToFeeSharing,
             assetsToSendToFeeSharing
         );
+
+        if (borrowerOutstandingInterest() == 0) {
+            _setInterestRepaidAt(uint64(block.timestamp));
+        }
     }
 
     function borrowerRepayPrincipal() external {}
@@ -425,7 +432,7 @@ contract LendingPool is
     /** @dev outstanding borrower interest = expectedBorrowerInterest - borrowerInterestAlreadyPaid
      *  @return interest amount of outstanding assets to be repaid
      */
-    function borrowerOutstandingInterest() external view returns (uint) {
+    function borrowerOutstandingInterest() public view returns (uint) {
         return borrowerExpectedInterest() - borrowerInterestRepaid();
     }
 
