@@ -42,11 +42,7 @@ abstract contract LendingPoolState {
 
     /* stableCoinContractAddress */
     address private s_stableCoinContractAddress;
-    event ChangeStableCoinContractAddress(
-        address indexed actor,
-        address oldValue,
-        address newValue
-    );
+    event ChangeStableCoinContractAddress(address indexed actor, address oldValue, address newValue);
 
     function stableCoinContractAddress() public view returns (address) {
         return s_stableCoinContractAddress;
@@ -60,11 +56,7 @@ abstract contract LendingPoolState {
 
     /* platformTokenContractAddress */
     address private s_platformTokenContractAddress;
-    event ChangePlatformTokenContractAddress(
-        address indexed actor,
-        address oldValue,
-        address newValue
-    );
+    event ChangePlatformTokenContractAddress(address indexed actor, address oldValue, address newValue);
 
     function platformTokenContractAddress() public view returns (address) {
         return s_platformTokenContractAddress;
@@ -78,11 +70,7 @@ abstract contract LendingPoolState {
 
     /* minFundingCapacity */
     uint private s_minFundingCapacity;
-    event ChangeMinFundingCapacity(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeMinFundingCapacity(address indexed actor, uint oldValue, uint newValue);
 
     function minFundingCapacity() public view returns (uint) {
         return s_minFundingCapacity;
@@ -96,11 +84,7 @@ abstract contract LendingPoolState {
 
     /* maxFundingCapacity */
     uint private s_maxFundingCapacity;
-    event ChangeMaxFundingCapacity(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeMaxFundingCapacity(address indexed actor, uint oldValue, uint newValue);
 
     function maxFundingCapacity() public view returns (uint) {
         return s_maxFundingCapacity;
@@ -114,11 +98,7 @@ abstract contract LendingPoolState {
 
     /* fundingPeriodSeconds */
     uint64 private s_fundingPeriodSeconds;
-    event ChangeFundingPeriodSeconds(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeFundingPeriodSeconds(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function fundingPeriodSeconds() public view returns (uint64) {
         return s_fundingPeriodSeconds;
@@ -132,11 +112,7 @@ abstract contract LendingPoolState {
 
     /* lendingTermSeconds */
     uint64 private s_lendingTermSeconds;
-    event ChangeLendingTermSeconds(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeLendingTermSeconds(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function lendingTermSeconds() public view returns (uint64) {
         return s_lendingTermSeconds;
@@ -150,11 +126,7 @@ abstract contract LendingPoolState {
 
     /* borrowerAddress */
     address private s_borrowerAddress;
-    event ChangeBorrowerAddress(
-        address indexed actor,
-        address oldValue,
-        address newValue
-    );
+    event ChangeBorrowerAddress(address indexed actor, address oldValue, address newValue);
 
     function borrowerAddress() public view returns (address) {
         return s_borrowerAddress;
@@ -168,11 +140,7 @@ abstract contract LendingPoolState {
 
     /* borrowerTotalInterestRateWad */
     uint private s_borrowerTotalInterestRateWad;
-    event ChangeBorrowerTotalInterestRateWad(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeBorrowerTotalInterestRateWad(address indexed actor, uint oldValue, uint newValue);
 
     function borrowerTotalInterestRateWad() public view returns (uint) {
         return s_borrowerTotalInterestRateWad;
@@ -186,11 +154,7 @@ abstract contract LendingPoolState {
 
     /* collateralRatioWad */
     uint private s_collateralRatioWad;
-    event ChangeCollateralRatioWad(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeCollateralRatioWad(address indexed actor, uint oldValue, uint newValue);
 
     function collateralRatioWad() public view returns (uint) {
         return s_collateralRatioWad;
@@ -204,11 +168,7 @@ abstract contract LendingPoolState {
 
     /* defaultPenalty */
     uint private s_defaultPenalty;
-    event ChangeDefaultPenalty(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeDefaultPenalty(address indexed actor, uint oldValue, uint newValue);
 
     function defaultPenalty() public view returns (uint) {
         return s_defaultPenalty;
@@ -222,11 +182,7 @@ abstract contract LendingPoolState {
 
     /* penaltyRateWad */
     uint private s_penaltyRateWad;
-    event ChangePenaltyRateWad(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangePenaltyRateWad(address indexed actor, uint oldValue, uint newValue);
 
     function penaltyRateWad() public view returns (uint) {
         return s_penaltyRateWad;
@@ -240,11 +196,7 @@ abstract contract LendingPoolState {
 
     /* tranchesCount */
     uint8 private s_tranchesCount;
-    event ChangeTranchesCount(
-        address indexed actor,
-        uint8 oldValue,
-        uint8 newValue
-    );
+    event ChangeTranchesCount(address indexed actor, uint8 oldValue, uint8 newValue);
 
     function tranchesCount() public view returns (uint8) {
         return s_tranchesCount;
@@ -258,11 +210,7 @@ abstract contract LendingPoolState {
 
     /* trancheAPYsWads */
     uint[] private s_trancheAPYsWads;
-    event ChangeTrancheAPYsWads(
-        address indexed actor,
-        uint[] oldValue,
-        uint[] newValue
-    );
+    event ChangeTrancheAPYsWads(address indexed actor, uint[] oldValue, uint[] newValue);
 
     function trancheAPYsWads() public view returns (uint[] memory) {
         return s_trancheAPYsWads;
@@ -276,11 +224,7 @@ abstract contract LendingPoolState {
 
     /* trancheBoostedAPYsWads */
     uint[] private s_trancheBoostedAPYsWads;
-    event ChangeTrancheBoostedAPYsWads(
-        address indexed actor,
-        uint[] oldValue,
-        uint[] newValue
-    );
+    event ChangeTrancheBoostedAPYsWads(address indexed actor, uint[] oldValue, uint[] newValue);
 
     function trancheBoostedAPYsWads() public view returns (uint[] memory) {
         return s_trancheBoostedAPYsWads;
@@ -294,11 +238,7 @@ abstract contract LendingPoolState {
 
     /* trancheBoostedRatioWads */
     uint[] private s_trancheBoostRatios;
-    event ChangeTrancheBoostRatios(
-        address indexed actor,
-        uint[] oldValue,
-        uint[] newValue
-    );
+    event ChangeTrancheBoostRatios(address indexed actor, uint[] oldValue, uint[] newValue);
 
     function trancheBoostRatios() public view returns (uint[] memory) {
         return s_trancheBoostRatios;
@@ -312,11 +252,7 @@ abstract contract LendingPoolState {
 
     /* trancheCoverages */
     uint[] private s_trancheCoveragesWads;
-    event ChangeTrancheCoveragesWads(
-        address indexed actor,
-        uint[] oldValue,
-        uint[] newValue
-    );
+    event ChangeTrancheCoveragesWads(address indexed actor, uint[] oldValue, uint[] newValue);
 
     function trancheCoveragesWads() public view returns (uint[] memory) {
         return s_trancheCoveragesWads;
@@ -334,11 +270,7 @@ abstract contract LendingPoolState {
 
     /* feeSharingContractAddress */
     address private s_feeSharingContractAddress;
-    event ChangeFeeSharingContractAddress(
-        address indexed actor,
-        address oldValue,
-        address newValue
-    );
+    event ChangeFeeSharingContractAddress(address indexed actor, address oldValue, address newValue);
 
     function feeSharingContractAddress() public view returns (address) {
         return s_feeSharingContractAddress;
@@ -352,11 +284,7 @@ abstract contract LendingPoolState {
 
     /* firstLossCapitalVaultAddress */
     address private s_firstLossCapitalVaultAddress;
-    event ChangeFirstLossCapitalVaultAddress(
-        address indexed actor,
-        address oldValue,
-        address newValue
-    );
+    event ChangeFirstLossCapitalVaultAddress(address indexed actor, address oldValue, address newValue);
 
     function firstLossCapitalVaultAddress() public view returns (address) {
         return s_firstLossCapitalVaultAddress;
@@ -370,11 +298,7 @@ abstract contract LendingPoolState {
 
     /* trancheVaultAddresses */
     address[] private s_trancheVaultAddresses;
-    event ChangeTrancheVaultAddresses(
-        address indexed actor,
-        address[] oldValue,
-        address[] newValue
-    );
+    event ChangeTrancheVaultAddresses(address indexed actor, address[] oldValue, address[] newValue);
 
     function trancheVaultAddresses() public view returns (address[] memory) {
         return s_trancheVaultAddresses;
@@ -391,11 +315,7 @@ abstract contract LendingPoolState {
     //////////////////////////////////////*/
     /* openedAt */
     uint64 private s_openedAt;
-    event ChangeOpenedAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeOpenedAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function openedAt() public view returns (uint64) {
         return s_openedAt;
@@ -409,11 +329,7 @@ abstract contract LendingPoolState {
 
     /* fundedAt */
     uint64 private s_fundedAt;
-    event ChangeFundedAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeFundedAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function fundedAt() public view returns (uint64) {
         return s_fundedAt;
@@ -427,11 +343,7 @@ abstract contract LendingPoolState {
 
     /* fundingFailedAt */
     uint64 private s_fundingFailedAt;
-    event ChangeFundingFailedAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeFundingFailedAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function fundingFailedAt() public view returns (uint64) {
         return s_fundingFailedAt;
@@ -445,11 +357,7 @@ abstract contract LendingPoolState {
 
     /* flcDepositedAt */
     uint64 private s_flcDepositedAt;
-    event ChangeFlcDepositedAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeFlcDepositedAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function flcDepositedAt() public view returns (uint64) {
         return s_flcDepositedAt;
@@ -463,11 +371,7 @@ abstract contract LendingPoolState {
 
     /* borrowedAt */
     uint64 private s_borrowedAt;
-    event ChangeBorrowedAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeBorrowedAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function borrowedAt() public view returns (uint64) {
         return s_borrowedAt;
@@ -481,11 +385,7 @@ abstract contract LendingPoolState {
 
     /* interestRepaidAt */
     uint64 private s_interestRepaidAt;
-    event ChangeInterestRepaidAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeInterestRepaidAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function interestRepaidAt() public view returns (uint64) {
         return s_interestRepaidAt;
@@ -499,11 +399,7 @@ abstract contract LendingPoolState {
 
     /* repaidAt */
     uint64 private s_repaidAt;
-    event ChangeRepaidAt(
-        address indexed actor,
-        uint64 oldValue,
-        uint64 newValue
-    );
+    event ChangeRepaidAt(address indexed actor, uint64 oldValue, uint64 newValue);
 
     function repaidAt() public view returns (uint64) {
         return s_repaidAt;
@@ -519,11 +415,7 @@ abstract contract LendingPoolState {
       Interests & Yields
     //////////////////////////////////////*/
     uint private s_collectedAssets;
-    event ChangeCollectedAssets(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeCollectedAssets(address indexed actor, uint oldValue, uint newValue);
 
     function collectedAssets() public view returns (uint) {
         return s_collectedAssets;
@@ -537,11 +429,7 @@ abstract contract LendingPoolState {
 
     /* borrowedAmount */
     uint private s_borrowedAssets;
-    event ChangeBorrowedAssets(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeBorrowedAssets(address indexed actor, uint oldValue, uint newValue);
 
     function borrowedAssets() public view returns (uint) {
         return s_borrowedAssets;
@@ -555,11 +443,7 @@ abstract contract LendingPoolState {
 
     /* borrowerInterestRepaid */
     uint private s_borrowerInterestRepaid;
-    event ChangeBorrowerInterestRepaid(
-        address indexed actor,
-        uint oldValue,
-        uint newValue
-    );
+    event ChangeBorrowerInterestRepaid(address indexed actor, uint oldValue, uint newValue);
 
     function borrowerInterestRepaid() public view returns (uint) {
         return s_borrowerInterestRepaid;
@@ -581,8 +465,7 @@ abstract contract LendingPoolState {
     EnumerableSet.AddressSet internal s_lenders;
 
     /// @dev trancheId => (lenderAddress => RewardableRecord)
-    mapping(uint8 => mapping(address => Rewardable))
-        internal s_trancheRewardables;
+    mapping(uint8 => mapping(address => Rewardable)) internal s_trancheRewardables;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

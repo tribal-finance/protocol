@@ -43,14 +43,7 @@ contract TrancheVault is BaseVault {
         string memory _symbol,
         address underlying
     ) external initializer {
-        _baseInitializer(
-            _poolAddress,
-            _minCapacity,
-            _maxCapacity,
-            _tokenName,
-            _symbol,
-            underlying
-        );
+        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, underlying);
         _setId(_trancheId);
     }
 
@@ -58,12 +51,7 @@ contract TrancheVault is BaseVault {
       ERC4626Upgradeable overrides
     ///////////////////////////////////////*/
 
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
         // calls the vault, which is assumed not malicious.
@@ -71,12 +59,7 @@ contract TrancheVault is BaseVault {
         // Conclusion: we need to do the transfer before we mint so that any reentrancy would happen before the
         // assets are transferred and before the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
-        SafeERC20Upgradeable.safeTransferFrom(
-            IERC20Upgradeable(asset()),
-            caller,
-            address(this),
-            assets
-        );
+        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
         ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
@@ -98,11 +81,7 @@ contract TrancheVault is BaseVault {
         }
 
         _burn(owner, shares);
-        SafeERC20Upgradeable.safeTransfer(
-            IERC20Upgradeable(asset()),
-            receiver,
-            assets
-        );
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), receiver, assets);
         ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);

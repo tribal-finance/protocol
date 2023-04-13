@@ -8,10 +8,7 @@ interface ITestUSDC is IERC20 {
 
     function updateMasterMinter(address _newMasterMinter) external;
 
-    function configureMinter(
-        address minter,
-        uint256 minterAllowedAmount
-    ) external returns (bool);
+    function configureMinter(address minter, uint256 minterAllowedAmount) external returns (bool);
 
     function mint(address _to, uint256 _amount) external returns (bool);
 }

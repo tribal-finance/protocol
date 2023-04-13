@@ -8,12 +8,7 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-contract BaseVault is
-    Initializable,
-    ERC4626Upgradeable,
-    PausableUpgradeable,
-    OwnableUpgradeable
-{
+contract BaseVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, OwnableUpgradeable {
     /*////////////////////////////////////////////////
       State
     ////////////////////////////////////////////////*/
@@ -70,11 +65,7 @@ contract BaseVault is
 
     /* withdrawEnabled */
     bool private s_withdrawEnabled;
-    event ChangeWithdrawEnabled(
-        address indexed actor,
-        bool oldValue,
-        bool newValue
-    );
+    event ChangeWithdrawEnabled(address indexed actor, bool oldValue, bool newValue);
 
     function withdrawEnabled() public view returns (bool) {
         return s_withdrawEnabled;
@@ -88,11 +79,7 @@ contract BaseVault is
 
     /* depositEnabled */
     bool private s_depositEnabled;
-    event ChangeDepositEnabled(
-        address indexed actor,
-        bool oldValue,
-        bool newValue
-    );
+    event ChangeDepositEnabled(address indexed actor, bool oldValue, bool newValue);
 
     function depositEnabled() public view returns (bool) {
         return s_depositEnabled;
@@ -106,11 +93,7 @@ contract BaseVault is
 
     /* transferEnabled */
     bool private s_transferEnabled;
-    event ChangeTransferEnabled(
-        address indexed actor,
-        bool oldValue,
-        bool newValue
-    );
+    event ChangeTransferEnabled(address indexed actor, bool oldValue, bool newValue);
 
     function transferEnabled() public view returns (bool) {
         return s_transferEnabled;
@@ -131,18 +114,12 @@ contract BaseVault is
     }
 
     modifier onlyOwnerOrPool() {
-        require(
-            _msgSender() == poolAddress() || _msgSender() == owner(),
-            "Vault: onlyOwnerOrPool"
-        );
+        require(_msgSender() == poolAddress() || _msgSender() == owner(), "Vault: onlyOwnerOrPool");
         _;
     }
 
     modifier onlyWhitelist() {
-        require(
-            _isWhitelisted(_msgSender()),
-            "Vault: TODO: whitelists are not implemented yet."
-        );
+        require(_isWhitelisted(_msgSender()), "Vault: TODO: whitelists are not implemented yet.");
         _;
     }
 
@@ -232,11 +209,7 @@ contract BaseVault is
 
     /** @dev called by the pool in order to send assets*/
     function sendAssetsToPool(uint assets) external onlyPool {
-        SafeERC20Upgradeable.safeTransfer(
-            IERC20Upgradeable(asset()),
-            poolAddress(),
-            assets
-        );
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
     /*////////////////////////////////////////////////
@@ -251,15 +224,7 @@ contract BaseVault is
     function deposit(
         uint256 assets,
         address receiver
-    )
-        public
-        virtual
-        override
-        whenNotPaused
-        onlyWhitelist
-        whenDepositEnabled
-        returns (uint256)
-    {
+    ) public virtual override whenNotPaused onlyWhitelist whenDepositEnabled returns (uint256) {
         return super.deposit(assets, receiver);
     }
 
@@ -267,15 +232,7 @@ contract BaseVault is
     function mint(
         uint256 shares,
         address receiver
-    )
-        public
-        virtual
-        override
-        whenNotPaused
-        onlyWhitelist
-        whenDepositEnabled
-        returns (uint256)
-    {
+    ) public virtual override whenNotPaused onlyWhitelist whenDepositEnabled returns (uint256) {
         return super.mint(shares, receiver);
     }
 
@@ -333,8 +290,7 @@ contract BaseVault is
         if (paused() || !withdrawEnabled()) {
             return 0;
         }
-        return
-            _convertToAssets(balanceOf(owner), MathUpgradeable.Rounding.Down);
+        return _convertToAssets(balanceOf(owner), MathUpgradeable.Rounding.Down);
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
@@ -364,11 +320,7 @@ contract BaseVault is
     /*////////////////////////////////////////////////
         ERC20Upgradeable overrides
     ////////////////////////////////////////////////*/
-    function _transfer(
-        address,
-        address,
-        uint256
-    ) internal override whenNotPaused whenTransferEnabled {
+    function _transfer(address, address, uint256) internal override whenNotPaused whenTransferEnabled {
         revert("Transfers are not implemented");
     }
 }

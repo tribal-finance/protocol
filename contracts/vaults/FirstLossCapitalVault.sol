@@ -23,25 +23,12 @@ contract FirstLossCapitalVault is BaseVault {
         string memory _symbol,
         address underlying
     ) external initializer {
-        _baseInitializer(
-            _poolAddress,
-            _minCapacity,
-            _maxCapacity,
-            _tokenName,
-            _symbol,
-            underlying
-        );
+        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, underlying);
     }
 
     function poolSetDepositTarget(uint _depositTarget) external onlyPool {
-        require(
-            _depositTarget >= minFundingCapacity(),
-            "deposit target < minFundingCapacity"
-        );
-        require(
-            _depositTarget <= maxFundingCapacity(),
-            "deposit target > maxFundingCapacity"
-        );
+        require(_depositTarget >= minFundingCapacity(), "deposit target < minFundingCapacity");
+        require(_depositTarget <= maxFundingCapacity(), "deposit target > maxFundingCapacity");
 
         _setMinFundingCapacity(_depositTarget);
         _setMaxFundingCapacity(_depositTarget);
@@ -51,12 +38,7 @@ contract FirstLossCapitalVault is BaseVault {
       ERC4626Upgradeable overrides
     ///////////////////////////////////////*/
 
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         require(assets >= minFundingCapacity(), "minFundingCapacity not met");
         require(assets <= maxFundingCapacity(), "maxFundingCapacity not met");
 
@@ -67,12 +49,7 @@ contract FirstLossCapitalVault is BaseVault {
         // Conclusion: we need to do the transfer before we mint so that any reentrancy would happen before the
         // assets are transferred and before the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
-        SafeERC20Upgradeable.safeTransferFrom(
-            IERC20Upgradeable(asset()),
-            caller,
-            address(this),
-            assets
-        );
+        SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
 
         emit Deposit(caller, receiver, assets, shares);

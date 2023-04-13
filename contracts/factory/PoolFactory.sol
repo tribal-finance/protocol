@@ -30,14 +30,8 @@ contract PoolFactory is OwnableUpgradeable {
     uint private constant WAD = 10 ** 18;
 
     event PoolCloned(address indexed addr, address implementationAddress);
-    event TrancheVaultCloned(
-        address indexed addr,
-        address implementationAddress
-    );
-    event FirstLossCapitalPoolCloned(
-        address indexed addr,
-        address implementationAddress
-    );
+    event TrancheVaultCloned(address indexed addr, address implementationAddress);
+    event FirstLossCapitalPoolCloned(address indexed addr, address implementationAddress);
     event PoolDeployed(address indexed deployer, PoolRecord record);
 
     address public poolImplementationAddress;
@@ -56,24 +50,16 @@ contract PoolFactory is OwnableUpgradeable {
     }
 
     /// @dev sets implementation for future tranche vault deployments
-    function setTrancheVaultImplementation(
-        address implementation
-    ) external onlyOwner {
+    function setTrancheVaultImplementation(address implementation) external onlyOwner {
         trancheVaultImplementationAddress = implementation;
     }
 
-    function setFirstLossCapitalVaultImplementation(
-        address implementation
-    ) external onlyOwner {
+    function setFirstLossCapitalVaultImplementation(address implementation) external onlyOwner {
         firstLossCapitalVaultImplementationAddress = implementation;
     }
 
     /// @dev returns last deployed pool record
-    function lastDeployedPoolRecord()
-        external
-        view
-        returns (PoolRecord memory p)
-    {
+    function lastDeployedPoolRecord() external view returns (PoolRecord memory p) {
         p = poolRegistry[poolRegistry.length - 1];
     }
 
@@ -100,11 +86,7 @@ contract PoolFactory is OwnableUpgradeable {
             _msgSender()
         );
 
-        address firstLossCapitalVaultAddress = deployFlcVault(
-            params,
-            poolAddress,
-            _msgSender()
-        );
+        address firstLossCapitalVaultAddress = deployFlcVault(params, poolAddress, _msgSender());
 
         initializePoolAndCreatePoolRecord(
             poolAddress,
@@ -131,39 +113,19 @@ contract PoolFactory is OwnableUpgradeable {
         trancheVaultAddresses = new address[](params.tranchesCount);
 
         for (uint8 i; i < params.tranchesCount; ++i) {
-            trancheVaultAddresses[i] = Clones.clone(
-                trancheVaultImplementationAddress
-            );
-            emit TrancheVaultCloned(
-                trancheVaultAddresses[i],
-                trancheVaultImplementationAddress
-            );
+            trancheVaultAddresses[i] = Clones.clone(trancheVaultImplementationAddress);
+            emit TrancheVaultCloned(trancheVaultAddresses[i], trancheVaultImplementationAddress);
 
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
                 params.minFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
                 params.maxFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
-                string(
-                    abi.encodePacked(
-                        params.name,
-                        " Tranche ",
-                        Strings.toString(uint(i)),
-                        " Token"
-                    )
-                ),
-                string(
-                    abi.encodePacked(
-                        "tv",
-                        Strings.toString(uint(i)),
-                        params.token
-                    )
-                ),
+                string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
+                string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
                 params.stableCoinContractAddress
             );
-            TrancheVault(trancheVaultAddresses[i]).transferOwnership(
-                ownerAddress
-            );
+            TrancheVault(trancheVaultAddresses[i]).transferOwnership(ownerAddress);
         }
     }
 
@@ -172,18 +134,11 @@ contract PoolFactory is OwnableUpgradeable {
         address poolAddress,
         address ownerAddress
     ) public onlyOwner returns (address firstLossCapitalVaultAddress) {
-        firstLossCapitalVaultAddress = Clones.clone(
-            firstLossCapitalVaultImplementationAddress
-        );
+        firstLossCapitalVaultAddress = Clones.clone(firstLossCapitalVaultImplementationAddress);
 
-        emit FirstLossCapitalPoolCloned(
-            firstLossCapitalVaultAddress,
-            firstLossCapitalVaultImplementationAddress
-        );
+        emit FirstLossCapitalPoolCloned(firstLossCapitalVaultAddress, firstLossCapitalVaultImplementationAddress);
 
-        string memory tokenName = string(
-            abi.encodePacked(params.name, " First Loss Capital Token")
-        );
+        string memory tokenName = string(abi.encodePacked(params.name, " First Loss Capital Token"));
         string memory symbol = string(abi.encodePacked("flc", params.token));
         FirstLossCapitalVault(firstLossCapitalVaultAddress).initialize(
             poolAddress,
@@ -193,9 +148,7 @@ contract PoolFactory is OwnableUpgradeable {
             symbol,
             params.stableCoinContractAddress
         );
-        OwnableUpgradeable(firstLossCapitalVaultAddress).transferOwnership(
-            ownerAddress
-        );
+        OwnableUpgradeable(firstLossCapitalVaultAddress).transferOwnership(ownerAddress);
     }
 
     function initializePoolAndCreatePoolRecord(
@@ -219,9 +172,7 @@ contract PoolFactory is OwnableUpgradeable {
             poolAddress,
             firstLossCapitalVaultAddress,
             trancheVaultAddresses[0],
-            trancheVaultAddresses.length > 1
-                ? trancheVaultAddresses[1]
-                : address(0),
+            trancheVaultAddresses.length > 1 ? trancheVaultAddresses[1] : address(0),
             poolImplementationAddress,
             trancheVaultImplementationAddress
         );
@@ -234,10 +185,7 @@ contract PoolFactory is OwnableUpgradeable {
         ILendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads
     ) internal pure {
-        require(
-            fundingSplitWads.length == params.tranchesCount,
-            "fundingSplitWads length"
-        );
+        require(fundingSplitWads.length == params.tranchesCount, "fundingSplitWads length");
 
         uint sum;
         for (uint i; i < params.tranchesCount; ++i) {

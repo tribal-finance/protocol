@@ -15,62 +15,30 @@ interface ILendingPool {
     // Capacities //
 
     /// @dev The maximum amount of capital that can be deposited into the lending pool.
-    event SetMaxFundingCapacity(
-        address indexed actor,
-        uint oldVal,
-        uint newVal
-    );
+    event SetMaxFundingCapacity(address indexed actor, uint oldVal, uint newVal);
 
     /// @dev The minimum amount of capital required to fund the lending pool.
-    event SetMinFundingCapacity(
-        address indexed actor,
-        uint oldVal,
-        uint newVal
-    );
+    event SetMinFundingCapacity(address indexed actor, uint oldVal, uint newVal);
 
     // Addresses //
 
-    event SetBorrowerAdddress(
-        address indexed actor,
-        address oldVal,
-        address newVal
-    );
+    event SetBorrowerAdddress(address indexed actor, address oldVal, address newVal);
 
     /// @dev Stable coin (deposit token) address: coming from the protocol configuration
-    event SetStableCoinContractAddress(
-        address indexed actor,
-        address oldVal,
-        address newVal
-    );
+    event SetStableCoinContractAddress(address indexed actor, address oldVal, address newVal);
 
-    event SetFeeSharingContractAdddress(
-        address indexed actor,
-        address oldVal,
-        address newVal
-    );
+    event SetFeeSharingContractAdddress(address indexed actor, address oldVal, address newVal);
 
     // Dates and durations (in unix time / seconds) //
     event SetOpenedAt(address indexed actor, uint64 oldVal, uint64 newVal);
 
-    event SetMinFundingCapacityReachedAt(
-        address indexed actor,
-        uint64 oldVal,
-        uint64 newVal
-    );
+    event SetMinFundingCapacityReachedAt(address indexed actor, uint64 oldVal, uint64 newVal);
 
-    event SetMaxFundingCapacityReachedAt(
-        address indexed actor,
-        uint64 oldVal,
-        uint64 newVal
-    );
+    event SetMaxFundingCapacityReachedAt(address indexed actor, uint64 oldVal, uint64 newVal);
 
     event SetFundedAt(address indexed actor, uint64 oldVal, uint64 newVal);
 
-    event SetFundingFailedAt(
-        address indexed actor,
-        uint64 oldVal,
-        uint64 newVal
-    );
+    event SetFundingFailedAt(address indexed actor, uint64 oldVal, uint64 newVal);
 
     event SetRepaidAt(address indexed actor, uint64 oldVal, uint64 newVal);
 
@@ -88,70 +56,33 @@ interface ILendingPool {
     /** @dev each tranche is a separate vault address:
      *   id: 0 - first loss capital, 1 - junior/default tranche, 2 - senior tranche
      */
-    event SetTrancheVaultAddresses(
-        address indexed actor,
-        uint8 indexed trancheId,
-        address[] oldVal,
-        address[] newVal
-    );
+    event SetTrancheVaultAddresses(address indexed actor, uint8 indexed trancheId, address[] oldVal, address[] newVal);
 
-    event SetTrancheMinFundingCapacities(
-        address indexed actor,
-        uint[] oldVal,
-        uint[] newVal
-    );
-    event SetTrancheMaxFundingCapacities(
-        address indexed actor,
-        uint[] oldVal,
-        uint[] newVal
-    );
+    event SetTrancheMinFundingCapacities(address indexed actor, uint[] oldVal, uint[] newVal);
+    event SetTrancheMaxFundingCapacities(address indexed actor, uint[] oldVal, uint[] newVal);
 
     /// @dev WAD
     event SetTrancheAPYs(address indexed actor, uint[] oldVal, uint[] newVal);
 
     /// @dev WAD
-    event SetTrancheBoostedAPYs(
-        address indexed actor,
-        uint[] oldVal,
-        uint[] newVal
-    );
+    event SetTrancheBoostedAPYs(address indexed actor, uint[] oldVal, uint[] newVal);
 
     /** @dev WAD. The percentage of first-loss capital used as coverage in the event of missed payments or default
      *  (e.g. assumption that first loss capital will be less than the senior tranche)
      */
-    event SetTrancheCoverages(
-        address indexed actor,
-        uint[] oldVal,
-        uint[] newVal
-    );
+    event SetTrancheCoverages(address indexed actor, uint[] oldVal, uint[] newVal);
 
     // Borrower //
 
     /// @dev WAD. Collateral ratio aka FLC/maxFunding. WAD.
-    event SetCollateralRatio(
-        address indexed actor,
-        uint256 oldVal,
-        uint256 newVal
-    );
+    event SetCollateralRatio(address indexed actor, uint256 oldVal, uint256 newVal);
 
-    event SetFirstLossCapitalAmount(
-        address indexed actor,
-        uint256 oldVal,
-        uint256 newVal
-    );
+    event SetFirstLossCapitalAmount(address indexed actor, uint256 oldVal, uint256 newVal);
 
-    event SetBorrowerTotalInterestRate(
-        address indexed actor,
-        uint256 oldValue,
-        uint256 newValue
-    );
+    event SetBorrowerTotalInterestRate(address indexed actor, uint256 oldValue, uint256 newValue);
 
     /// @dev The penalty that will be applied to borrowers in the event of a default. (ex: Total Penalty = First loss capital + penalty rate * unrepaid capital)
-    event SetDefaultPenalty(
-        address indexed actor,
-        uint256 oldVal,
-        uint256 newVal
-    );
+    event SetDefaultPenalty(address indexed actor, uint256 oldVal, uint256 newVal);
 
     /// @dev WAD. The rate at which borrowers will be penalized for late or missed payments.
     event SetPenaltyRate(address indexed actor, uint256 oldVal, uint256 newVal);
@@ -168,11 +99,7 @@ interface ILendingPool {
     event PoolDefaulted();
 
     // Lender events //
-    event LenderDeposit(
-        address indexed lender,
-        uint8 indexed trancheId,
-        uint256 amount
-    );
+    event LenderDeposit(address indexed lender, uint8 indexed trancheId, uint256 amount);
 
     event LenderTrancheRewardsChange(
         address indexed lender,
@@ -184,29 +111,14 @@ interface ILendingPool {
         uint redeemableRewards
     );
 
-    event LenderWithdraw(
-        address indexed lender,
-        uint8 indexed trancheId,
-        uint256 amount
-    );
+    event LenderWithdraw(address indexed lender, uint8 indexed trancheId, uint256 amount);
 
-    event LenderWithdrawInterest(
-        address indexed lender,
-        uint8 indexed trancheId,
-        uint256 amount
-    );
+    event LenderWithdrawInterest(address indexed lender, uint8 indexed trancheId, uint256 amount);
 
-    event LenderBoostAPY(
-        address indexed lender,
-        uint8 indexed trancheId,
-        uint boostedAPY
-    );
+    event LenderBoostAPY(address indexed lender, uint8 indexed trancheId, uint boostedAPY);
 
     // Borrower events //
-    event BorrowerDepositFirstLossCapital(
-        address indexed borrower,
-        uint amount
-    );
+    event BorrowerDepositFirstLossCapital(address indexed borrower, uint amount);
 
     event BorrowerBorrow(address indexed borrower, uint amount);
 
@@ -295,15 +207,7 @@ interface ILendingPool {
        Tranche notification functions
     ///////////////////////////////////*/
 
-    function onTrancheDeposit(
-        uint8 trancheId,
-        address receiverAddress,
-        uint amount
-    ) external;
+    function onTrancheDeposit(uint8 trancheId, address receiverAddress, uint amount) external;
 
-    function onTrancheWithdraw(
-        uint8 trancheId,
-        address ownerAddress,
-        uint amount
-    ) external;
+    function onTrancheWithdraw(uint8 trancheId, address ownerAddress, uint amount) external;
 }

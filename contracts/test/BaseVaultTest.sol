@@ -12,13 +12,6 @@ contract BaseVaultTest is BaseVault {
         string memory _symbol,
         address underlying
     ) external initializer {
-        _baseInitializer(
-            _poolAddress,
-            _minCapacity,
-            _maxCapacity,
-            _tokenName,
-            _symbol,
-            underlying
-        );
+        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, underlying);
     }
 }
