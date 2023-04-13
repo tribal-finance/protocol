@@ -62,10 +62,10 @@ interface ILendingPool {
     event SetTrancheMaxFundingCapacities(address indexed actor, uint[] oldVal, uint[] newVal);
 
     /// @dev WAD
-    event SetTrancheAPYs(address indexed actor, uint[] oldVal, uint[] newVal);
+    event SetTrancheAPRs(address indexed actor, uint[] oldVal, uint[] newVal);
 
     /// @dev WAD
-    event SetTrancheBoostedAPYs(address indexed actor, uint[] oldVal, uint[] newVal);
+    event SetTrancheBoostedAPRs(address indexed actor, uint[] oldVal, uint[] newVal);
 
     /** @dev WAD. The percentage of first-loss capital used as coverage in the event of missed payments or default
      *  (e.g. assumption that first loss capital will be less than the senior tranche)
@@ -115,7 +115,7 @@ interface ILendingPool {
 
     event LenderWithdrawInterest(address indexed lender, uint8 indexed trancheId, uint256 amount);
 
-    event LenderBoostAPY(address indexed lender, uint8 indexed trancheId, uint boostedAPY);
+    event LenderBoostAPR(address indexed lender, uint8 indexed trancheId, uint boostedAPR);
 
     // Borrower events //
     event BorrowerDepositFirstLossCapital(address indexed borrower, uint amount);

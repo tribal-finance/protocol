@@ -46,8 +46,8 @@ contract OldLendingPool is
         STORAGE
     ////////////////////////////////////////////////*/
     uint public targetAssets;
-    uint public lenderAPY;
-    uint public boostedLenderAPY;
+    uint public lenderAPR;
+    uint public boostedLenderAPR;
     uint public borrowerAPR;
     uint public borrowerInterestPaid;
     address public borrowerAddress;
@@ -73,7 +73,7 @@ contract OldLendingPool is
     event PoolTargetSet(uint poolTarget);
     event PoolDurationSet(uint64 poolDuration);
     event BorrowerAddressSet(address indexed BorroweAddress);
-    event RatesSet(uint lenderAPY, uint borrowerAPR);
+    event RatesSet(uint lenderAPR, uint borrowerAPR);
 
     event StageChanged(
         uint8 indexed fromStage,
@@ -113,7 +113,7 @@ contract OldLendingPool is
      *  @param symbol pool token symbol
      *  @param underlying address of the underlying token
      *  @param poolTarget amount that the pool is intended to raise
-     *  @param lenderAPY_ Lender's Annual Percentage Yield (wad)
+     *  @param lenderAPR_ Lender's Annual Percentage Yield (wad)
      *  @param borrowerAPR_ Borrowers's Annual Percentage Rate (wad)
      */
     function initialize(
@@ -122,7 +122,7 @@ contract OldLendingPool is
         IERC20Upgradeable underlying,
         uint poolTarget,
         uint64 poolDuration,
-        uint lenderAPY_,
+        uint lenderAPR_,
         uint borrowerAPR_,
         address borrowerAddress_
     ) public initializer {
@@ -130,8 +130,8 @@ contract OldLendingPool is
 
         targetAssets = poolTarget;
         loanDuration = poolDuration;
-        lenderAPY = lenderAPY_;
-        boostedLenderAPY = lenderAPY_;
+        lenderAPR = lenderAPR_;
+        boostedLenderAPR = lenderAPR_;
         borrowerAPR = borrowerAPR_;
         borrowerAddress = borrowerAddress_;
 
@@ -146,7 +146,7 @@ contract OldLendingPool is
         emit PoolTargetSet(poolTarget);
         emit PoolDurationSet(poolDuration);
         emit BorrowerAddressSet(borrowerAddress_);
-        emit RatesSet(lenderAPY_, borrowerAPR_);
+        emit RatesSet(lenderAPR_, borrowerAPR_);
         _transitionToStage(Stages.OPEN);
     }
 
@@ -296,10 +296,10 @@ contract OldLendingPool is
 
         uint256 stakeDuration = end - start;
 
-        // stakedAssets * stakeDuration * adjustedAPY / (loanDuration)
+        // stakedAssets * stakeDuration * adjustedAPR / (loanDuration)
         uint256 calculatedRewards = (rewardable.stake)
             .mulDiv(stakeDuration, loanDuration)
-            .mulDiv(lenderAdjustedAPY(), WAD);
+            .mulDiv(lenderAdjustedAPR(), WAD);
 
         return rewardCorrections[receiver] + calculatedRewards;
     }
@@ -312,14 +312,14 @@ contract OldLendingPool is
             rewardWithdrawals[receiver];
     }
 
-    /// @dev adjusted lender APY adjusted by duration of the loan = lenderAPY * loanDuration / 365
-    function lenderAdjustedAPY() public view returns (uint adj) {
-        return lenderAPY.mulDiv(loanDuration, YEAR);
+    /// @dev adjusted lender APR adjusted by duration of the loan = lenderAPR * loanDuration / 365
+    function lenderAdjustedAPR() public view returns (uint adj) {
+        return lenderAPR.mulDiv(loanDuration, YEAR);
     }
 
     /// @dev expected amount of assets that will be rewarded to all the lenders
     function expectedAllLendersYield() public view returns (uint yld) {
-        return lenderAdjustedAPY().mulDiv(targetAssets, WAD);
+        return lenderAdjustedAPR().mulDiv(targetAssets, WAD);
     }
 
     /*////////////////////////////////////////////////

@@ -93,15 +93,15 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
 
         require(params.tranchesCount > 0, "tranchesCount == 0");
         require(_trancheVaultAddresses.length == params.tranchesCount, "trancheAddresses length");
-        require(params.trancheAPRsWads.length == params.tranchesCount, "tranche APYs length");
-        require(params.trancheBoostedAPRsWads.length == params.tranchesCount, "tranche Boosted APYs length");
-        require(params.trancheBoostedAPRsWads.length == params.tranchesCount, "tranche Coverage APYs length");
+        require(params.trancheAPRsWads.length == params.tranchesCount, "tranche APRs length");
+        require(params.trancheBoostedAPRsWads.length == params.tranchesCount, "tranche Boosted APRs length");
+        require(params.trancheBoostedAPRsWads.length == params.tranchesCount, "tranche Coverage APRs length");
 
         for (uint i; i < params.tranchesCount; ++i) {
-            require(params.trancheAPRsWads[i] > 0, "tranche APYs == 0");
+            require(params.trancheAPRsWads[i] > 0, "tranche APRs == 0");
             require(
                 params.trancheBoostedAPRsWads[i] >= params.trancheAPRsWads[i],
-                "tranche boosted APYs < tranche APYs"
+                "tranche boosted APRs < tranche APRs"
             );
         }
 

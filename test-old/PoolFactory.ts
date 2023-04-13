@@ -30,7 +30,7 @@ describe("PoolFactory", function () {
       USDC_ADDRESS_6,
       parseUnits("10000", USDC_PRECISION),
       365 * 24 * 60 * 60,
-      parseUnits("0.1", 18), // APY is 10%
+      parseUnits("0.1", 18), // APR is 10%
       parseUnits("0.2", 18),
       signers[4].address,
     ];

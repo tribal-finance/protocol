@@ -9828,7 +9828,7 @@
               name: "BorrowerWithdrawFirstLossCapital",
               type: "event",
             },
-            "LenderBoostAPY(address,uint256,uint256)": {
+            "LenderBoostAPR(address,uint256,uint256)": {
               anonymous: !1,
               inputs: [
                 {
@@ -9846,11 +9846,11 @@
                 {
                   indexed: !1,
                   internalType: "uint256",
-                  name: "boostedAPY",
+                  name: "boostedAPR",
                   type: "uint256",
                 },
               ],
-              name: "LenderBoostAPY",
+              name: "LenderBoostAPR",
               type: "event",
             },
             "LenderDeposit(address,uint256,uint256)": {
@@ -10430,7 +10430,7 @@
               details:
                 "Stable coin (deposit token) address: coming from the protocol configuration",
             },
-            "SetTrancheAPYs(address,uint256[],uint256[])": {
+            "SetTrancheAPRs(address,uint256[],uint256[])": {
               anonymous: !1,
               inputs: [
                 {
@@ -10452,11 +10452,11 @@
                   type: "uint256[]",
                 },
               ],
-              name: "SetTrancheAPYs",
+              name: "SetTrancheAPRs",
               type: "event",
               details: "WAD",
             },
-            "SetTrancheBoostedAPYs(address,uint256[],uint256[])": {
+            "SetTrancheBoostedAPRs(address,uint256[],uint256[])": {
               anonymous: !1,
               inputs: [
                 {
@@ -10478,7 +10478,7 @@
                   type: "uint256[]",
                 },
               ],
-              name: "SetTrancheBoostedAPYs",
+              name: "SetTrancheBoostedAPRs",
               type: "event",
               details: "WAD",
             },
@@ -11651,7 +11651,7 @@
               details:
                 "Triggered when the contract has been initialized or reinitialized.",
             },
-            "LenderBoostAPY(address,uint256,uint256)": {
+            "LenderBoostAPR(address,uint256,uint256)": {
               anonymous: !1,
               inputs: [
                 {
@@ -11669,11 +11669,11 @@
                 {
                   indexed: !1,
                   internalType: "uint256",
-                  name: "boostedAPY",
+                  name: "boostedAPR",
                   type: "uint256",
                 },
               ],
-              name: "LenderBoostAPY",
+              name: "LenderBoostAPR",
               type: "event",
             },
             "LenderDeposit(address,uint256,uint256)": {
@@ -12286,7 +12286,7 @@
               details:
                 "Stable coin (deposit token) address: coming from the protocol configuration",
             },
-            "SetTrancheAPYs(address,uint256[],uint256[])": {
+            "SetTrancheAPRs(address,uint256[],uint256[])": {
               anonymous: !1,
               inputs: [
                 {
@@ -12308,11 +12308,11 @@
                   type: "uint256[]",
                 },
               ],
-              name: "SetTrancheAPYs",
+              name: "SetTrancheAPRs",
               type: "event",
               details: "WAD",
             },
-            "SetTrancheBoostedAPYs(address,uint256[],uint256[])": {
+            "SetTrancheBoostedAPRs(address,uint256[],uint256[])": {
               anonymous: !1,
               inputs: [
                 {
@@ -12334,7 +12334,7 @@
                   type: "uint256[]",
                 },
               ],
-              name: "SetTrancheBoostedAPYs",
+              name: "SetTrancheBoostedAPRs",
               type: "event",
               details: "WAD",
             },

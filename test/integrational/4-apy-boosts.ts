@@ -16,7 +16,7 @@ import {
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 
-describe("Boosting the APY", function () {
+describe("Boosting the APR", function () {
   async function uniPoolFixture() {
     const { signers, usdc } = await testSetup();
     const [deployer, lender1, lender2, lender3, borrower] = signers;
@@ -62,7 +62,7 @@ describe("Boosting the APY", function () {
   // unboosted APR is 10%
   // booster APR is 15%
   describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a partial boost (locks 1000 TRIBAL)", function () {
-    it("is bumps APY to 12.5%", async () => {
+    it("is bumps APR to 12.5%", async () => {
       const { usdc, tribalToken, lenders, lendingPool, firstTrancheVault } =
         await loadFixture(uniPoolFixture);
 
@@ -92,7 +92,7 @@ describe("Boosting the APY", function () {
   });
 
   describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a full boost (locks 2000 TRIBAL)", function () {
-    it("is bumps APY to 15%", async () => {
+    it("is bumps APR to 15%", async () => {
       const { usdc, tribalToken, lenders, lendingPool, firstTrancheVault } =
         await loadFixture(uniPoolFixture);
 

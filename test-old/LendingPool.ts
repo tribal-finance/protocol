@@ -18,7 +18,7 @@ describe("LendingPool", function () {
       USDC_ADDRESS_6,
       USDC(10000),
       duration,
-      WAD("0.1"), // APY is 10%
+      WAD("0.1"), // APR is 10%
       WAD("0.2"), // APR is 20%
       borrower.address,
     ];
@@ -224,10 +224,10 @@ describe("LendingPool", function () {
   });
 
   describe("calculations", async () => {
-    it("should calculate the adjusted lender APY", async () => {
+    it("should calculate the adjusted lender APR", async () => {
       const { pool } = await loadFixture(deploy73days);
-      const adjustedLenderAPY = await pool.lenderAdjustedAPY();
-      expect(adjustedLenderAPY).to.be.equal(parseUnits("0.02", WAD_PRECISION));
+      const adjustedLenderAPR = await pool.lenderAdjustedAPR();
+      expect(adjustedLenderAPR).to.be.equal(parseUnits("0.02", WAD_PRECISION));
     });
 
     it("should calculate expected lender yield", async () => {
