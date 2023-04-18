@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "./BaseVault.sol";
-import "../pool/ILendingPool.sol";
+import "../pool/LendingPool.sol";
 
 contract TrancheVault is BaseVault {
     /*////////////////////////////////////////////////
@@ -61,7 +61,7 @@ contract TrancheVault is BaseVault {
         // slither-disable-next-line reentrancy-no-eth
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
-        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
+        LendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -82,7 +82,7 @@ contract TrancheVault is BaseVault {
 
         _burn(owner, shares);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), receiver, assets);
-        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
+        LendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }

@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "../pool/ILendingPool.sol";
 import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
 
@@ -66,7 +65,7 @@ contract PoolFactory is OwnableUpgradeable {
      * . See {LendingPool-initialize}
      */
     function deployPool(
-        ILendingPool.LendingPoolParams calldata params,
+        LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads
     ) external onlyOwner returns (address) {
         address poolAddress = clonePool();
@@ -94,7 +93,7 @@ contract PoolFactory is OwnableUpgradeable {
     }
 
     function deployTrancheVaults(
-        ILendingPool.LendingPoolParams calldata params,
+        LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads,
         address poolAddress,
         address ownerAddress
@@ -120,11 +119,11 @@ contract PoolFactory is OwnableUpgradeable {
 
     function initializePoolAndCreatePoolRecord(
         address poolAddress,
-        ILendingPool.LendingPoolParams calldata params,
+        LendingPool.LendingPoolParams calldata params,
         address[] memory trancheVaultAddresses,
         address feeSharingContractAddress
     ) public onlyOwner {
-        ILendingPool(poolAddress).initialize(
+        LendingPool(poolAddress).initialize(
             params,
             trancheVaultAddresses,
             feeSharingContractAddress
@@ -146,7 +145,7 @@ contract PoolFactory is OwnableUpgradeable {
     }
 
     function _checkFundingSplitWads(
-        ILendingPool.LendingPoolParams calldata params,
+        LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads
     ) internal pure {
         require(fundingSplitWads.length == params.tranchesCount, "fundingSplitWads length");

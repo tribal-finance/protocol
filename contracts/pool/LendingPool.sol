@@ -4,11 +4,10 @@ pragma solidity 0.8.18;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./ILendingPool.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 
-contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, PausableUpgradeable, LendingPoolState {
+contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /*///////////////////////////////////
@@ -16,6 +15,19 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     ///////////////////////////////////*/
     uint internal constant WAD = 10 ** 18;
     uint internal constant YEAR = 365 * 24 * 60 * 60;
+
+    enum Stages {
+        INITIAL,
+        OPEN,
+        FUNDED,
+        FUNDING_FAILED,
+        FLC_DEPOSITED,
+        BORROWED,
+        BORROWER_INTEREST_REPAID,
+        DILINQUENT,
+        REPAID,
+        DEFAULTED
+    }
 
     /*///////////////////////////////////
        MODIFIERS
@@ -27,8 +39,66 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     }
 
     /*///////////////////////////////////
+       EVENTS
+    ///////////////////////////////////*/
+
+    // State Changes //
+    event PoolOpen(address indexed actor);
+    event PoolFunded();
+    event PoolFundingFailed();
+    event PoolRepaid();
+    event PoolDefaulted();
+
+    // Lender //
+    event LenderDeposit(address indexed lender, uint8 indexed trancheId, uint256 amount);
+    event LenderWithdraw(address indexed lender, uint8 indexed trancheId, uint256 amount);
+    event LenderWithdrawInterest(address indexed lender, uint8 indexed trancheId, uint256 amount);
+    event LenderTrancheRewardsChange(
+        address indexed lender,
+        uint8 indexed trancheId,
+        uint lenderEffectiveAprWad,
+        uint totalExpectedRewards,
+        uint totalGeneratedRewards,
+        uint redeemedRewards,
+        uint redeemableRewards
+    );
+
+    // Borrower //
+    event BorrowerDepositFirstLossCapital(address indexed borrower, uint amount);
+    event BorrowerBorrow(address indexed borrower, uint amount);
+    event BorrowerPayInterest(
+        address indexed borrower,
+        uint amount,
+        uint lendersDistributedAmount,
+        uint feeSharingContractAmount
+    );
+    event BorrowerRepayPrincipal(address indexed borrower, uint amount);
+
+    /*///////////////////////////////////
        INITIALIZATION
     ///////////////////////////////////*/
+
+    struct LendingPoolParams {
+        string name;
+        string token;
+        address stableCoinContractAddress;
+        address platformTokenContractAddress;
+        uint minFundingCapacity;
+        uint maxFundingCapacity;
+        uint64 fundingPeriodSeconds;
+        uint64 lendingTermSeconds;
+        address borrowerAddress;
+        uint borrowerTotalInterestRateWad;
+        uint collateralRatioWad;
+        uint defaultPenalty;
+        uint penaltyRateWad;
+        uint8 tranchesCount;
+        uint[] trancheAPRsWads;
+        uint[] trancheBoostedAPRsWads;
+        uint[] trancheBoostRatios;
+        uint[] trancheCoveragesWads;
+    }
+
 
     function initialize(
         LendingPoolParams calldata params,
@@ -151,7 +221,7 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
             _trancheVaultContracts()[i].enableWithdrawals();
         }
         _setOpenedAt(uint64(block.timestamp));
-        emit PoolOpen();
+        emit PoolOpen(_msgSender());
     }
 
     /** @notice Checks whether the pool was funded successfully or not.
@@ -206,6 +276,7 @@ contract LendingPool is ILendingPool, Initializable, OwnableUpgradeable, Pausabl
     function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
         _setRepaidAt(uint64(block.timestamp));
         emit BorrowerRepayPrincipal(borrowerAddress(), repaidPrincipal);
+        emit PoolRepaid();
     }
 
     /*///////////////////////////////////
