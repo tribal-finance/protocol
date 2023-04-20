@@ -9,10 +9,10 @@ interface IStaking {
     function staked(address user) external view returns (uint256);
     function lastUpdateTime(address user) external view returns (uint256);
     function rewardEarned(address user) external view returns (uint256);
+    function claimableReward(address user) external view returns (uint256);
 
     function stake(uint256 amount) external;
     function withdraw(uint256 amount) external;
     function claimReward() external;
-    function claimableReward() external view returns (uint256);
     function addReward(uint256 amount) external;
 }

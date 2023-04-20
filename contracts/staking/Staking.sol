@@ -57,8 +57,8 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
         }
     }
 
-    function claimableReward() external view returns (uint256) {
-        return rewardEarned[msg.sender] + calculateReward(msg.sender);
+    function claimableReward(address user) external view returns (uint256) {
+        return rewardEarned[user] + calculateReward(msg.sender);
     }
 
     // Update rewards for a user
