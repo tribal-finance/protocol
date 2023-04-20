@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
+import "../fee_sharing/IFeeSharing.sol";
 
 contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -442,11 +443,18 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
             assets
         );
 
+        SafeERC20Upgradeable.safeApprove(
+            IERC20Upgradeable(stableCoinContractAddress()),
+            feeSharingContractAddress(),
+            assetsToSendToFeeSharing
+        );
+        IFeeSharing(feeSharingContractAddress()).deposit(assetsToSendToFeeSharing);
+
         _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
         emit BorrowerPayInterest(
             borrowerAddress(),
             assets,
-            assets - assetsToSendToFeeSharing,
+            assetsForLenders,
             assetsToSendToFeeSharing
         );
 

@@ -11,7 +11,6 @@ import {
   deployFactoryAndImplementations,
   deployUnitranchePool,
   _getDeployedContracts,
-  deployTribalToken,
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
@@ -22,12 +21,25 @@ describe("Boosting the APR", function () {
     const [deployer, lender1, lender2, lender3, borrower] = signers;
     const lenders = [lender1, lender2, lender3];
 
-    const tribalToken = await deployTribalToken(deployer, lenders);
-
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
       lenders
+    );
+
+    const feeSharingAddress = await poolFactory.feeSharingContractAddress();
+    const feeSharing = await ethers.getContractAt(
+      "FeeSharing",
+      feeSharingAddress
+    );
+
+    const stakingAddress = await feeSharing.stakingContract();
+    const staking = await ethers.getContractAt("Staking", stakingAddress);
+
+    const tribalAddress = await staking.token();
+    const tribalToken = await ethers.getContractAt(
+      "TribalToken",
+      tribalAddress
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {

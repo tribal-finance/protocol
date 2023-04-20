@@ -10,15 +10,16 @@
  * - repaid pool
  */
 
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import type { BigNumberish, Signer } from "ethers";
 import type {
   ERC20Upgradeable,
-  ILendingPool,
+  FeeSharing,
   LendingPool,
   PoolFactory,
   TrancheVault,
   TribalToken,
+  Staking,
 } from "../typechain-types";
 import { pool } from "../typechain-types/contracts";
 import { USDC_ADDRESS_6 } from "../test/helpers/usdc";
@@ -57,6 +58,10 @@ export async function deployTribalToken(
   const tribalToken = await TribalToken.connect(deployer).deploy();
   await tribalToken.deployed();
 
+  await tribalToken
+    .connect(deployer)
+    .mint(await deployer.getAddress(), parseUnits("1000", 18));
+
   for (let lender of lenders) {
     const tx = await tribalToken
       .connect(deployer)
@@ -72,6 +77,29 @@ export async function deployFactoryAndImplementations(
   borrower: Signer,
   lenders: Array<Signer>
 ): Promise<PoolFactory> {
+  const tribalToken = await deployTribalToken(deployer, lenders);
+
+  const Staking = await ethers.getContractFactory("Staking");
+  const staking = await upgrades.deployProxy(Staking, [
+    tribalToken.address,
+    USDC_ADDRESS_6,
+  ]);
+  await staking.deployed();
+
+  await tribalToken
+    .connect(deployer)
+    .approve(staking.address, parseUnits("1000", 18));
+
+  await staking.connect(deployer).stake(parseUnits("1000", 18));
+
+  const FeeSharing = await ethers.getContractFactory("FeeSharing");
+  const feeSharing = await upgrades.deployProxy(FeeSharing, [
+    USDC_ADDRESS_6,
+    staking.address,
+    ethers.utils.parseEther("0.2"),
+  ]);
+  await feeSharing.deployed();
+
   const LendingPool = await ethers.getContractFactory("LendingPool");
   const poolImplementation = await LendingPool.connect(deployer).deploy();
   await poolImplementation.deployed();
@@ -94,6 +122,10 @@ export async function deployFactoryAndImplementations(
     .connect(deployer)
     .setTrancheVaultImplementation(trancheVaultImplementation.address);
 
+  await poolFactory
+    .connect(deployer)
+    .setFeeSharingContractAddress(feeSharing.address);
+
   return poolFactory;
 }
 
@@ -102,12 +134,12 @@ export async function deployUnitranchePool(
   deployer: Signer,
   borrower: Signer,
   lenders: Array<Signer>,
-  poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
+  poolInitParamsOverrides: Partial<LendingPool.LendingPoolParamsStruct> = {},
   afterDeploy?: (
     contracts: DeployedContractsType
   ) => Promise<DeployedContractsType>
 ) {
-  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = {
+  const lendingPoolParams: LendingPool.LendingPoolParamsStruct = {
     ...DEFAULT_LENDING_POOL_PARAMS,
     ...{
       borrowerAddress: await borrower.getAddress(),
@@ -142,12 +174,12 @@ export async function deployDuotranchePool(
   deployer: Signer,
   borrower: Signer,
   lenders: Array<Signer>,
-  poolInitParamsOverrides: Partial<ILendingPool.LendingPoolParamsStruct> = {},
+  poolInitParamsOverrides: Partial<LendingPool.LendingPoolParamsStruct> = {},
   afterDeploy?: (
     contracts: DeployedContractsType
   ) => Promise<DeployedContractsType>
 ) {
-  const lendingPoolParams: ILendingPool.LendingPoolParamsStruct = {
+  const lendingPoolParams: LendingPool.LendingPoolParamsStruct = {
     ...{},
     ...DEFAULT_LENDING_POOL_PARAMS,
     ...{

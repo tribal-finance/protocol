@@ -80,7 +80,7 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
     }
 
     // Add more reward tokens to the contract
-    function addReward(uint256 amount) external onlyOwner {
+    function addReward(uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
         rewardToken.transferFrom(msg.sender, address(this), amount);
         rewardPerTokenStaked += amount * 1e18 / totalStaked;

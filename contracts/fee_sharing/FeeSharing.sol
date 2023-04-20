@@ -8,8 +8,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../staking/IStaking.sol";
+import "./IFeeSharing.sol";
 
-contract FeeSharing is Initializable, OwnableUpgradeable {
+contract FeeSharing is IFeeSharing, Initializable, OwnableUpgradeable {
     using MathUpgradeable for uint;
 
     uint constant public WAD = 10 ** 18;

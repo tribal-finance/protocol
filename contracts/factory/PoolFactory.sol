@@ -125,12 +125,12 @@ contract PoolFactory is OwnableUpgradeable {
         address poolAddress,
         LendingPool.LendingPoolParams calldata params,
         address[] memory trancheVaultAddresses,
-        address feeSharingContractAddress
+        address _feeSharingContractAddress
     ) public onlyOwner {
         LendingPool(poolAddress).initialize(
             params,
             trancheVaultAddresses,
-            feeSharingContractAddress
+            _feeSharingContractAddress
         );
         OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
 
