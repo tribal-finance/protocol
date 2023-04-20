@@ -453,6 +453,12 @@ abstract contract LendingPoolState {
     /// @dev trancheId => (lenderAddress => RewardableRecord)
     mapping(uint8 => mapping(address => Rewardable)) internal s_trancheRewardables;
 
+    /// @dev trancheId => stakedassets
+    mapping(uint8 => uint256) internal s_totalStakedAssetsByTranche;
+
+    /// @dev trancheId => lockedTokens
+    mapping(uint8 => uint256) internal s_totalLockedPlatformTokensByTranche;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.

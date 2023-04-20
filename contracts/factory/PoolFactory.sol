@@ -9,8 +9,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
 
-import "hardhat/console.sol";
-
 contract PoolFactory is OwnableUpgradeable {
     using MathUpgradeable for uint;
 
@@ -35,6 +33,8 @@ contract PoolFactory is OwnableUpgradeable {
 
     PoolRecord[] public poolRegistry;
 
+    address public feeSharingContractAddress;
+
     function initialize() public initializer {
         __Ownable_init();
     }
@@ -47,6 +47,10 @@ contract PoolFactory is OwnableUpgradeable {
     /// @dev sets implementation for future tranche vault deployments
     function setTrancheVaultImplementation(address implementation) external onlyOwner {
         trancheVaultImplementationAddress = implementation;
+    }
+
+    function setFeeSharingContractAddress(address implementation) external onlyOwner {
+        feeSharingContractAddress = implementation;
     }
 
     /// @dev returns last deployed pool record
@@ -81,7 +85,7 @@ contract PoolFactory is OwnableUpgradeable {
             poolAddress,
             params,
             trancheVaultAddresses,
-            address(0)
+            feeSharingContractAddress
         );
 
         return poolAddress;

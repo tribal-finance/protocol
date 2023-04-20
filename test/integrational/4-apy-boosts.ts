@@ -71,6 +71,7 @@ describe("Boosting the APR", function () {
         0
       );
       expect(trancheAprBefore).to.eq(WAD("0.1"));
+      expect(await lendingPool.allLendersEffectiveAprWad()).to.eq(WAD("0.1"));
 
       const amountToLock = ethers.utils.parseEther("1000");
 
@@ -88,6 +89,7 @@ describe("Boosting the APR", function () {
       );
 
       expect(trancheAprAfter).to.eq(WAD("0.125"));
+      expect(await lendingPool.allLendersEffectiveAprWad()).to.eq(WAD("0.125"));
     });
   });
 
@@ -117,6 +119,7 @@ describe("Boosting the APR", function () {
       );
 
       expect(trancheAprAfter).to.eq(WAD("0.15"));
+      expect(await lendingPool.allLendersEffectiveAprWad()).to.eq(WAD("0.15"));
     });
   });
 

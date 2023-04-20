@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 
 contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using MathUpgradeable for uint;
 
     /*///////////////////////////////////
        CONSTANTS
@@ -326,21 +328,22 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
-    function lenderLockPlatformTokensByTranche(uint8 trancheId, uint protocolTokens) external {
-        require(protocolTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId), "lock will lead to overboost");
+    function lenderLockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external {
+        require(platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId), "lock will lead to overboost");
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(platformTokenContractAddress()),
             _msgSender(),
             address(this),
-            protocolTokens
+            platformTokens
         );
-        r.stakedPlatformTokens += protocolTokens;
+        r.stakedPlatformTokens += platformTokens;
+        s_totalLockedPlatformTokensByTranche[trancheId] += platformTokens;
 
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
-    function lenderUnlockPlatformTokensByTranche(uint8 trancheId, uint protocolTokens) external {
+    function lenderUnlockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external {
         // TODO: check that the tranche is in repaid stage
         // TODO: check that all the rewards are paid out
     }
@@ -429,14 +432,15 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     }
 
     function borrowerPayInterest(uint assets) external {
+        uint assetsForLenders = allLendersEffectiveAprWad().mulDiv(assets, borrowerTotalInterestRateWad(), MathUpgradeable.Rounding.Up);
+        uint assetsToSendToFeeSharing = assets - assetsForLenders;
+
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(stableCoinContractAddress()),
             _msgSender(),
             address(this),
             assets
         );
-
-        uint assetsToSendToFeeSharing = assets;
 
         _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
         emit BorrowerPayInterest(
@@ -510,6 +514,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         // 3. add to the staked assets
         rewardable.stakedAssets += amount;
         _setCollectedAssets(collectedAssets() + amount);
+        s_totalStakedAssetsByTranche[trancheId] += amount;
 
         // 4. set the start of the rewardable
         rewardable.start = uint64(block.timestamp);
@@ -533,6 +538,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
 
             rewardable.stakedAssets -= amount;
             _setCollectedAssets(collectedAssets() - amount);
+            s_totalStakedAssetsByTranche[trancheId] -= amount;
 
             if (rewardable.stakedAssets == 0) {
                 s_lenders.remove(depositorAddress);
@@ -553,6 +559,27 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         for (uint i; i < addresses.length; ++i) {
             contracts[i] = TrancheVault(addresses[i]);
         }
+    }
+
+    /// @notice average APR of all lenders across all tranches, boosted or not
+    function allLendersEffectiveAprWad() public view returns (uint) {
+        uint weightedSum = 0;
+        uint totalStakedAssets = 0;
+        for (uint8 trancheId; trancheId < tranchesCount(); trancheId++) {
+            uint stakedAssets = s_totalStakedAssetsByTranche[trancheId];
+            totalStakedAssets += stakedAssets;
+
+            uint boostedAssets = s_totalLockedPlatformTokensByTranche[trancheId] / trancheBoostRatios()[trancheId];
+            if (boostedAssets > stakedAssets) {
+                boostedAssets = stakedAssets;
+            }
+            uint unBoostedAssets = stakedAssets - boostedAssets;
+
+            weightedSum += unBoostedAssets * trancheAPRsWads()[trancheId];
+            weightedSum += boostedAssets * trancheBoostedAPRsWads()[trancheId];
+        }
+
+        return weightedSum / totalStakedAssets;
     }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
