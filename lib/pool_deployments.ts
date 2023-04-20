@@ -221,6 +221,9 @@ export type DeployedContractsType = {
   lendingPool: LendingPool;
   firstTrancheVault: TrancheVault;
   secondTrancheVault: TrancheVault;
+  feeSharing: FeeSharing;
+  staking: Staking;
+  tribalToken: TribalToken;
 };
 
 export async function _getDeployedContracts(
@@ -242,10 +245,25 @@ export async function _getDeployedContracts(
     lastDeployedPoolRecord.secondTrancheVaultAddress
   );
 
+  const feeSharingAddress = await poolFactory.feeSharingContractAddress();
+  const feeSharing = await ethers.getContractAt(
+    "FeeSharing",
+    feeSharingAddress
+  );
+
+  const stakingAddress = await feeSharing.stakingContract();
+  const staking = await ethers.getContractAt("Staking", stakingAddress);
+
+  const tribalAddress = await staking.token();
+  const tribalToken = await ethers.getContractAt("TribalToken", tribalAddress);
+
   return {
     lendingPool,
     firstTrancheVault,
     secondTrancheVault,
+    feeSharing,
+    staking,
+    tribalToken,
   };
 }
 

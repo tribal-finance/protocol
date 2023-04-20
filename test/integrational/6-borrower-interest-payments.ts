@@ -106,6 +106,16 @@ describe("Interests", function () {
         return data;
       }
 
+      it("sends $50 to fee sharing, fee sharing sends $10 to staking", async () => {
+        const { usdc, feeSharing, staking } = await loadFixture(
+          partlyRepaidFixture
+        );
+
+        // NOTE: we do not have foundation address just yet, so the money is still in Fee Sharing contract
+        expect(await usdc.balanceOf(feeSharing.address)).to.equal(USDC(40));
+        expect(await usdc.balanceOf(staking.address)).to.equal(USDC(10));
+      });
+
       it("leaves borrowerExpectedInterest unchanged", async () => {
         const { lendingPool } = await loadFixture(partlyRepaidFixture);
 

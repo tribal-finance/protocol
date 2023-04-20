@@ -28,6 +28,21 @@ describe("Borrowing", function () {
         lenders
       );
 
+      const feeSharingAddress = await poolFactory.feeSharingContractAddress();
+      const feeSharing = await ethers.getContractAt(
+        "FeeSharing",
+        feeSharingAddress
+      );
+
+      const stakingAddress = await feeSharing.stakingContract();
+      const staking = await ethers.getContractAt("Staking", stakingAddress);
+
+      const tribalAddress = await staking.token();
+      const tribalToken = await ethers.getContractAt(
+        "TribalToken",
+        tribalAddress
+      );
+
       const afterDeploy = async (contracts: DeployedContractsType) => {
         await contracts.lendingPool.connect(deployer).adminOpenPool();
         const toDeposit = await contracts.lendingPool.minFundingCapacity();

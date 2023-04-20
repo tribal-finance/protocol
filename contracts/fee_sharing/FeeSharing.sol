@@ -40,4 +40,11 @@ contract FeeSharing is IFeeSharing, Initializable, OwnableUpgradeable {
         SafeERC20.safeApprove(assetContract, address(stakingContract), assetsForStaking);
         stakingContract.addReward(assetsForStaking);
     }
+
+    /// @notice We do not know foundation address so the remaining money will sit in this contract.
+    /// Thus, this method will allow owner to withdraw balance
+    function withdraw(uint assets, address receiver) external onlyOwner {
+        require(assetContract.balanceOf(address(this)) >= assets, "not enough balance");
+        SafeERC20.safeTransfer(assetContract, receiver, assets);
+    }
 }
