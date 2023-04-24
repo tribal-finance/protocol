@@ -34,6 +34,7 @@ contract PoolFactory is OwnableUpgradeable {
     PoolRecord[] public poolRegistry;
 
     address public feeSharingContractAddress;
+    address public authorityContractAddress;
 
     function initialize() public initializer {
         __Ownable_init();

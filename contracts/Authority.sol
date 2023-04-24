@@ -15,6 +15,15 @@ contract Authority is OwnableUpgradeable {
 
     EnumerableSetUpgradeable.AddressSet whitelistedBorrowers;
     EnumerableSetUpgradeable.AddressSet whitelistedLenders;
+    EnumerableSetUpgradeable.AddressSet admins;
+
+    modifier onlyOwnerOrAdmin() {
+        require(
+            owner() == msg.sender || admins.contains(msg.sender),
+            "Authority: caller is not the owner or admin"
+        );
+        _;
+    }
 
     /// @dev initializer
     function initialize() external initializer {
@@ -25,7 +34,7 @@ contract Authority is OwnableUpgradeable {
      * @notice adds borrower address to the whitelist.
      * @param a address to add to the whitelist
      */
-    function addBorrower(address a) external onlyOwner {
+    function addBorrower(address a) external onlyOwnerOrAdmin {
         whitelistedBorrowers.add(a);
     }
 
@@ -33,7 +42,7 @@ contract Authority is OwnableUpgradeable {
      * @notice removes borrower address from the whitelist.
      * @param a address to remove from the whitelist
      */
-    function removeBorrower(address a) external onlyOwner {
+    function removeBorrower(address a) external onlyOwnerOrAdmin {
         whitelistedBorrowers.remove(a);
     }
 
@@ -61,7 +70,7 @@ contract Authority is OwnableUpgradeable {
      * @notice adds lenders address to the whitelist.
      * @param a address to add to the whitelist
      */
-    function addLender(address a) external onlyOwner {
+    function addLender(address a) external onlyOwnerOrAdmin {
         whitelistedLenders.add(a);
     }
 
@@ -69,7 +78,7 @@ contract Authority is OwnableUpgradeable {
      * @notice removes lenders address from the whitelist.
      * @param a address to remove from the whitelist
      */
-    function removeLender(address a) external onlyOwner {
+    function removeLender(address a) external onlyOwnerOrAdmin {
         whitelistedLenders.remove(a);
     }
 
@@ -88,6 +97,42 @@ contract Authority is OwnableUpgradeable {
         address[] memory addresses = new address[](length);
         for (uint i; i < length; i++) {
             addresses[i] = whitelistedLenders.at(i);
+        }
+
+        return addresses;
+    }
+
+    /**
+     * @notice adds admin address to the list.
+     * @param a address to add to the list
+     */
+    function addAdmin(address a) external onlyOwnerOrAdmin {
+        admins.add(a);
+    }
+
+    /**
+     * @notice removes admin address from the list.
+     * @param a address to remove from the list
+     */
+    function removeAdmin(address a) external onlyOwnerOrAdmin {
+        admins.remove(a);
+    }
+
+    /**
+     * @notice checks if the admin in the list.
+     * @param a address to check
+     * @return true if the address is in the list
+     */
+    function isAdmin(address a) external view returns (bool) {
+        return admins.contains(a);
+    }
+
+    /// @notice returns array of all admin addresses
+    function allAdmins() external view returns (address[] memory) {
+        uint length = admins.length();
+        address[] memory addresses = new address[](length);
+        for (uint i; i < length; i++) {
+            addresses[i] = admins.at(i);
         }
 
         return addresses;
