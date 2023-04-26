@@ -10,8 +10,9 @@ contract BaseVaultTest is BaseVault {
         uint _maxCapacity,
         string memory _tokenName,
         string memory _symbol,
-        address underlying
+        address underlying,
+        address authority
     ) external initializer {
-        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, underlying);
+        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, underlying, authority);
     }
 }

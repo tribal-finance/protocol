@@ -102,7 +102,6 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         uint[] trancheCoveragesWads;
     }
 
-
     function initialize(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
@@ -330,7 +329,10 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     }
 
     function lenderLockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external {
-        require(platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId), "lock will lead to overboost");
+        require(
+            platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
+            "lock will lead to overboost"
+        );
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(platformTokenContractAddress()),
@@ -352,10 +354,10 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     /* VIEWS BY TRANCHE*/
 
     function lenderTotalExpectedRewardsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        return (
-            lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-            lendingTermSeconds()) / (YEAR * WAD);
+        return
+            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+                lendingTermSeconds()) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheProjectedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
@@ -363,10 +365,10 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
             return 0;
         }
         uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
-        return (
-            lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-            secondsElapsed) / (YEAR * WAD);
+        return
+            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+                secondsElapsed) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
@@ -433,7 +435,11 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     }
 
     function borrowerPayInterest(uint assets) external {
-        uint assetsForLenders = allLendersEffectiveAprWad().mulDiv(assets, borrowerTotalInterestRateWad(), MathUpgradeable.Rounding.Up);
+        uint assetsForLenders = allLendersEffectiveAprWad().mulDiv(
+            assets,
+            borrowerTotalInterestRateWad(),
+            MathUpgradeable.Rounding.Up
+        );
         uint assetsToSendToFeeSharing = assets - assetsForLenders;
 
         SafeERC20Upgradeable.safeTransferFrom(
@@ -451,12 +457,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         IFeeSharing(feeSharingContractAddress()).deposit(assetsToSendToFeeSharing);
 
         _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
-        emit BorrowerPayInterest(
-            borrowerAddress(),
-            assets,
-            assetsForLenders,
-            assetsToSendToFeeSharing
-        );
+        emit BorrowerPayInterest(borrowerAddress(), assets, assetsForLenders, assetsToSendToFeeSharing);
 
         if (borrowerOutstandingInterest() == 0) {
             _transitionToInterestRepaidStage();

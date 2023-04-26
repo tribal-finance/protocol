@@ -41,9 +41,10 @@ contract TrancheVault is BaseVault {
         uint _maxCapacity,
         string memory _tokenName,
         string memory _symbol,
-        address underlying
+        address _underlying,
+        address _authority
     ) external initializer {
-        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, underlying);
+        _baseInitializer(_poolAddress, _minCapacity, _maxCapacity, _tokenName, _symbol, _underlying, _authority);
         _setId(_trancheId);
     }
 

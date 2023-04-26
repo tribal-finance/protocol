@@ -7,8 +7,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "../authority/AuthorityAware.sol";
 
-contract BaseVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, OwnableUpgradeable {
+contract BaseVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     /*////////////////////////////////////////////////
       State
     ////////////////////////////////////////////////*/
@@ -151,7 +152,8 @@ contract BaseVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, Ow
         uint _maxCapacity,
         string memory _tokenName,
         string memory _symbol,
-        address underlying
+        address _underlying,
+        address _authority
     ) internal onlyInitializing {
         require(_minCapacity <= _maxCapacity, "Vault: min > max");
         _setPoolAddress(_poolAddress);
@@ -160,7 +162,8 @@ contract BaseVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, Ow
         __ERC20_init(_tokenName, _symbol);
         __Pausable_init();
         __Ownable_init();
-        __ERC4626_init(IERC20Upgradeable(underlying));
+        __ERC4626_init(IERC20Upgradeable(_underlying));
+        __AuthorityAware__init(_authority);
     }
 
     /*////////////////////////////////////////////////
@@ -198,12 +201,12 @@ contract BaseVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, Ow
     }
 
     /** @dev Pauses the pool */
-    function pause() external onlyOwner {
+    function pause() external onlyOwnerOrAdmin {
         _pause();
     }
 
     /** @dev Unpauses the pool */
-    function unpause() external onlyOwner {
+    function unpause() external onlyOwnerOrAdmin {
         _unpause();
     }
 

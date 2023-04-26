@@ -75,7 +75,7 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
         uint256 timeSinceLastUpdate = block.timestamp - lastUpdateTime[user];
         uint256 stakedAmount = staked[user];
         uint256 rewardPerToken = rewardPerTokenStaked;
-        uint256 reward = stakedAmount * rewardPerToken * timeSinceLastUpdate / 1e18;
+        uint256 reward = (stakedAmount * rewardPerToken * timeSinceLastUpdate) / 1e18;
         return reward;
     }
 
@@ -83,6 +83,6 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
     function addReward(uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
         rewardToken.transferFrom(msg.sender, address(this), amount);
-        rewardPerTokenStaked += amount * 1e18 / totalStaked;
+        rewardPerTokenStaked += (amount * 1e18) / totalStaked;
     }
 }

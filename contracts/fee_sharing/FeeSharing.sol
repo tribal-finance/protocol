@@ -9,26 +9,33 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../staking/IStaking.sol";
 import "./IFeeSharing.sol";
+import "../authority/AuthorityAware.sol";
 
-contract FeeSharing is IFeeSharing, Initializable, OwnableUpgradeable {
+contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
     using MathUpgradeable for uint;
 
-    uint constant public WAD = 10 ** 18;
+    uint public constant WAD = 10 ** 18;
 
     IERC20 public assetContract;
     IStaking public stakingContract;
     uint public stakingContractShareWad;
 
-    function initialize(IERC20 _assetContract, IStaking _stakingContract, uint _stakingContractShareWad) public initializer {
+    function initialize(
+        address _authority,
+        IERC20 _assetContract,
+        IStaking _stakingContract,
+        uint _stakingContractShareWad
+    ) public initializer {
         require(stakingContractShareWad <= WAD, "staking contract share must be less than 100%");
         assetContract = _assetContract;
         stakingContract = _stakingContract;
         stakingContractShareWad = _stakingContractShareWad;
-        
+
         __Ownable_init();
+        __AuthorityAware__init(_authority);
     }
 
-    function setStakingContractShareWad(uint feeWad) external onlyOwner {
+    function setStakingContractShareWad(uint feeWad) external onlyAdmin {
         require(feeWad <= WAD, "staking contract share must be less than 100%");
         stakingContractShareWad = feeWad;
     }
@@ -39,12 +46,5 @@ contract FeeSharing is IFeeSharing, Initializable, OwnableUpgradeable {
         uint assetsForStaking = stakingContractShareWad.mulDiv(assets, WAD, MathUpgradeable.Rounding.Up);
         SafeERC20.safeApprove(assetContract, address(stakingContract), assetsForStaking);
         stakingContract.addReward(assetsForStaking);
-    }
-
-    /// @notice We do not know foundation address so the remaining money will sit in this contract.
-    /// Thus, this method will allow owner to withdraw balance
-    function withdraw(uint assets, address receiver) external onlyOwner {
-        require(assetContract.balanceOf(address(this)) >= assets, "not enough balance");
-        SafeERC20.safeTransfer(assetContract, receiver, assets);
     }
 }

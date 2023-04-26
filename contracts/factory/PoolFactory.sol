@@ -8,8 +8,9 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
+import "../authority/AuthorityAware.sol";
 
-contract PoolFactory is OwnableUpgradeable {
+contract PoolFactory is AuthorityAware {
     using MathUpgradeable for uint;
 
     struct PoolRecord {
@@ -34,10 +35,10 @@ contract PoolFactory is OwnableUpgradeable {
     PoolRecord[] public poolRegistry;
 
     address public feeSharingContractAddress;
-    address public authorityContractAddress;
 
-    function initialize() public initializer {
+    function initialize(address _authority) public initializer {
         __Ownable_init();
+        __AuthorityAware__init(_authority);
     }
 
     /// @dev sets implementation for future pool deployments
@@ -82,12 +83,7 @@ contract PoolFactory is OwnableUpgradeable {
             _msgSender()
         );
 
-        initializePoolAndCreatePoolRecord(
-            poolAddress,
-            params,
-            trancheVaultAddresses,
-            feeSharingContractAddress
-        );
+        initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
 
         return poolAddress;
     }
@@ -116,7 +112,8 @@ contract PoolFactory is OwnableUpgradeable {
                 params.maxFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
                 string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
                 string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
-                params.stableCoinContractAddress
+                params.stableCoinContractAddress,
+                address(authority)
             );
             TrancheVault(trancheVaultAddresses[i]).transferOwnership(ownerAddress);
         }
@@ -128,11 +125,7 @@ contract PoolFactory is OwnableUpgradeable {
         address[] memory trancheVaultAddresses,
         address _feeSharingContractAddress
     ) public onlyOwner {
-        LendingPool(poolAddress).initialize(
-            params,
-            trancheVaultAddresses,
-            _feeSharingContractAddress
-        );
+        LendingPool(poolAddress).initialize(params, trancheVaultAddresses, _feeSharingContractAddress);
         OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
 
         PoolRecord memory record = PoolRecord(

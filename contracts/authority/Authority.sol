@@ -3,25 +3,28 @@ pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
-
-import "hardhat/console.sol";
+import "./IAuthority.sol";
 
 /**
  * @title Authority Whitelist smart contract
- * @notice this contract manages a whitelists for all the borrowers and lenders
+ * @notice this contract manages a whitelists for all the admins, borrowers and lenders
  */
-contract Authority is OwnableUpgradeable {
+contract Authority is OwnableUpgradeable, IAuthority {
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+
+    event BorrowerAdded(address indexed actor, address indexed borrower);
+    event BorrowerRemoved(address indexed actor, address indexed borrower);
+    event LenderAdded(address indexed actor, address indexed lender);
+    event LenderRemoved(address indexed actor, address indexed lender);
+    event AdminAdded(address indexed actor, address indexed admin);
+    event AdminRemoved(address indexed actor, address indexed admin);
 
     EnumerableSetUpgradeable.AddressSet whitelistedBorrowers;
     EnumerableSetUpgradeable.AddressSet whitelistedLenders;
     EnumerableSetUpgradeable.AddressSet admins;
 
     modifier onlyOwnerOrAdmin() {
-        require(
-            owner() == msg.sender || admins.contains(msg.sender),
-            "Authority: caller is not the owner or admin"
-        );
+        require(owner() == msg.sender || admins.contains(msg.sender), "Authority: caller is not the owner or admin");
         _;
     }
 
@@ -35,7 +38,9 @@ contract Authority is OwnableUpgradeable {
      * @param a address to add to the whitelist
      */
     function addBorrower(address a) external onlyOwnerOrAdmin {
-        whitelistedBorrowers.add(a);
+        if (whitelistedBorrowers.add(a)) {
+            emit BorrowerAdded(msg.sender, a);
+        }
     }
 
     /**
@@ -43,7 +48,9 @@ contract Authority is OwnableUpgradeable {
      * @param a address to remove from the whitelist
      */
     function removeBorrower(address a) external onlyOwnerOrAdmin {
-        whitelistedBorrowers.remove(a);
+        if (whitelistedBorrowers.remove(a)) {
+            emit BorrowerRemoved(msg.sender, a);
+        }
     }
 
     /**
@@ -71,7 +78,9 @@ contract Authority is OwnableUpgradeable {
      * @param a address to add to the whitelist
      */
     function addLender(address a) external onlyOwnerOrAdmin {
-        whitelistedLenders.add(a);
+        if (whitelistedLenders.add(a)) {
+            emit LenderAdded(msg.sender, a);
+        }
     }
 
     /**
@@ -79,7 +88,9 @@ contract Authority is OwnableUpgradeable {
      * @param a address to remove from the whitelist
      */
     function removeLender(address a) external onlyOwnerOrAdmin {
-        whitelistedLenders.remove(a);
+        if (whitelistedLenders.remove(a)) {
+            emit LenderRemoved(msg.sender, a);
+        }
     }
 
     /**
@@ -107,7 +118,9 @@ contract Authority is OwnableUpgradeable {
      * @param a address to add to the list
      */
     function addAdmin(address a) external onlyOwnerOrAdmin {
-        admins.add(a);
+        if (admins.add(a)) {
+            emit AdminAdded(msg.sender, a);
+        }
     }
 
     /**
@@ -115,7 +128,9 @@ contract Authority is OwnableUpgradeable {
      * @param a address to remove from the list
      */
     function removeAdmin(address a) external onlyOwnerOrAdmin {
-        admins.remove(a);
+        if (admins.remove(a)) {
+            emit AdminRemoved(msg.sender, a);
+        }
     }
 
     /**
