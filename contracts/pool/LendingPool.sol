@@ -9,7 +9,7 @@ import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
 
-contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, LendingPoolState {
+contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
     using MathUpgradeable for uint;
 
@@ -105,7 +105,8 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     function initialize(
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
-        address _feeSharingContractAddress
+        address _feeSharingContractAddress,
+        address _authorityAddress
     ) external initializer {
         _validateInitParams(params, _trancheVaultAddresses, _feeSharingContractAddress);
 
@@ -133,6 +134,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
 
         __Ownable_init();
         __Pausable_init();
+        __AuthorityAware__init(_authorityAddress);
     }
 
     /// @dev validates initializer params
@@ -176,12 +178,12 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     ///////////////////////////////////*/
 
     /** @dev Pauses the pool */
-    function pause() external onlyOwner {
+    function pause() external onlyOwnerOrAdmin {
         _pause();
     }
 
     /** @dev Unpauses the pool */
-    function unpause() external onlyOwner {
+    function unpause() external onlyOwnerOrAdmin {
         _unpause();
     }
 
@@ -217,7 +219,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
-    function adminOpenPool() external onlyOwner {
+    function adminOpenPool() external onlyWhitelisted {
         for (uint i; i < trancheVaultAddresses().length; i++) {
             _trancheVaultContracts()[i].enableDeposits();
             _trancheVaultContracts()[i].enableWithdrawals();
@@ -229,7 +231,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     /** @notice Checks whether the pool was funded successfully or not.
      *  this function is expected to be called by *owner* once the funding period ends
      */
-    function adminTransitionToFundedState() external onlyOwner {
+    function adminTransitionToFundedState() external onlyOwnerOrAdmin {
         if (collectedAssets() >= minFundingCapacity()) {
             _transitionToFundedStage();
         } else {
@@ -317,7 +319,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     /*///////////////////////////////////
        Lender rewards
     ///////////////////////////////////*/
-    function lenderRedeemRewardsByTranche(uint8 trancheId) external {
+    function lenderRedeemRewardsByTranche(uint8 trancheId) external onlyLender {
         uint toWithdraw = lenderRewardsByTrancheRedeemable(_msgSender(), trancheId);
         require(toWithdraw > 0, "nothing to withdraw");
         s_trancheRewardables[trancheId][_msgSender()].redeemedRewards += toWithdraw;
@@ -328,7 +330,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
-    function lenderLockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external {
+    function lenderLockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external onlyLender {
         require(
             platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
             "lock will lead to overboost"
@@ -346,7 +348,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
-    function lenderUnlockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external {
+    function lenderUnlockPlatformTokensByTranche(uint8 trancheId, uint platformTokens) external onlyLender {
         // TODO: check that the tranche is in repaid stage
         // TODO: check that all the rewards are paid out
     }
@@ -421,7 +423,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     /*///////////////////////////////////
        Borrower functions
     ///////////////////////////////////*/
-    function borrow() external {
+    function borrow() external onlyBorrower {
         uint firstLossCapitalDepositTarget = (collectedAssets() * collateralRatioWad()) / WAD;
         uint amountToBorrow = collectedAssets() - firstLossCapitalDepositTarget;
         SafeERC20Upgradeable.safeTransfer(
@@ -434,7 +436,8 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         _transitionToBorrowedStage(amountToBorrow);
     }
 
-    function borrowerPayInterest(uint assets) external {
+    function borrowerPayInterest(uint assets) external onlyBorrower {
+        require(assets <= borrowerOutstandingInterest(), "too much interest paid");
         uint assetsForLenders = allLendersEffectiveAprWad().mulDiv(
             assets,
             borrowerTotalInterestRateWad(),
@@ -464,7 +467,7 @@ contract LendingPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         }
     }
 
-    function borrowerRepayPrincipal() external {
+    function borrowerRepayPrincipal() external onlyBorrower {
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(stableCoinContractAddress()),
             _msgSender(),

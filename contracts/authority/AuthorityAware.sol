@@ -35,7 +35,8 @@ abstract contract AuthorityAware is OwnableUpgradeable {
 
     modifier onlyWhitelisted() {
         require(
-            authority.isWhitelistedBorrower(msg.sender) ||
+            owner() == msg.sender ||
+                authority.isWhitelistedBorrower(msg.sender) ||
                 authority.isWhitelistedLender(msg.sender) ||
                 authority.isAdmin(msg.sender),
             "AuthorityAware: caller is not a whitelisted borrower or lender"

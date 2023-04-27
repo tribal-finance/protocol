@@ -4,9 +4,10 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "../authority/AuthorityAware.sol";
 import "./IStaking.sol";
 
-contract Staking is IStaking, Initializable, OwnableUpgradeable {
+contract Staking is IStaking, Initializable, AuthorityAware {
     IERC20 public token; // The ERC-20 token being staked (TRIBL)
     IERC20 public rewardToken; // The ERC-20 token used for rewards (USDC)
     uint256 public rewardPerTokenStaked; // The amount of rewardToken per token staked
@@ -18,14 +19,15 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
 
-    function initialize(IERC20 _token, IERC20 _rewardToken) public initializer {
+    function initialize(address _authority, IERC20 _token, IERC20 _rewardToken) public initializer {
         token = _token;
         rewardToken = _rewardToken;
         __Ownable_init();
+        __AuthorityAware__init(_authority);
     }
 
     /// @notice Stake TRIBL tokens
-    function stake(uint256 amount) external {
+    function stake(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");
         require(token.balanceOf(msg.sender) >= amount, "Insufficient balance");
         updateReward(msg.sender);
@@ -36,7 +38,7 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
     }
 
     /// @notice Withdraw TRIBL tokens
-    function withdraw(uint256 amount) external {
+    function withdraw(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");
         require(staked[msg.sender] >= amount, "Insufficient staked balance");
         updateReward(msg.sender);
@@ -47,7 +49,7 @@ contract Staking is IStaking, Initializable, OwnableUpgradeable {
     }
 
     // Claim rewards
-    function claimReward() external {
+    function claimReward() external onlyWhitelisted {
         updateReward(msg.sender);
         uint256 reward = rewardEarned[msg.sender];
         if (reward > 0) {

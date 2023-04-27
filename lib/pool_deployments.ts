@@ -20,6 +20,7 @@ import type {
   TrancheVault,
   TribalToken,
   Staking,
+  Authority,
 } from "../typechain-types";
 import { pool } from "../typechain-types/contracts";
 import { USDC_ADDRESS_6 } from "../test/helpers/usdc";
@@ -72,15 +73,37 @@ export async function deployTribalToken(
   return tribalToken;
 }
 
+export async function deployAuthority(
+  deployer: Signer,
+  borrower: Signer,
+  lenders: Array<Signer>
+): Promise<Authority> {
+  const Authority = await ethers.getContractFactory("Authority");
+  const authority = await Authority.connect(deployer).deploy();
+  await authority.deployed();
+  await authority.initialize();
+
+  authority.connect(deployer).addAdmin(await deployer.getAddress());
+  authority.connect(deployer).addBorrower(await borrower.getAddress());
+
+  for (let lender of lenders) {
+    authority.connect(deployer).addLender(await lender.getAddress());
+  }
+
+  return authority;
+}
+
 export async function deployFactoryAndImplementations(
   deployer: Signer,
   borrower: Signer,
   lenders: Array<Signer>
 ): Promise<PoolFactory> {
   const tribalToken = await deployTribalToken(deployer, lenders);
+  const authority = await deployAuthority(deployer, borrower, lenders);
 
   const Staking = await ethers.getContractFactory("Staking");
   const staking = await upgrades.deployProxy(Staking, [
+    authority.address,
     tribalToken.address,
     USDC_ADDRESS_6,
   ]);
@@ -94,6 +117,7 @@ export async function deployFactoryAndImplementations(
 
   const FeeSharing = await ethers.getContractFactory("FeeSharing");
   const feeSharing = await upgrades.deployProxy(FeeSharing, [
+    authority.address,
     USDC_ADDRESS_6,
     staking.address,
     ethers.utils.parseEther("0.2"),
@@ -114,7 +138,7 @@ export async function deployFactoryAndImplementations(
   const poolFactory = await PoolFactory.connect(deployer).deploy();
   await poolFactory.deployed();
 
-  await poolFactory.connect(deployer).initialize();
+  await poolFactory.connect(deployer).initialize(authority.address);
   await poolFactory
     .connect(deployer)
     .setPoolImplementation(poolImplementation.address);
@@ -218,6 +242,7 @@ export async function deployDuotranchePool(
 }
 
 export type DeployedContractsType = {
+  authority: Authority;
   lendingPool: LendingPool;
   firstTrancheVault: TrancheVault;
   secondTrancheVault: TrancheVault;
@@ -245,6 +270,9 @@ export async function _getDeployedContracts(
     lastDeployedPoolRecord.secondTrancheVaultAddress
   );
 
+  const authorityAddress = await poolFactory.authority();
+  const authority = await ethers.getContractAt("Authority", authorityAddress);
+
   const feeSharingAddress = await poolFactory.feeSharingContractAddress();
   const feeSharing = await ethers.getContractAt(
     "FeeSharing",
@@ -258,6 +286,7 @@ export async function _getDeployedContracts(
   const tribalToken = await ethers.getContractAt("TribalToken", tribalAddress);
 
   return {
+    authority,
     lendingPool,
     firstTrancheVault,
     secondTrancheVault,

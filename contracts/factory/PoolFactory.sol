@@ -42,16 +42,16 @@ contract PoolFactory is AuthorityAware {
     }
 
     /// @dev sets implementation for future pool deployments
-    function setPoolImplementation(address implementation) external onlyOwner {
+    function setPoolImplementation(address implementation) external onlyOwnerOrAdmin {
         poolImplementationAddress = implementation;
     }
 
     /// @dev sets implementation for future tranche vault deployments
-    function setTrancheVaultImplementation(address implementation) external onlyOwner {
+    function setTrancheVaultImplementation(address implementation) external onlyOwnerOrAdmin {
         trancheVaultImplementationAddress = implementation;
     }
 
-    function setFeeSharingContractAddress(address implementation) external onlyOwner {
+    function setFeeSharingContractAddress(address implementation) external onlyOwnerOrAdmin {
         feeSharingContractAddress = implementation;
     }
 
@@ -61,7 +61,7 @@ contract PoolFactory is AuthorityAware {
     }
 
     /// @dev removes all the pool records from storage
-    function clearPoolRecords() external onlyOwner {
+    function clearPoolRecords() external onlyOwnerOrAdmin {
         while (poolRegistry.length != 0) {
             poolRegistry.pop();
         }
@@ -125,7 +125,7 @@ contract PoolFactory is AuthorityAware {
         address[] memory trancheVaultAddresses,
         address _feeSharingContractAddress
     ) public onlyOwner {
-        LendingPool(poolAddress).initialize(params, trancheVaultAddresses, _feeSharingContractAddress);
+        LendingPool(poolAddress).initialize(params, trancheVaultAddresses, _feeSharingContractAddress, address(authority));
         OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
 
         PoolRecord memory record = PoolRecord(
