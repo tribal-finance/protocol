@@ -16,18 +16,18 @@ import STAGES from "../helpers/stages";
 
 describe("When Pool moves to Open state", function () {
   async function uniPoolFixture() {
-    const [deployer, lender1, lender2, lender3, borrower] =
+    const [deployer, lender1, lender2, lender3, borrower, foundation] =
       await ethers.getSigners();
     const lenders = [lender1, lender2, lender3];
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
-      lenders
+      lenders,
+      foundation.address
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     };
 
@@ -40,22 +40,24 @@ describe("When Pool moves to Open state", function () {
       afterDeploy
     );
 
+    await data.lendingPool.connect(deployer).adminOpenPool();
+
     return { ...data, ...(await _getDeployedContracts(poolFactory)) };
   }
 
   async function duoPoolFixture() {
-    const [deployer, lender1, lender2, lender3, borrower] =
+    const [deployer, lender1, lender2, lender3, borrower, foundation] =
       await ethers.getSigners();
     const lenders = [lender1, lender2, lender3];
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
-      lenders
+      lenders,
+      foundation.address
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     };
 

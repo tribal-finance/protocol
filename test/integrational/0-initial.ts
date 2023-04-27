@@ -15,28 +15,30 @@ import STAGES from "../helpers/stages";
 
 describe("When pool is in Initial ", function () {
   async function uniPoolFixture() {
-    const [deployer, lender1, lender2, lender3, borrower] =
+    const [deployer, lender1, lender2, lender3, borrower, foundation] =
       await ethers.getSigners();
     const lenders = [lender1, lender2, lender3];
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
-      lenders
+      lenders,
+      foundation.address
     );
 
     return await deployUnitranchePool(poolFactory, deployer, borrower, lenders);
   }
 
   async function duoPoolFixture() {
-    const [deployer, lender1, lender2, lender3, borrower] =
+    const [deployer, lender1, lender2, lender3, borrower, foundation] =
       await ethers.getSigners();
     const lenders = [lender1, lender2, lender3];
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
-      lenders
+      lenders,
+      foundation.address
     );
 
     return await deployDuotranchePool(poolFactory, deployer, borrower, lenders);

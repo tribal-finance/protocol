@@ -19,13 +19,15 @@ describe("Borrowing", function () {
   context("from unitranche pool", function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
-      const [deployer, lender1, lender2, lender3, borrower] = signers;
+      const [deployer, lender1, lender2, lender3, borrower, foundation] =
+        signers;
       const lenders = [lender1, lender2, lender3];
 
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
         borrower,
-        lenders
+        lenders,
+        foundation.address
       );
 
       const feeSharingAddress = await poolFactory.feeSharingContractAddress();
@@ -97,13 +99,15 @@ describe("Borrowing", function () {
   context("from duotranche pool", function () {
     async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
-      const [deployer, lender1, lender2, lender3, borrower] = signers;
+      const [deployer, lender1, lender2, lender3, borrower, foundation] =
+        signers;
       const lenders = [lender1, lender2, lender3];
 
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
         borrower,
-        lenders
+        lenders,
+        foundation.address
       );
 
       const afterDeploy = async (contracts: DeployedContractsType) => {
@@ -139,8 +143,6 @@ describe("Borrowing", function () {
         {},
         afterDeploy
       );
-
-      await data.lendingPool.connect(deployer).adminOpenPool();
 
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }

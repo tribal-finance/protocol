@@ -125,7 +125,12 @@ contract PoolFactory is AuthorityAware {
         address[] memory trancheVaultAddresses,
         address _feeSharingContractAddress
     ) public onlyOwner {
-        LendingPool(poolAddress).initialize(params, trancheVaultAddresses, _feeSharingContractAddress, address(authority));
+        LendingPool(poolAddress).initialize(
+            params,
+            trancheVaultAddresses,
+            _feeSharingContractAddress,
+            address(authority)
+        );
         OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
 
         PoolRecord memory record = PoolRecord(

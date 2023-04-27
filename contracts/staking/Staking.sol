@@ -15,9 +15,11 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     mapping(address => uint256) public staked; // The amount of token staked by each user
     mapping(address => uint256) public lastUpdateTime; // The last time rewards were updated for each user
     mapping(address => uint256) public rewardEarned; // The amount of reward earned by each user
+
     event Staked(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
+    event NewRewards(address indexed sender, uint256 totalAmount);
 
     function initialize(address _authority, IERC20 _token, IERC20 _rewardToken) public initializer {
         token = _token;
@@ -86,5 +88,6 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         require(amount > 0, "Amount must be greater than 0");
         rewardToken.transferFrom(msg.sender, address(this), amount);
         rewardPerTokenStaked += (amount * 1e18) / totalStaked;
+        emit NewRewards(msg.sender, amount);
     }
 }

@@ -19,13 +19,15 @@ describe("Interests", function () {
   context("For unitranche pool", function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
-      const [deployer, lender1, lender2, lender3, borrower] = signers;
+      const [deployer, lender1, lender2, lender3, borrower, foundation] =
+        signers;
       const lenders = [lender1, lender2, lender3];
 
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
         borrower,
-        lenders
+        lenders,
+        foundation.address
       );
 
       const afterDeploy = async (contracts: DeployedContractsType) => {
@@ -63,7 +65,12 @@ describe("Interests", function () {
         afterDeploy
       );
 
-      return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
+      return {
+        ...data,
+        usdc,
+        foundation,
+        ...(await _getDeployedContracts(poolFactory)),
+      };
     }
 
     /**
@@ -106,13 +113,15 @@ describe("Interests", function () {
         return data;
       }
 
-      it("sends $50 to fee sharing, fee sharing sends $10 to staking", async () => {
-        const { usdc, feeSharing, staking } = await loadFixture(
-          partlyRepaidFixture
-        );
+      it("sends $50 to fee sharing, after distributeFees(), fee sharing sends $10 to staking and $40 to foundation", async () => {
+        const { usdc, feeSharing, foundation, staking, deployer } =
+          await loadFixture(partlyRepaidFixture);
 
-        // NOTE: we do not have foundation address just yet, so the money is still in Fee Sharing contract
-        expect(await usdc.balanceOf(feeSharing.address)).to.equal(USDC(40));
+        expect(await usdc.balanceOf(feeSharing.address)).to.equal(USDC(50));
+        await feeSharing.connect(deployer).distributeFees();
+
+        // After fee distribution, foundation will get $40 and staking will get $50
+        expect(await usdc.balanceOf(foundation.address)).to.equal(USDC(40));
         expect(await usdc.balanceOf(staking.address)).to.equal(USDC(10));
       });
 

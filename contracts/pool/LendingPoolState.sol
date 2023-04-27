@@ -443,7 +443,7 @@ abstract contract LendingPoolState {
 
     struct Rewardable {
         uint stakedAssets;
-        uint stakedPlatformTokens;
+        uint lockedPlatformTokens;
         uint redeemedRewards;
         uint64 start;
     }

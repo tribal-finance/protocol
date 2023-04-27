@@ -331,6 +331,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     ) internal view override returns (uint256 assets) {
         return _initialConvertToAssets(shares, rounding); // 1:1
     }
+
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,

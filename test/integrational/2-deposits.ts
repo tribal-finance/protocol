@@ -3,10 +3,7 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
-import {
-  FirstLossCapitalVault__factory,
-  PoolFactory,
-} from "../../typechain-types";
+import { PoolFactory } from "../../typechain-types";
 import { USDC, WAD } from "../helpers/conversion";
 import {
   deployDuotranchePool,
@@ -20,13 +17,14 @@ import testSetup from "../helpers/usdc";
 describe("When Lender deposits to Open state pool", function () {
   async function uniPoolFixture() {
     const { signers, usdc } = await testSetup();
-    const [deployer, lender1, lender2, lender3, borrower] = signers;
+    const [deployer, lender1, lender2, lender3, borrower, foundation] = signers;
     const lenders = [lender1, lender2, lender3];
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
-      lenders
+      lenders,
+      foundation.address
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
@@ -54,13 +52,14 @@ describe("When Lender deposits to Open state pool", function () {
 
   async function duoPoolFixture() {
     const { signers, usdc } = await testSetup();
-    const [deployer, lender1, lender2, lender3, borrower] = signers;
+    const [deployer, lender1, lender2, lender3, borrower, foundation] = signers;
     const lenders = [lender1, lender2, lender3];
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
       borrower,
-      lenders
+      lenders,
+      foundation.address
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
@@ -91,8 +90,6 @@ describe("When Lender deposits to Open state pool", function () {
       {},
       afterDeploy
     );
-
-    await data.lendingPool.connect(deployer).adminOpenPool();
 
     return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
   }

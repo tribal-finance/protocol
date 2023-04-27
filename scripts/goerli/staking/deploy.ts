@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 async function main() {
+  if (!process.env.GOERLI_AUTHORITY_ADDRESS) {
+    throw new Error("GOERLI_AUTHORITY_ADDRESS must be set");
+  }
   if (!process.env.GOERLI_TRIBAL_TOKEN_ADDRESS) {
     throw new Error("GOERLI_TRIBAL_TOKEN_ADDRESS must be set");
   }
@@ -13,6 +16,7 @@ async function main() {
 
   const Staking = await ethers.getContractFactory("Staking");
   const staking = await upgrades.deployProxy(Staking, [
+    process.env.GOERLI_AUTHORITY_ADDRESS,
     process.env.GOERLI_TRIBAL_TOKEN_ADDRESS,
     process.env.GOERLI_USDC_ADDRESS,
   ]);

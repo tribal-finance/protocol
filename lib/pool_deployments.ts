@@ -96,7 +96,8 @@ export async function deployAuthority(
 export async function deployFactoryAndImplementations(
   deployer: Signer,
   borrower: Signer,
-  lenders: Array<Signer>
+  lenders: Array<Signer>,
+  foundationAddress: string
 ): Promise<PoolFactory> {
   const tribalToken = await deployTribalToken(deployer, lenders);
   const authority = await deployAuthority(deployer, borrower, lenders);
@@ -119,8 +120,8 @@ export async function deployFactoryAndImplementations(
   const feeSharing = await upgrades.deployProxy(FeeSharing, [
     authority.address,
     USDC_ADDRESS_6,
-    staking.address,
-    ethers.utils.parseEther("0.2"),
+    [staking.address, foundationAddress],
+    [ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.8")],
   ]);
   await feeSharing.deployed();
 

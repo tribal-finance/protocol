@@ -17,34 +17,87 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
     uint public constant WAD = 10 ** 18;
 
     IERC20 public assetContract;
-    IStaking public stakingContract;
-    uint public stakingContractShareWad;
+    address[] public beneficiaries;
+    uint[] public beneficiariesSharesWad;
 
+    /** @notice initializer
+     *  IMPORTANT: the assumption is that the first beneficiary is the staking contract
+     *  @param _authority address of the Authority contract
+     *  @param _assetContract address of the asset contract (USDC)
+     *  @param _beneficiaries array of addresses of the beneficiaries where the funds will be distributed
+     *  @param _beneficiariesSharesWad array of shares of the beneficiaries where the funds will be distributed (in WAD. 100% = 10**18)
+     */
     function initialize(
         address _authority,
         IERC20 _assetContract,
-        IStaking _stakingContract,
-        uint _stakingContractShareWad
-    ) public initializer {
-        require(stakingContractShareWad <= WAD, "staking contract share must be less than 100%");
+        address[] calldata _beneficiaries,
+        uint[] calldata _beneficiariesSharesWad
+    ) external initializer {
         assetContract = _assetContract;
-        stakingContract = _stakingContract;
-        stakingContractShareWad = _stakingContractShareWad;
 
         __Ownable_init();
         __AuthorityAware__init(_authority);
+        updateBenificiariesAndShares(_beneficiaries, _beneficiariesSharesWad);
     }
 
-    function setStakingContractShareWad(uint feeWad) external onlyAdmin {
-        require(feeWad <= WAD, "staking contract share must be less than 100%");
-        stakingContractShareWad = feeWad;
+    /** @notice update the beneficiaries and their shares
+     *  IMPORTANT: the assumption is that the first beneficiary is the staking contract
+     */
+    function updateBenificiariesAndShares(
+        address[] calldata _beneficiaries,
+        uint[] calldata _beneficiariesSharesWad
+    ) public onlyOwnerOrAdmin {
+        require(
+            _beneficiaries.length == _beneficiariesSharesWad.length,
+            "beneficiaries and shares must have the same length"
+        );
+        _validateShares(_beneficiariesSharesWad);
+        beneficiaries = _beneficiaries;
+        beneficiariesSharesWad = _beneficiariesSharesWad;
     }
 
-    /// @notice This function is called by the pools when someone tries to deposit tokens
-    function deposit(uint assets) external {
-        SafeERC20.safeTransferFrom(assetContract, msg.sender, address(this), assets);
-        uint assetsForStaking = stakingContractShareWad.mulDiv(assets, WAD, MathUpgradeable.Rounding.Up);
-        SafeERC20.safeApprove(assetContract, address(stakingContract), assetsForStaking);
-        stakingContract.addReward(assetsForStaking);
+    /** @notice update the beneficiaries shares
+     *   @param shareWads array of shares of the beneficiaries where the funds will be distributed (in WAD. 100% = 10**18)
+     */
+    function updateShares(uint[] calldata shareWads) external onlyOwnerOrAdmin {
+        require(shareWads.length == beneficiaries.length, "beneficiaries and shares must have the same length");
+        _validateShares(shareWads);
+        beneficiariesSharesWad = shareWads;
+    }
+
+    function _validateShares(uint[] calldata shareWads) internal pure {
+        uint sum = 0;
+        for (uint i = 0; i < shareWads.length; i++) {
+            sum += shareWads[i];
+        }
+        require(sum == WAD, "shares must sum to 100%");
+    }
+
+    /** @notice distribute the collected fees to the beneficiaries
+     *  IMPORTANT: the assumption is that the first beneficiary is the staking contract
+     */
+    function distributeFees() external onlyOwnerOrAdmin {
+        uint balance = assetContract.balanceOf(address(this));
+        // distribute shares
+        for (uint i = 0; i < beneficiaries.length; i++) {
+            uint amount = balance.mulDiv(beneficiariesSharesWad[i], WAD, MathUpgradeable.Rounding.Down);
+            if (amount > 0) {
+                if (i == 0) {
+                    address stakingAddress = beneficiaries[i];
+                    // first beneficiary is the staking contract.
+                    SafeERC20.safeApprove(assetContract, stakingAddress, amount);
+                    // Call addFunds on the contract
+                    IStaking(stakingAddress).addReward(amount);
+                } else {
+                    // otherwise just transfer funds to benificiary
+                    SafeERC20.safeTransfer(assetContract, beneficiaries[i], amount);
+                }
+            }
+        }
+    }
+
+    /// @notice returns the address of the staking contract
+    function stakingContract() public view returns (address) {
+        return beneficiaries[0];
     }
 }

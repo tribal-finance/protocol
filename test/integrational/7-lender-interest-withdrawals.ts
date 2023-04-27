@@ -19,13 +19,15 @@ describe("Lenders redeem rewards", function () {
   context("For unitranche pool", function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
-      const [deployer, lender1, lender2, lender3, borrower] = signers;
+      const [deployer, lender1, lender2, lender3, borrower, foundation] =
+        signers;
       const lenders = [lender1, lender2, lender3];
 
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
         borrower,
-        lenders
+        lenders,
+        foundation.address
       );
 
       const afterDeploy = async (contracts: DeployedContractsType) => {
