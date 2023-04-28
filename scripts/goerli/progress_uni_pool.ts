@@ -101,18 +101,18 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  const interestToRepay = USDC(30);
-  tx = await USDCContract.connect(borrower).approve(
-    poolContract.address,
-    interestToRepay
-  );
-  await tx.wait();
-  console.log("approved interst spend");
-  tx = await poolContract
-    .connect(borrower)
-    .borrowerPayInterest(interestToRepay);
-  await tx.wait();
-  console.log("deposited interest money");
+  // const interestToRepay = USDC(30);
+  // tx = await USDCContract.connect(borrower).approve(
+  //   poolContract.address,
+  //   interestToRepay
+  // );
+  // await tx.wait();
+  // console.log("approved interst spend");
+  // tx = await poolContract
+  //   .connect(borrower)
+  //   .borrowerPayInterest(interestToRepay);
+  // await tx.wait();
+  // console.log("deposited interest money");
 
   /* !!!!!!!!!!!! 6. Redeem interest !!!!!!!!!!!!!!!!!!!!*/
   // tx = await poolContract.connect(lender1).lenderRedeemRewardsByTranche(0);
