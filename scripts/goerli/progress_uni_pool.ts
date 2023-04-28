@@ -10,7 +10,7 @@ import { USDC } from "../../test/helpers/conversion";
 
 dotenv.config();
 
-const LENDING_POOL_ADDRESS = "0x932daF7cABfb08Ac47439C94669CA0A2a6025322";
+const LENDING_POOL_ADDRESS = "0x9BaCCc09785c86d4981331e72d5B49787378124d";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -62,26 +62,26 @@ async function main() {
   // console.log("Lending Pool Opened");
 
   /* !!!!!!!!!!!! 2. Deposit to the Lending Pool !!!!!!!!!!!!!!!!!!!!*/
-  //tx = await USDCContract.connect(lender1).approve(
-  //  trancheContracts[0].address,
-  //  USDC(10000)
-  //);
-  //await tx.wait();
-  //console.log("approved spend");
-  //tx = await trancheContracts[0]
-  //  .connect(lender1)
-  //  .deposit(USDC(2000), lender1.address);
-  //await tx.wait();
-  //console.log("deposited money");
+  // tx = await USDCContract.connect(lender1).approve(
+  //   trancheContracts[0].address,
+  //   USDC(10000)
+  // );
+  // await tx.wait();
+  // console.log("approved spend");
+  // tx = await trancheContracts[0]
+  //   .connect(lender1)
+  //   .deposit(USDC(10000), lender1.address);
+  // await tx.wait();
+  // console.log("deposited money");
 
   /* !!!!!!!!!!!! 3. Move to funded state !!!!!!!!!!!!!!!!!!!!*/
-  //  tx = await poolContract.connect(deployer).adminTransitionToFundedState();
-  //  await tx.wait();
-  //  console.log("Lending Pool Transitioned to Funded State");
-  //  console.log(
-  //    "Current Pool Stage:",
-  //    STAGES_LOOKUP[await poolContract.currentStage()]
-  //  );
+  // tx = await poolContract.connect(deployer).adminTransitionToFundedState();
+  // await tx.wait();
+  // console.log("Lending Pool Transitioned to Funded State");
+  // console.log(
+  //   "Current Pool Stage:",
+  //   STAGES_LOOKUP[await poolContract.currentStage()]
+  // );
 
   /* !!!!!!!!!!!! 5. Borrow !!!!!!!!!!!!!!!!!!!!*/
   // console.log(
@@ -101,7 +101,7 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  const interestToRepay = USDC(300);
+  const interestToRepay = USDC(30);
   tx = await USDCContract.connect(borrower).approve(
     poolContract.address,
     interestToRepay
