@@ -107,6 +107,7 @@ export async function deployFactoryAndImplementations(
     authority.address,
     tribalToken.address,
     USDC_ADDRESS_6,
+    60,
   ]);
   await staking.deployed();
 
@@ -283,7 +284,7 @@ export async function _getDeployedContracts(
   const stakingAddress = await feeSharing.stakingContract();
   const staking = await ethers.getContractAt("Staking", stakingAddress);
 
-  const tribalAddress = await staking.token();
+  const tribalAddress = await staking.stakingToken();
   const tribalToken = await ethers.getContractAt("TribalToken", tribalAddress);
 
   return {

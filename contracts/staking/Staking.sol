@@ -7,87 +7,171 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../authority/AuthorityAware.sol";
 import "./IStaking.sol";
 
+/** @title Staking smart contract
+ *  @notice This contract allows users to stake TRIBL tokens and part of platform fee shares
+ *  The contract is heavily inspired by https://solidity-by-example.org/defi/discrete-staking-rewards/
+ *  You can see the math explanation in this video: https://www.youtube.com/watch?v=mo6rHnDU8us&t=728s
+ *  In addition to that, I want to mention that it is inspired by Synthetix staking contract
+ */
 contract Staking is IStaking, Initializable, AuthorityAware {
-    IERC20 public token; // The ERC-20 token being staked (TRIBL)
-    IERC20 public rewardToken; // The ERC-20 token used for rewards (USDC)
-    uint256 public rewardPerTokenStaked; // The amount of rewardToken per token staked
-    uint256 public totalStaked; // The total amount of TRIBL token staked
-    mapping(address => uint256) public staked; // The amount of token staked by each user
-    mapping(address => uint256) public lastUpdateTime; // The last time rewards were updated for each user
-    mapping(address => uint256) public rewardEarned; // The amount of reward earned by each user
+    /*///////////////////////////////////
+       CONSTANTS
+    ///////////////////////////////////*/
+    uint private constant WAD = 10**18;
+    struct UnstakeRequest {
+        uint amount;
+        uint timestampExecutable;
+    }
 
+    /*///////////////////////////////////
+       STATE VARIABLES
+    ///////////////////////////////////*/
+    /// @notice The ERC-20 token being staked (TRIBL)
+    IERC20 public stakingToken;
+    /// @notice the ERC-20 token used for rewards (USDC)
+    IERC20 public rewardToken;
+    /// @notice cooldown period in seconds
+    uint public cooldownPeriodSeconds;
+    /// @notice Total amount of TRIBL staked by each user
+    mapping(address => uint) balanceOf;
+    /// @notice Total amount of TRIBL staked by all users
+    uint public totalSupply;
+    /// @dev current reward index
+    uint private rewardIndex;
+    /// @dev user reward indexes
+    mapping(address => uint) private rewardIndexOf;
+    /// @dev how much rewards each user has already earned
+    mapping(address => uint) private earned;
+    /// @dev unstake requests
+    mapping(address => UnstakeRequest) private unstakeRequests;
+
+    /*///////////////////////////////////
+       EVENTS
+    ///////////////////////////////////*/
     event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-    event RewardPaid(address indexed user, uint256 reward);
+    event UnstakeRequested(address indexed user, uint256 amount);
+    event Unstaked(address indexed user, uint256 amount);
     event NewRewards(address indexed sender, uint256 totalAmount);
+    event RewardsClaimed(address indexed user, uint256 amount);
 
-    function initialize(address _authority, IERC20 _token, IERC20 _rewardToken) public initializer {
-        token = _token;
+    /*///////////////////////////////////
+       INITIALIZER
+    ///////////////////////////////////*/
+    /** @notice Initialize the contract
+     *  @param _authority Address of the Authority contract
+     *  @param _stakingToken Address of the TRIBL token
+     *  @param _rewardToken Address of the USDC token
+     *  @param _cooldownPeriodSeconds Cooldown period in seconds
+     */
+    function initialize(address _authority, IERC20 _stakingToken, IERC20 _rewardToken, uint256 _cooldownPeriodSeconds) public initializer {
+        stakingToken = _stakingToken;
         rewardToken = _rewardToken;
+        cooldownPeriodSeconds = _cooldownPeriodSeconds;
         __Ownable_init();
         __AuthorityAware__init(_authority);
     }
 
-    /// @notice Stake TRIBL tokens
+    /*///////////////////////////////////
+        ADDITION OF REWARDS
+    ///////////////////////////////////*/
+    /** @notice Add rewards to the pool
+     *  @param amount Amount of rewards to add
+     */
+    function addReward(uint256 amount) external {
+        rewardToken.transferFrom(msg.sender, address(this), amount);
+        rewardIndex += (amount * WAD) / totalSupply;
+    }
+
+    /*///////////////////////////////////
+        STAKING FUNCTIONS
+    ///////////////////////////////////*/
+    /** @notice Stake TRIBL tokens
+     *  @param amount Amount of TRIBL tokens to stake
+     */
     function stake(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");
-        require(token.balanceOf(msg.sender) >= amount, "Insufficient balance");
-        updateReward(msg.sender);
-        token.transferFrom(msg.sender, address(this), amount);
-        staked[msg.sender] += amount;
-        totalStaked += amount;
+        require(stakingToken.balanceOf(msg.sender) >= amount, "Insufficient balance");
+
+        _updateRewards(msg.sender);
+
+        balanceOf[msg.sender] += amount;
+        totalSupply += amount;
+
+        stakingToken.transferFrom(msg.sender, address(this), amount);
+
         emit Staked(msg.sender, amount);
     }
 
-    /// @notice Withdraw TRIBL tokens
-    function withdraw(uint256 amount) external onlyWhitelisted {
+    /** @notice Unstake requested amount of TRIBL tokens
+     *  You should call requestUnstake() and wait for the cooldown period to pass before calling this function
+     */
+    function unstake() external onlyWhitelisted {
+        UnstakeRequest storage r = unstakeRequests[msg.sender];
+        require(r.timestampExecutable > 0, "No unstake request");
+        require(block.timestamp >= r.timestampExecutable, "Cooldown period has not passed");
+        _updateRewards(msg.sender);
+
+        balanceOf[msg.sender] -= r.amount;
+        totalSupply -= r.amount;
+
+        // Clear the existing unstake request
+        r.amount = 0;
+        r.timestampExecutable = 0;
+
+        stakingToken.transfer(msg.sender, r.amount);
+        emit Unstaked(msg.sender, r.amount);
+    }
+
+    /** @notice Request to unstake TRIBL tokens
+     *  @param amount Amount of TRIBL tokens to unstake
+     */
+    function requestUnstake(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");
-        require(staked[msg.sender] >= amount, "Insufficient staked balance");
-        updateReward(msg.sender);
-        token.transfer(msg.sender, amount);
-        staked[msg.sender] -= amount;
-        totalStaked -= amount;
-        emit Withdrawn(msg.sender, amount);
+        require(balanceOf[msg.sender] >= amount, "Insufficient staked balance");
+        require(unstakeRequests[msg.sender].timestampExecutable == 0, "Unstake request already exists");
+
+        UnstakeRequest memory request = UnstakeRequest(amount, block.timestamp + cooldownPeriodSeconds);
+        unstakeRequests[msg.sender] = request;
+
+        emit UnstakeRequested(msg.sender, amount);
     }
 
-    // Claim rewards
-    function claimReward() external onlyWhitelisted {
-        updateReward(msg.sender);
-        uint256 reward = rewardEarned[msg.sender];
+    /// @notice Claim rewards
+    function claimReward() external onlyWhitelisted returns (uint) {
+        _updateRewards(msg.sender);
+
+        uint reward = earned[msg.sender];
         if (reward > 0) {
-            rewardEarned[msg.sender] = 0;
+            earned[msg.sender] = 0;
             rewardToken.transfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, reward);
+            emit RewardsClaimed(msg.sender, reward);
         }
-    }
 
-    function claimableReward(address user) external view returns (uint256) {
-        return rewardEarned[user] + calculateReward(msg.sender);
-    }
-
-    // Update rewards for a user
-    function updateReward(address user) internal {
-        if (staked[user] > 0) {
-            uint256 reward = calculateReward(user);
-            rewardEarned[user] += reward;
-            lastUpdateTime[user] = block.timestamp;
-        }
-    }
-
-    // Calculate rewards for a user
-    function calculateReward(address user) internal view returns (uint256) {
-        uint256 timeSinceLastUpdate = block.timestamp - lastUpdateTime[user];
-        uint256 stakedAmount = staked[user];
-        uint256 rewardPerToken = rewardPerTokenStaked;
-        uint256 reward = (stakedAmount * rewardPerToken * timeSinceLastUpdate) / 1e18;
         return reward;
     }
 
-    // Add more reward tokens to the contract
-    function addReward(uint256 amount) external {
-        require(amount > 0, "Amount must be greater than 0");
-        rewardToken.transferFrom(msg.sender, address(this), amount);
-        rewardPerTokenStaked += (amount * 1e18) / totalStaked;
-        emit NewRewards(msg.sender, amount);
+    /** @notice Calculate rewards earned by a user
+     *  @param account Address of the user
+     *  @return Amount of USDC earned in rewards
+     */
+    function calculateRewardsEarned(address account) external view returns (uint256) {
+        return earned[account] + _calculateRewards(account);
+    }
+
+    /*///////////////////////////////////
+        HELPERS
+    ///////////////////////////////////*/
+    function _updateRewards(address account) private {
+        earned[account] += _calculateRewards(account);
+        rewardIndexOf[account] = rewardIndex;
+    }
+
+    /** @dev Calculate rewards earned by a user
+     * @param account Address of the user
+     * @return Amount of rewards earned
+     */
+    function _calculateRewards(address account) private view returns (uint) {
+        uint shares = balanceOf[account];
+        return (shares * (rewardIndex - rewardIndexOf[account])) / WAD;
     }
 }

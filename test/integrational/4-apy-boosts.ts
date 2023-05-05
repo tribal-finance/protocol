@@ -37,7 +37,7 @@ describe("Boosting the APR", function () {
     const stakingAddress = await feeSharing.stakingContract();
     const staking = await ethers.getContractAt("Staking", stakingAddress);
 
-    const tribalAddress = await staking.token();
+    const tribalAddress = await staking.stakingToken();
     const tribalToken = await ethers.getContractAt(
       "TribalToken",
       tribalAddress
