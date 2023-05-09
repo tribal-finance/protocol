@@ -17,7 +17,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /*///////////////////////////////////
        CONSTANTS
     ///////////////////////////////////*/
-    uint private constant WAD = 10**18;
+    uint private constant WAD = 10 ** 18;
     struct UnstakeRequest {
         uint amount;
         uint timestampExecutable;
@@ -63,7 +63,12 @@ contract Staking is IStaking, Initializable, AuthorityAware {
      *  @param _rewardToken Address of the USDC token
      *  @param _cooldownPeriodSeconds Cooldown period in seconds
      */
-    function initialize(address _authority, IERC20 _stakingToken, IERC20 _rewardToken, uint256 _cooldownPeriodSeconds) public initializer {
+    function initialize(
+        address _authority,
+        IERC20 _stakingToken,
+        IERC20 _rewardToken,
+        uint256 _cooldownPeriodSeconds
+    ) public initializer {
         stakingToken = _stakingToken;
         rewardToken = _rewardToken;
         cooldownPeriodSeconds = _cooldownPeriodSeconds;
