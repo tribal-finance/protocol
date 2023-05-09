@@ -9,4 +9,5 @@ interface IStaking {
     function requestUnstake(uint256 amount) external;
     function claimReward() external returns (uint256);
     function calculateRewardsEarned(address account) external view returns (uint256);
+    function totalSupply() external view returns (uint256);
 }

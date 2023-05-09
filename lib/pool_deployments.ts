@@ -53,7 +53,8 @@ export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.8), WAD(0.2)];
 
 export async function deployTribalToken(
   deployer: Signer,
-  lenders: Array<Signer>
+  lenders: Array<Signer>,
+  foundationAddress: string | null
 ): Promise<TribalToken> {
   const TribalToken = await ethers.getContractFactory("TribalToken");
   const tribalToken = await TribalToken.connect(deployer).deploy();
@@ -70,13 +71,20 @@ export async function deployTribalToken(
     await tx.wait();
   }
 
+  if (foundationAddress) {
+    const tx = await tribalToken
+      .connect(deployer)
+      .mint(foundationAddress, parseUnits("1000000", "ether"));
+  }
+
   return tribalToken;
 }
 
 export async function deployAuthority(
   deployer: Signer,
   borrower: Signer,
-  lenders: Array<Signer>
+  lenders: Array<Signer>,
+  foundationAddress: string | null
 ): Promise<Authority> {
   const Authority = await ethers.getContractFactory("Authority");
   const authority = await Authority.connect(deployer).deploy();
@@ -84,6 +92,9 @@ export async function deployAuthority(
   await authority.initialize();
 
   authority.connect(deployer).addAdmin(await deployer.getAddress());
+  if (foundationAddress) {
+    authority.connect(deployer).addAdmin(foundationAddress);
+  }
   authority.connect(deployer).addBorrower(await borrower.getAddress());
 
   for (let lender of lenders) {
@@ -93,29 +104,48 @@ export async function deployAuthority(
   return authority;
 }
 
+export async function deployStaking(
+  authorityAddress: string,
+  tribalTokenAddress: string,
+  usdcAddress: string,
+  stakingPeriodSeconds: number
+) {
+  const Staking = await ethers.getContractFactory("Staking");
+  const staking = await upgrades.deployProxy(Staking, [
+    authorityAddress,
+    tribalTokenAddress,
+    usdcAddress,
+    60,
+  ]);
+  await staking.deployed();
+
+  return staking;
+}
+
 export async function deployFactoryAndImplementations(
   deployer: Signer,
   borrower: Signer,
   lenders: Array<Signer>,
   foundationAddress: string
 ): Promise<PoolFactory> {
-  const tribalToken = await deployTribalToken(deployer, lenders);
-  const authority = await deployAuthority(deployer, borrower, lenders);
+  const tribalToken = await deployTribalToken(
+    deployer,
+    lenders,
+    foundationAddress
+  );
+  const authority = await deployAuthority(
+    deployer,
+    borrower,
+    lenders,
+    foundationAddress
+  );
 
-  const Staking = await ethers.getContractFactory("Staking");
-  const staking = await upgrades.deployProxy(Staking, [
+  const staking = await deployStaking(
     authority.address,
     tribalToken.address,
     USDC_ADDRESS_6,
-    60,
-  ]);
-  await staking.deployed();
-
-  await tribalToken
-    .connect(deployer)
-    .approve(staking.address, parseUnits("1000", 18));
-
-  await staking.connect(deployer).stake(parseUnits("1000", 18));
+    60
+  );
 
   const FeeSharing = await ethers.getContractFactory("FeeSharing");
   const feeSharing = await upgrades.deployProxy(FeeSharing, [

@@ -86,7 +86,7 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
                     address stakingAddress = beneficiaries[i];
                     // first beneficiary is the staking contract.
                     SafeERC20.safeApprove(assetContract, stakingAddress, amount);
-                    // Call addFunds on the contract
+                    // Call addReward on the contract
                     IStaking(stakingAddress).addReward(amount);
                 } else {
                     // otherwise just transfer funds to benificiary

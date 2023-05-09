@@ -114,10 +114,17 @@ describe("Interests", function () {
       }
 
       it("sends $50 to fee sharing, after distributeFees(), fee sharing sends $10 to staking and $40 to foundation", async () => {
-        const { usdc, feeSharing, foundation, staking, deployer } =
+        const { usdc, feeSharing, tribalToken, foundation, staking, deployer } =
           await loadFixture(partlyRepaidFixture);
 
         expect(await usdc.balanceOf(feeSharing.address)).to.equal(USDC(50));
+
+        // Staking a single TRIBAL token to let the math work on staking smart contract
+        const toStake = ethers.utils.parseUnits("1", 18);
+        await tribalToken.connect(foundation).approve(staking.address, toStake);
+        await staking.connect(foundation).stake(toStake);
+
+        // Distibute fees
         await feeSharing.connect(deployer).distributeFees();
 
         // After fee distribution, foundation will get $40 and staking will get $50

@@ -33,7 +33,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /// @notice cooldown period in seconds
     uint public cooldownPeriodSeconds;
     /// @notice Total amount of TRIBL staked by each user
-    mapping(address => uint) public balanceOf;
+    mapping(address => uint) public stakedBalanceOf;
     /// @notice Total amount of TRIBL staked by all users
     uint public totalSupply;
     /// @dev current reward index
@@ -43,7 +43,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /// @dev how much rewards each user has already earned
     mapping(address => uint) private earned;
     /// @dev unstake requests
-    mapping(address => UnstakeRequest) private unstakeRequests;
+    mapping(address => UnstakeRequest) public unstakeRequests;
 
     /*///////////////////////////////////
        EVENTS
@@ -94,7 +94,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
 
         _updateRewards(msg.sender);
 
-        balanceOf[msg.sender] += amount;
+        stakedBalanceOf[msg.sender] += amount;
         totalSupply += amount;
 
         stakingToken.transferFrom(msg.sender, address(this), amount);
@@ -108,17 +108,18 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     function unstake() external onlyWhitelisted {
         UnstakeRequest storage r = unstakeRequests[msg.sender];
         require(r.timestampExecutable > 0, "No unstake request");
-        require(block.timestamp >= r.timestampExecutable, "Cooldown period has not passed");
+        require(block.timestamp >= r.timestampExecutable, "Cooldown period not passed");
         _updateRewards(msg.sender);
 
-        balanceOf[msg.sender] -= r.amount;
+        stakedBalanceOf[msg.sender] -= r.amount;
         totalSupply -= r.amount;
+        uint toSend = r.amount;
 
         // Clear the existing unstake request
         r.amount = 0;
         r.timestampExecutable = 0;
 
-        stakingToken.transfer(msg.sender, r.amount);
+        stakingToken.transfer(msg.sender, toSend);
         emit Unstaked(msg.sender, r.amount);
     }
 
@@ -127,7 +128,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
      */
     function requestUnstake(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");
-        require(balanceOf[msg.sender] >= amount, "Insufficient staked balance");
+        require(stakedBalanceOf[msg.sender] >= amount, "Insufficient staked balance");
         require(unstakeRequests[msg.sender].timestampExecutable == 0, "Unstake request already exists");
 
         UnstakeRequest memory request = UnstakeRequest(amount, block.timestamp + cooldownPeriodSeconds);
@@ -171,7 +172,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
      * @return Amount of rewards earned
      */
     function _calculateRewards(address account) private view returns (uint) {
-        uint shares = balanceOf[account];
+        uint shares = stakedBalanceOf[account];
         return (shares * (rewardIndex - rewardIndexOf[account])) / WAD;
     }
 }
