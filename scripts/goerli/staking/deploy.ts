@@ -19,6 +19,7 @@ async function main() {
     process.env.GOERLI_AUTHORITY_ADDRESS,
     process.env.GOERLI_TRIBAL_TOKEN_ADDRESS,
     process.env.GOERLI_USDC_ADDRESS,
+    60,
   ]);
 
   await staking.deployed();

@@ -33,7 +33,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /// @notice cooldown period in seconds
     uint public cooldownPeriodSeconds;
     /// @notice Total amount of TRIBL staked by each user
-    mapping(address => uint) balanceOf;
+    mapping(address => uint) public balanceOf;
     /// @notice Total amount of TRIBL staked by all users
     uint public totalSupply;
     /// @dev current reward index

@@ -445,6 +445,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        if (fundedAt() == 0) {
+            return 0;
+        }
         return
             (lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId) * borrowerInterestRepaid()) /
             borrowerExpectedInterest();
