@@ -87,24 +87,35 @@ describe("Lenders redeem rewards", function () {
      * - lender 2 deposit: $2,000
      */
 
-    context(
-      "after borrower pays $150 interest and lender redeems tranche 1",
-      async () => {
-        it("allows borrower to withdraw $100", async () => {
-          const { lendingPool, usdc, lenders } = await loadFixture(
-            uniPoolFixture
-          );
+    context("after halve of the term passes", async () => {
+      it("allows borrower to withdraw $100 and rewards redeemable is $150", async () => {
+        const { lendingPool, usdc, lenders } = await loadFixture(
+          uniPoolFixture
+        );
 
-          const balanceBefore = await usdc.balanceOf(
-            await lenders[0].getAddress()
+        const balanceBefore = await usdc.balanceOf(
+          await lenders[0].getAddress()
+        );
+
+        // wait for 91.25 days
+        await ethers.provider.send("evm_increaseTime", [60 * 60 * 24 * 91.25]);
+        await ethers.provider.send("evm_mine", []);
+
+        await lendingPool
+          .connect(lenders[0])
+          .lenderRedeemRewardsByTranche(0, USDC(100));
+        const balanceAfter = await usdc.balanceOf(
+          await lenders[0].getAddress()
+        );
+        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(100));
+        const outstandingRewards =
+          await lendingPool.lenderRewardsByTrancheRedeemable(
+            await lenders[0].getAddress(),
+            0
           );
-          await lendingPool.connect(lenders[0]).lenderRedeemRewardsByTranche(0);
-          const balanceAfter = await usdc.balanceOf(
-            await lenders[0].getAddress()
-          );
-          expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(100));
-        });
-      }
-    );
+        expect(outstandingRewards).to.be.gte(USDC(150));
+        expect(outstandingRewards).to.be.lte(USDC(150.1));
+      });
+    });
   });
 });

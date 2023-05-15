@@ -369,20 +369,6 @@ abstract contract LendingPoolState {
         emit ChangeBorrowedAt(msg.sender, oldValue, newValue);
     }
 
-    /* interestRepaidAt */
-    uint64 private s_interestRepaidAt;
-    event ChangeInterestRepaidAt(address indexed actor, uint64 oldValue, uint64 newValue);
-
-    function interestRepaidAt() public view returns (uint64) {
-        return s_interestRepaidAt;
-    }
-
-    function _setInterestRepaidAt(uint64 newValue) internal {
-        uint64 oldValue = s_interestRepaidAt;
-        s_interestRepaidAt = newValue;
-        emit ChangeInterestRepaidAt(msg.sender, oldValue, newValue);
-    }
-
     /* repaidAt */
     uint64 private s_repaidAt;
     event ChangeRepaidAt(address indexed actor, uint64 oldValue, uint64 newValue);

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
+import "hardhat/console.sol";
 
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -236,9 +237,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         if (repaidAt() != 0) {
             return Stages.REPAID;
         }
-        if (interestRepaidAt() != 0) {
-            return Stages.BORROWER_INTEREST_REPAID;
-        }
         if (borrowedAt() != 0) {
             return Stages.BORROWED;
         }
@@ -313,10 +311,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         emit BorrowerBorrow(borrowerAddress(), amountToBorrow);
     }
 
-    function _transitionToInterestRepaidStage() internal {
-        _setInterestRepaidAt(uint64(block.timestamp));
-    }
-
     function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
         _setRepaidAt(uint64(block.timestamp));
         emit BorrowerRepayPrincipal(borrowerAddress(), repaidPrincipal);
@@ -378,18 +372,35 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /** @notice Redeem currently available rewards for a tranche
      *  @param trancheId tranche id
+     *  @param toWithdraw amount of rewards to withdraw
      */
     function lenderRedeemRewardsByTranche(
-        uint8 trancheId
-    ) external onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
-        uint toWithdraw = lenderRewardsByTrancheRedeemable(_msgSender(), trancheId);
-        require(toWithdraw > 0, "nothing to withdraw");
+        uint8 trancheId,
+        uint toWithdraw
+    ) public onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
+        if (toWithdraw == 0) {
+            return;
+        }
+        uint maxWithdraw = lenderRewardsByTrancheRedeemable(_msgSender(), trancheId);
+        require(toWithdraw < maxWithdraw, "LendingPool: amount to withdraw is too big");
         s_trancheRewardables[trancheId][_msgSender()].redeemedRewards += toWithdraw;
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(stableCoinContractAddress()), _msgSender(), toWithdraw);
 
         emit LenderWithdrawInterest(_msgSender(), trancheId, toWithdraw);
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
+    }
+
+    /** @notice Redeem currently available rewards for two tranches
+     *  @param toWithdraws amount of rewards to withdraw accross all tranches
+     */
+    function lenderRedeemRewards(
+        uint[] calldata toWithdraws
+    ) external onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
+        require(toWithdraws.length == tranchesCount(), "LendingPool: wrong amount of tranches");
+        for(uint8 i; i < toWithdraws.length; i++) {
+            lenderRedeemRewardsByTranche(i, toWithdraws[i]);
+        }
     }
 
     /* VIEWS */
@@ -427,30 +438,26 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function lenderTotalExpectedRewardsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        return
-            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-                lendingTermSeconds()) / (YEAR * WAD);
+        return (
+            lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+            lendingTermSeconds()
+        ) / (YEAR * WAD);
     }
 
-    function lenderRewardsByTrancheProjectedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
+    function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
         if (fundedAt() > block.timestamp) {
             return 0;
         }
         uint64 secondsElapsed = uint64(block.timestamp) - fundedAt();
-        return
-            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-                secondsElapsed) / (YEAR * WAD);
-    }
-
-    function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        if (fundedAt() == 0) {
-            return 0;
+        if (secondsElapsed > lendingTermSeconds()) {
+            secondsElapsed = lendingTermSeconds();
         }
-        return
-            (lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId) * borrowerInterestRepaid()) /
-            borrowerExpectedInterest();
+        return (
+            lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
+            lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
+            secondsElapsed
+        ) / (YEAR * WAD);
     }
 
     function lenderRewardsByTrancheRedeemed(address lenderAddress, uint8 trancheId) public view returns (uint) {
@@ -534,10 +541,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
         emit BorrowerPayInterest(borrowerAddress(), assets, assetsForLenders, assetsToSendToFeeSharing);
-
-        if (borrowerOutstandingInterest() == 0) {
-            _transitionToInterestRepaidStage();
-        }
     }
 
     function borrowerRepayPrincipal() external onlyPoolBorrower {

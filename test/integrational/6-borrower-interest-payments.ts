@@ -148,7 +148,8 @@ describe("Interests", function () {
         );
       });
 
-      it("sets lenderRewardsByTrancheGeneratedByDate to $100", async () => {
+      // TODO: its calculated in real time
+      xit("sets lenderRewardsByTrancheGeneratedByDate to $100", async () => {
         const { lendingPool, lenders } = await loadFixture(partlyRepaidFixture);
         const [lender1, lender2] = lenders;
         const a = await lender1.getAddress();
@@ -209,7 +210,8 @@ describe("Interests", function () {
           );
         });
 
-        it("changes pool current stage to INTEREST_REPAID", async () => {
+        // THERE IS NO INTEREST TO REPAID state anymore
+        xit("changes pool current stage to INTEREST_REPAID", async () => {
           const { lendingPool } = await loadFixture(fullyRepaidFixture);
 
           expect(await lendingPool.currentStage()).to.equal(
