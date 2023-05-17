@@ -61,7 +61,9 @@ const vars6 = [
   // "uint borrowerInterestRepaid",
   //"uint borrowedAmount",
   //"uint64 interestRepaidAt",
-  "uint protocolFeeWad",
+  // "uint protocolFeeWad",
+  // "uint poolBalanceThreshold"
+  "uint64 delinquentAt"
 ];
 
 for (let v of vars6) {

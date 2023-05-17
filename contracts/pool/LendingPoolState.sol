@@ -176,6 +176,16 @@ abstract contract LendingPoolState {
         emit ChangeProtocolFeeWad(msg.sender, oldValue, newValue);
     }
 
+    /* poolBalanceThreshold */
+    uint private s_poolBalanceThreshold;
+    event ChangePoolBalanceThreshold(address indexed actor, uint oldValue, uint newValue);
+    function poolBalanceThreshold() public view returns (uint) { return s_poolBalanceThreshold; }
+    function _setPoolBalanceThreshold(uint newValue) internal {
+        uint oldValue = s_poolBalanceThreshold;
+        s_poolBalanceThreshold = newValue;
+        emit ChangePoolBalanceThreshold(msg.sender, oldValue, newValue);
+    }
+
     /* defaultPenalty */
     uint private s_defaultPenalty;
     event ChangeDefaultPenalty(address indexed actor, uint oldValue, uint newValue);
@@ -391,6 +401,16 @@ abstract contract LendingPoolState {
         uint64 oldValue = s_repaidAt;
         s_repaidAt = newValue;
         emit ChangeRepaidAt(msg.sender, oldValue, newValue);
+    }
+
+    /* delinquentAt */
+    uint64 private s_delinquentAt;
+    event ChangeDelinquentAt(address indexed actor, uint64 oldValue, uint64 newValue);
+    function delinquentAt() public view returns (uint64) { return s_delinquentAt; }
+    function _setDelinquentAt(uint64 newValue) internal {
+        uint64 oldValue = s_delinquentAt;
+        s_delinquentAt = newValue;
+        emit ChangeDelinquentAt(msg.sender, oldValue, newValue);
     }
 
     /*//////////////////////////////////////

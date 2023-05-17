@@ -18,7 +18,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
        CONSTANTS
     ///////////////////////////////////*/
     uint internal constant WAD = 10 ** 18;
-    uint internal constant YEAR = 365 * 24 * 60 * 60;
+    uint internal constant DAY = 24 * 60 * 60;
+    uint internal constant YEAR = 365 * DAY;
 
     enum Stages {
         INITIAL,
@@ -28,7 +29,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         FLC_DEPOSITED,
         BORROWED,
         BORROWER_INTEREST_REPAID,
-        DILINQUENT,
+        DELINQUENT,
         REPAID,
         DEFAULTED
     }
@@ -78,6 +79,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     event PoolFunded();
     event PoolFundingFailed();
     event PoolRepaid();
+    event PoolDelinquent();
+    event PoolRecoverFromDelinquency();
     event PoolDefaulted();
 
     // Lender //
@@ -105,6 +108,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint lendersDistributedAmount,
         uint feeSharingContractAmount
     );
+    event BorrowerPayPenalty(address indexed borrower, uint amount);
     event BorrowerRepayPrincipal(address indexed borrower, uint amount);
 
     /*///////////////////////////////////
@@ -124,6 +128,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint borrowerTotalInterestRateWad;
         uint collateralRatioWad;
         uint protocolFeeWad;
+        uint poolBalanceThreshold;
         uint defaultPenalty;
         uint penaltyRateWad;
         uint8 tranchesCount;
@@ -153,6 +158,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         _setBorrowerTotalInterestRateWad(params.borrowerTotalInterestRateWad);
         _setCollateralRatioWad(params.collateralRatioWad);
         _setProtocolFeeWad(params.protocolFeeWad);
+        _setPoolBalanceThreshold(params.poolBalanceThreshold);
         _setDefaultPenalty(params.defaultPenalty);
         _setPenaltyRateWad(params.penaltyRateWad);
         _setTranchesCount(params.tranchesCount);
@@ -240,6 +246,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         if (repaidAt() != 0) {
             return Stages.REPAID;
         }
+        if (delinquentAt() != 0) {
+            return Stages.DELINQUENT;
+        }
         if (borrowedAt() != 0) {
             return Stages.BORROWED;
         }
@@ -320,6 +329,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         emit PoolRepaid();
     }
 
+    function _transitionToDelinquentStage() internal {
+        _setDelinquentAt(uint64(block.timestamp));
+        emit PoolDelinquent();
+    }
+
     /*///////////////////////////////////
       Lender (please also see onTrancheDeposit() and onTrancheWithdraw())
     ///////////////////////////////////*/
@@ -389,6 +403,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         s_trancheRewardables[trancheId][_msgSender()].redeemedRewards += toWithdraw;
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(stableCoinContractAddress()), _msgSender(), toWithdraw);
+
+        if (IERC20Upgradeable(stableCoinContractAddress()).balanceOf(address(this)) < poolBalanceThreshold()) {
+            _transitionToDelinquentStage();
+        }
 
         emit LenderWithdrawInterest(_msgSender(), trancheId, toWithdraw);
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
@@ -561,6 +579,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /* VIEWS */
+
+    function borrowerPenalty() public view returns (uint) {
+        if (currentStage() != Stages.DELINQUENT) {
+            return 0;
+        }
+        return defaultPenalty();
+    }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid
