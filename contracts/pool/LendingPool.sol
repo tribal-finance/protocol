@@ -123,6 +123,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address borrowerAddress;
         uint borrowerTotalInterestRateWad;
         uint collateralRatioWad;
+        uint protocolFeeWad;
         uint defaultPenalty;
         uint penaltyRateWad;
         uint8 tranchesCount;
@@ -151,6 +152,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         _setBorrowerAddress(params.borrowerAddress);
         _setBorrowerTotalInterestRateWad(params.borrowerTotalInterestRateWad);
         _setCollateralRatioWad(params.collateralRatioWad);
+        _setProtocolFeeWad(params.protocolFeeWad);
         _setDefaultPenalty(params.defaultPenalty);
         _setPenaltyRateWad(params.penaltyRateWad);
         _setTranchesCount(params.tranchesCount);

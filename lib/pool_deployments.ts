@@ -41,6 +41,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   lendingTermSeconds: (365 * 24 * 60 * 60) / 2, // 1/2 of a year
   borrowerTotalInterestRateWad: WAD(0.15),
   collateralRatioWad: WAD(0.2),
+  protocolFeeWad: WAD(0.1),
   defaultPenalty: 0,
   penaltyRateWad: WAD(0.01),
   tranchesCount: 1,

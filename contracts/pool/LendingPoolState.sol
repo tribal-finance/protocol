@@ -166,6 +166,16 @@ abstract contract LendingPoolState {
         emit ChangeCollateralRatioWad(msg.sender, oldValue, newValue);
     }
 
+    /* protocolFeeWad */
+    uint private s_protocolFeeWad;
+    event ChangeProtocolFeeWad(address indexed actor, uint oldValue, uint newValue);
+    function protocolFeeWad() public view returns (uint) { return s_protocolFeeWad; }
+    function _setProtocolFeeWad(uint newValue) internal {
+        uint oldValue = s_protocolFeeWad;
+        s_protocolFeeWad = newValue;
+        emit ChangeProtocolFeeWad(msg.sender, oldValue, newValue);
+    }
+
     /* defaultPenalty */
     uint private s_defaultPenalty;
     event ChangeDefaultPenalty(address indexed actor, uint oldValue, uint newValue);
