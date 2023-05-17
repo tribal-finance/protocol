@@ -190,6 +190,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         require(params.borrowerAddress != address(0), "LendingPool: borrowerAddress empty");
         require(params.borrowerTotalInterestRateWad > 0, "LendingPool: borrower interest rate = 0%");
         require(params.collateralRatioWad > 0, "LendingPool: collateralRatio == 0%");
+        require(params.protocolFeeWad > 0, "LendingPool: protocolFee == 0%");
         require(params.penaltyRateWad > 0, "LendingPool: penaltyRate == 0");
 
         require(params.tranchesCount > 0, "LendingPool: tranchesCount == 0");
@@ -333,7 +334,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     ) external onlyLender atStage(Stages.OPEN) {
         require(
             platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
-            "lock will lead to overboost"
+            "LendingPool: lock will lead to overboost"
         );
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
         SafeERC20Upgradeable.safeTransferFrom(
@@ -520,13 +521,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
-        require(assets <= borrowerOutstandingInterest(), "too much interest paid");
-        uint assetsForLenders = allLendersEffectiveAprWad().mulDiv(
-            assets,
-            borrowerTotalInterestRateWad(),
-            MathUpgradeable.Rounding.Up
-        );
-        uint assetsToSendToFeeSharing = assets - assetsForLenders;
+        uint assetsToSendToFeeSharing = assets * protocolFeeWad() / WAD;
+        uint assetsForLenders = assets - assetsToSendToFeeSharing;
 
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(stableCoinContractAddress()),
