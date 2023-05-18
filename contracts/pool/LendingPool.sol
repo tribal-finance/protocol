@@ -128,7 +128,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint borrowerTotalInterestRateWad;
         uint collateralRatioWad;
         uint protocolFeeWad;
-        uint poolBalanceThreshold;
         uint defaultPenalty;
         uint penaltyRateWad;
         uint8 tranchesCount;
@@ -158,7 +157,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         _setBorrowerTotalInterestRateWad(params.borrowerTotalInterestRateWad);
         _setCollateralRatioWad(params.collateralRatioWad);
         _setProtocolFeeWad(params.protocolFeeWad);
-        _setPoolBalanceThreshold(params.poolBalanceThreshold);
         _setDefaultPenalty(params.defaultPenalty);
         _setPenaltyRateWad(params.penaltyRateWad);
         _setTranchesCount(params.tranchesCount);
@@ -404,9 +402,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(stableCoinContractAddress()), _msgSender(), toWithdraw);
 
-        if (IERC20Upgradeable(stableCoinContractAddress()).balanceOf(address(this)) < poolBalanceThreshold()) {
-            _transitionToDelinquentStage();
-        }
+        // if (IERC20Upgradeable(stableCoinContractAddress()).balanceOf(address(this)) < poolBalanceThreshold()) {
+        //     _transitionToDelinquentStage();
+        // }
 
         emit LenderWithdrawInterest(_msgSender(), trancheId, toWithdraw);
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
@@ -539,7 +537,20 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
-        uint assetsToSendToFeeSharing = assets * protocolFeeWad() / WAD;
+
+
+
+        uint penalty = 0;
+        // threshold = FLC - (30 + 5) * dailyInterestAmount
+        // unpaidInterestAmount = dailyInterestAmount*daysOverdue
+        // penalty = (unpaidInterestAmount) * (1 + penaltyRate) ** (daysOverdue) - unpaidInterestAmount
+        // penaltyV2 = borrowerExpectedInterest() * (1 + penaltyRateV2) ** (daysOverdue) - borrowerExpectedInterest
+
+        require(penalty < assets, "LendingPool: penalty cannot be more than assets");
+
+        uint assetsToSendToFeeSharing = assets * protocolFeeWad() / WAD + penalty;
+        emit BorrowerPayPenalty(_msgSender(), penalty);
+
         uint assetsForLenders = assets - assetsToSendToFeeSharing;
 
         SafeERC20Upgradeable.safeTransferFrom(
@@ -555,7 +566,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             assetsToSendToFeeSharing
         );
 
-        _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets);
+        _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets - penalty);
         emit BorrowerPayInterest(borrowerAddress(), assets, assetsForLenders, assetsToSendToFeeSharing);
     }
 
@@ -579,13 +590,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /* VIEWS */
-
-    function borrowerPenalty() public view returns (uint) {
-        if (currentStage() != Stages.DELINQUENT) {
-            return 0;
-        }
-        return defaultPenalty();
-    }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid

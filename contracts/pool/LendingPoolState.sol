@@ -176,16 +176,6 @@ abstract contract LendingPoolState {
         emit ChangeProtocolFeeWad(msg.sender, oldValue, newValue);
     }
 
-    /* poolBalanceThreshold */
-    uint private s_poolBalanceThreshold;
-    event ChangePoolBalanceThreshold(address indexed actor, uint oldValue, uint newValue);
-    function poolBalanceThreshold() public view returns (uint) { return s_poolBalanceThreshold; }
-    function _setPoolBalanceThreshold(uint newValue) internal {
-        uint oldValue = s_poolBalanceThreshold;
-        s_poolBalanceThreshold = newValue;
-        emit ChangePoolBalanceThreshold(msg.sender, oldValue, newValue);
-    }
-
     /* defaultPenalty */
     uint private s_defaultPenalty;
     event ChangeDefaultPenalty(address indexed actor, uint oldValue, uint newValue);
