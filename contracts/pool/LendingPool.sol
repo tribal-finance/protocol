@@ -10,7 +10,7 @@ import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
 import "hardhat/console.sol";
 
-contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable, LendingPoolState {
+contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable, LendingPoolState, DSMath {
     using EnumerableSet for EnumerableSet.AddressSet;
     using MathUpgradeable for uint;
 
@@ -549,16 +549,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
-        uint penalty = 0;
-        // threshold = FLC - (30 + 5) * dailyInterestAmount
-        // unpaidInterestAmount = dailyInterestAmount*daysOverdue
-        // penalty = (unpaidInterestAmount) * (1 + penaltyRate) ** (daysOverdue) - unpaidInterestAmount
-        // penaltyV2 = borrowerExpectedInterest() * (1 + penaltyRateV2) ** (daysOverdue) - borrowerExpectedInterest
+        uint penalty = borrowerPenaltyAmount();
 
         require(penalty < assets, "LendingPool: penalty cannot be more than assets");
 
         uint assetsToSendToFeeSharing = assets * protocolFeeWad() / WAD + penalty;
-        emit BorrowerPayPenalty(_msgSender(), penalty);
 
         uint assetsForLenders = assets - assetsToSendToFeeSharing;
 
@@ -574,6 +569,15 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             feeSharingContractAddress(),
             assetsToSendToFeeSharing
         );
+
+        if (penalty > 0) {
+            SafeERC20Upgradeable.safeTransfer(
+                IERC20Upgradeable(stableCoinContractAddress()),
+                feeSharingContractAddress(),
+                penalty
+            );
+            emit BorrowerPayPenalty(_msgSender(), penalty);
+        }
 
         _setBorrowerInterestRepaid(borrowerInterestRepaid() + assets - penalty);
         emit BorrowerPayInterest(borrowerAddress(), assets, assetsForLenders, assetsToSendToFeeSharing);
@@ -612,18 +616,18 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             return 0;
         }
         uint balanceDifference = poolBalanceThreshold() - poolBalance();
+        console.log("balanceDifference", balanceDifference);
         uint daysUnpaid = balanceDifference / _dailyInterestAmount();
+        console.log("daysUnpaid", daysUnpaid);
 
         if (daysUnpaid == 0) {
             return 0;
         }
 
-        uint penaltyCoefficientWad = WAD + penaltyRateWad();
-        for(uint i; i < daysUnpaid - 1; ++i) {
-            penaltyCoefficientWad = penaltyCoefficientWad * penaltyCoefficientWad / WAD;
-        }
+        console.log("penaltyCoefficient", penaltyCoefficient);
 
-        uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
+        // uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
+        uint penalty = 0;
         return penalty;
     }
 
@@ -638,7 +642,17 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @return interest amount of outstanding assets to be repaid
      */
     function borrowerOutstandingInterest() public view returns (uint) {
+        if (borrowerInterestRepaid() > borrowerExpectedInterest() ) {
+            return 0;
+        }
         return borrowerExpectedInterest() - borrowerInterestRepaid();
+    }
+
+    function borrowerExcessSpread() public view returns (uint) {
+        if (borrowerOutstandingInterest() > 0) {
+            return 0;
+        }
+        return borrowerInterestRepaid() - borrowerExpectedInterest();
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days
@@ -738,7 +752,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         return weightedSum / totalStakedAssets;
     }
-
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
         emit LenderTrancheRewardsChange(
             lenderAddress,
