@@ -45,7 +45,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   borrowerTotalInterestRateWad: WAD(0.15),
   protocolFeeWad: WAD(0.1),
   defaultPenalty: 0,
-  penaltyRateWad: WAD(0.01),
+  penaltyRateWad: WAD(0.02),
   tranchesCount: 1,
   trancheAPRsWads: [WAD(0.1)],
   trancheBoostedAPRsWads: [WAD(0.1)],

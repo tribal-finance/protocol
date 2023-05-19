@@ -144,8 +144,14 @@ describe("Interests", function () {
         // . penalty = 4,750 * (1.02) ** 31 - 4750 = 4,750 * 1.847588 - 4,750 = 4,026.04687
         // . but current implementation will lose accuracy if you power 1.02 to 31 (will return 1.36..)
 
-        expect(await lendingPool.borrowerPenaltyAmount()).not.to.be.equal(
-          USDC(0)
+        console.log("penalty: ", await lendingPool.borrowerPenaltyAmount());
+
+        expect(await lendingPool.borrowerPenaltyAmount()).to.be.gt(
+          USDC(4026.04)
+        );
+
+        expect(await lendingPool.borrowerPenaltyAmount()).to.be.lt(
+          USDC(4026.05)
         );
       });
     });
