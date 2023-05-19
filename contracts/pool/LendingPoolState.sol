@@ -138,6 +138,38 @@ abstract contract LendingPoolState {
         emit ChangeBorrowerAddress(msg.sender, oldValue, newValue);
     }
 
+     /* firstLossAssets */
+    uint private s_firstLossAssets;
+    event ChangeFirstLossAssets(address indexed actor, uint oldValue, uint newValue);
+    function firstLossAssets() public view returns (uint) { return s_firstLossAssets; }
+    function _setFirstLossAssets(uint newValue) internal {
+        uint oldValue = s_firstLossAssets;
+        s_firstLossAssets = newValue;
+        emit ChangeFirstLossAssets(msg.sender, oldValue, newValue);
+    }
+  
+
+    /* repaymentRecurrenceDays */
+    uint private s_repaymentRecurrenceDays;
+    event ChangeRepaymentRecurrenceDays(address indexed actor, uint oldValue, uint newValue);
+    function repaymentRecurrenceDays() public view returns (uint) { return s_repaymentRecurrenceDays; }
+    function _setRepaymentRecurrenceDays(uint newValue) internal {
+        uint oldValue = s_repaymentRecurrenceDays;
+        s_repaymentRecurrenceDays = newValue;
+        emit ChangeRepaymentRecurrenceDays(msg.sender, oldValue, newValue);
+    }
+  
+
+    /* gracePeriodDays */
+    uint private s_gracePeriodDays;
+    event ChangeGracePeriodDays(address indexed actor, uint oldValue, uint newValue);
+    function gracePeriodDays() public view returns (uint) { return s_gracePeriodDays; }
+    function _setGracePeriodDays(uint newValue) internal {
+        uint oldValue = s_gracePeriodDays;
+        s_gracePeriodDays = newValue;
+        emit ChangeGracePeriodDays(msg.sender, oldValue, newValue);
+    }
+
     /* borrowerTotalInterestRateWad */
     uint private s_borrowerTotalInterestRateWad;
     event ChangeBorrowerTotalInterestRateWad(address indexed actor, uint oldValue, uint newValue);
@@ -150,20 +182,6 @@ abstract contract LendingPoolState {
         uint oldValue = s_borrowerTotalInterestRateWad;
         s_borrowerTotalInterestRateWad = newValue;
         emit ChangeBorrowerTotalInterestRateWad(msg.sender, oldValue, newValue);
-    }
-
-    /* collateralRatioWad */
-    uint private s_collateralRatioWad;
-    event ChangeCollateralRatioWad(address indexed actor, uint oldValue, uint newValue);
-
-    function collateralRatioWad() public view returns (uint) {
-        return s_collateralRatioWad;
-    }
-
-    function _setCollateralRatioWad(uint newValue) internal {
-        uint oldValue = s_collateralRatioWad;
-        s_collateralRatioWad = newValue;
-        emit ChangeCollateralRatioWad(msg.sender, oldValue, newValue);
     }
 
     /* protocolFeeWad */

@@ -75,21 +75,20 @@ describe("Borrowing", function () {
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }
 
-    it("sends collected assets minus flc the borrower way", async function () {
-      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
-        await loadFixture(uniPoolFixture);
+    it("sends collected assets the borrower way", async function () {
+      const { borrower, usdc, lendingPool } = await loadFixture(uniPoolFixture);
 
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool.connect(borrower).borrow();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
 
-      // 10.000 - 20%
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(USDC(8000));
+      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(
+        USDC(10000)
+      );
     });
 
     it("moves the pool to borrowed state", async function () {
-      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
-        await loadFixture(uniPoolFixture);
+      const { borrower, usdc, lendingPool } = await loadFixture(uniPoolFixture);
 
       await lendingPool.connect(borrower).borrow();
       expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);
@@ -147,21 +146,20 @@ describe("Borrowing", function () {
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }
 
-    it("sends collected assets minus collateral value the borrower way", async function () {
-      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
-        await loadFixture(duoPoolFixture);
+    it("sends collected assets the borrower way", async function () {
+      const { borrower, usdc, lendingPool } = await loadFixture(duoPoolFixture);
 
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool.connect(borrower).borrow();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
 
-      // 10000 - 20% collateral value
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(USDC(8000));
+      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.eq(
+        USDC(10000)
+      );
     });
 
     it("moves the pool to borrowed state", async function () {
-      const { borrower, usdc, firstLossCapitalVault, lendingPool } =
-        await loadFixture(duoPoolFixture);
+      const { borrower, usdc, lendingPool } = await loadFixture(duoPoolFixture);
 
       await lendingPool.connect(borrower).borrow();
       expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);

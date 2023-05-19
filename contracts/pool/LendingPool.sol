@@ -125,8 +125,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint64 fundingPeriodSeconds;
         uint64 lendingTermSeconds;
         address borrowerAddress;
+        uint firstLossAssets;
         uint borrowerTotalInterestRateWad;
-        uint collateralRatioWad;
+        uint repaymentRecurrenceDays;
+        uint gracePeriodDays;
         uint protocolFeeWad;
         uint defaultPenalty;
         uint penaltyRateWad;
@@ -154,8 +156,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         _setFundingPeriodSeconds(params.fundingPeriodSeconds);
         _setLendingTermSeconds(params.lendingTermSeconds);
         _setBorrowerAddress(params.borrowerAddress);
+        _setFirstLossAssets(params.firstLossAssets);
         _setBorrowerTotalInterestRateWad(params.borrowerTotalInterestRateWad);
-        _setCollateralRatioWad(params.collateralRatioWad);
+        _setRepaymentRecurrenceDays(params.repaymentRecurrenceDays);
+        _setGracePeriodDays(params.gracePeriodDays);
         _setProtocolFeeWad(params.protocolFeeWad);
         _setDefaultPenalty(params.defaultPenalty);
         _setPenaltyRateWad(params.penaltyRateWad);
@@ -193,7 +197,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         require(params.lendingTermSeconds > 0, "LendingPool: lendingTermSeconds == 0");
         require(params.borrowerAddress != address(0), "LendingPool: borrowerAddress empty");
         require(params.borrowerTotalInterestRateWad > 0, "LendingPool: borrower interest rate = 0%");
-        require(params.collateralRatioWad > 0, "LendingPool: collateralRatio == 0%");
         require(params.protocolFeeWad > 0, "LendingPool: protocolFee == 0%");
         require(params.penaltyRateWad > 0, "LendingPool: penaltyRate == 0");
 
@@ -523,23 +526,26 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        Borrower functions
     ///////////////////////////////////*/
+    function borrowerDepositFirstLossCapital() external onlyPoolBorrower() {
+        SafeERC20Upgradeable.safeTransferFrom(
+            IERC20Upgradeable(stableCoinContractAddress()),
+            msg.sender,
+            address(this),
+            firstLossAssets()
+        );
+        _transitionToFlcDepositedStage(firstLossAssets());
+    }
+
     function borrow() external onlyPoolBorrower {
-        uint firstLossCapitalDepositTarget = (collectedAssets() * collateralRatioWad()) / WAD;
-        uint amountToBorrow = collectedAssets() - firstLossCapitalDepositTarget;
         SafeERC20Upgradeable.safeTransfer(
             IERC20Upgradeable(stableCoinContractAddress()),
             borrowerAddress(),
-            amountToBorrow
+            collectedAssets()
         );
-        // NOTE: the flc stays on the contract itself
-        _transitionToFlcDepositedStage(firstLossCapitalDepositTarget);
-        _transitionToBorrowedStage(amountToBorrow);
+        _transitionToBorrowedStage(collectedAssets());
     }
 
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
-
-
-
         uint penalty = 0;
         // threshold = FLC - (30 + 5) * dailyInterestAmount
         // unpaidInterestAmount = dailyInterestAmount*daysOverdue
@@ -590,6 +596,33 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /* VIEWS */
+    function poolBalanceThreshold() public view returns (uint) {
+        return firstLossAssets() - (repaymentRecurrenceDays() + gracePeriodDays()) * _dailyInterestAmount();
+    }
+
+    function poolBalance() public view returns (uint) {
+        return IERC20Upgradeable(stableCoinContractAddress()).balanceOf(address(this));
+    }
+
+    function borrowerPenaltyAmount() public view returns (uint) {
+        if (poolBalance() >= poolBalanceThreshold()) {
+            return 0;
+        }
+        uint balanceDifference = poolBalanceThreshold() - poolBalance();
+        uint daysUnpaid = balanceDifference / _dailyInterestAmount();
+
+        if (daysUnpaid == 0) {
+            return 0;
+        }
+
+        uint penaltyCoefficientWad = WAD + penaltyRateWad();
+        for(uint i; i < daysUnpaid - 1; ++i) {
+            penaltyCoefficientWad = penaltyCoefficientWad * penaltyCoefficient / WAD;
+        }
+
+        uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
+        return penalty;
+    }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid
@@ -668,6 +701,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        HELPERS
     ///////////////////////////////////*/
+
+    function _dailyInterestAmount() internal view returns (uint) {
+        return (borrowedAssets() * borrowerTotalInterestRateWad()) / (WAD * 365);
+    }
 
     function _trancheVaultContracts() internal view returns (TrancheVault[] memory contracts) {
         address[] memory addresses = trancheVaultAddresses();

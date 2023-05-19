@@ -63,7 +63,10 @@ const vars6 = [
   //"uint64 interestRepaidAt",
   // "uint protocolFeeWad",
   // "uint poolBalanceThreshold"
-  "uint64 delinquentAt"
+  // "uint64 delinquentAt"
+  "uint firstLossAssets",
+  "uint repaymentRecurrenceDays",
+  "uint gracePeriodDays",
 ];
 
 for (let v of vars6) {
