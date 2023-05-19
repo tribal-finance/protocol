@@ -158,44 +158,10 @@ describe("Interests", function () {
         );
       });
 
-      // TODO: its calculated in real time
-      xit("sets lenderRewardsByTrancheGeneratedByDate to $100", async () => {
-        const { lendingPool, lenders } = await loadFixture(partlyRepaidFixture);
-        const [lender1, lender2] = lenders;
-        const a = await lender1.getAddress();
-        const lenderRewardsByTrancheGeneratedByDate =
-          await lendingPool.lenderRewardsByTrancheGeneratedByDate(a, 0);
-        expect(lenderRewardsByTrancheGeneratedByDate).to.equal(USDC(100));
+      it("has zero borrowerExcessSpread", async () => {
+        const { lendingPool } = await loadFixture(partlyRepaidFixture);
 
-        const lenderRewardsByTrancheRedeemable =
-          await lendingPool.lenderRewardsByTrancheRedeemable(a, 0);
-        expect(lenderRewardsByTrancheRedeemable).to.equal(USDC(100));
-      });
-
-      xit("console.logs", async () => {
-        const { lendingPool, lenders } = await loadFixture(partlyRepaidFixture);
-        const [lender1, lender2] = lenders;
-
-        const a = await lender1.getAddress();
-
-        const lenderTotalExpectedRewardsByTranche =
-          await lendingPool.lenderTotalExpectedRewardsByTranche(a, 0);
-
-        const lenderRewardsByTrancheProjectedByDate =
-          await lendingPool.lenderRewardsByTrancheProjectedByDate(a, 0);
-
-        const lenderRewardsByTrancheGeneratedByDate =
-          await lendingPool.lenderRewardsByTrancheGeneratedByDate(a, 0);
-
-        const lenderRewardsByTrancheWithdrawable =
-          await lendingPool.lenderRewardsByTrancheRedeemable(a, 0);
-
-        console.log({
-          lenderTotalExpectedRewardsByTranche,
-          lenderRewardsByTrancheProjectedByDate,
-          lenderRewardsByTrancheGeneratedByDate,
-          lenderRewardsByTrancheWithdrawable,
-        });
+        expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(0));
       });
     });
 
@@ -220,13 +186,39 @@ describe("Interests", function () {
           );
         });
 
-        // THERE IS NO INTEREST TO REPAID state anymore
-        xit("changes pool current stage to INTEREST_REPAID", async () => {
+        it("has zero borrowerExcessSpread", async () => {
           const { lendingPool } = await loadFixture(fullyRepaidFixture);
 
-          expect(await lendingPool.currentStage()).to.equal(
-            STAGES.BORROWER_INTEREST_REPAID
+          expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(0));
+        });
+      }
+    );
+
+    context(
+      "after borrower repays $1000 interest (more than enough)",
+      async () => {
+        async function overRepaidFixture() {
+          const data = await loadFixture(uniPoolFixture);
+          const { usdc, lendingPool, borrower } = data;
+
+          await usdc.connect(borrower).approve(lendingPool.address, USDC(1000));
+          await lendingPool.connect(borrower).borrowerPayInterest(USDC(1000));
+
+          return data;
+        }
+
+        it("changes borrowerOutstandingInterest to zero", async () => {
+          const { lendingPool } = await loadFixture(overRepaidFixture);
+
+          expect(await lendingPool.borrowerOutstandingInterest()).to.equal(
+            USDC(0)
           );
+        });
+
+        it("changes borrowerExcessSpread to $250", async () => {
+          const { lendingPool } = await loadFixture(overRepaidFixture);
+
+          expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(250));
         });
       }
     );
