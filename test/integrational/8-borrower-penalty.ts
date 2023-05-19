@@ -154,6 +154,81 @@ describe("Interests", function () {
           USDC(4026.05)
         );
       });
+
+      describe("when there is ~4026 USDC penalty", async () => {
+        async function uniPoolFixtureWithPenalty() {
+          const data = await loadFixture(uniPoolFixture);
+          const { usdc, lendingPool, borrower, lenders } = data;
+          const [lender1, lender2] = lenders;
+          await ethers.provider.send("evm_increaseTime", [100 * 24 * 60 * 60]);
+          await ethers.provider.send("evm_mine", []);
+
+          await lendingPool
+            .connect(lender1)
+            .lenderRedeemRewardsByTranche(0, USDC(10000));
+
+          // Pool penalty is now ~4026 USDC
+
+          return data;
+        }
+
+        it("will not allow borrower to repay interest less than penalty", async () => {
+          const data = await loadFixture(uniPoolFixtureWithPenalty);
+          const { usdc, lendingPool, borrower } = data;
+
+          await usdc.connect(borrower).approve(lendingPool.address, USDC(1000));
+          await expect(
+            lendingPool.connect(borrower).borrowerPayInterest(USDC(1000))
+          ).to.be.revertedWith(
+            "LendingPool: penalty cannot be more than assets"
+          );
+        });
+
+        it("will allow borrower to repay interest more than penalty but less that will bring pool to healthy state", async () => {
+          const data = await loadFixture(uniPoolFixtureWithPenalty);
+          const { usdc, lendingPool, borrower } = data;
+
+          // penalty: ~ 4026
+          // amount to get back to healthy: 4750
+          await usdc.connect(borrower).approve(lendingPool.address, USDC(5000));
+          await expect(
+            lendingPool.connect(borrower).borrowerPayInterest(USDC(5000))
+          ).to.be.revertedWith(
+            "LendingPool: penalty+interest will not bring pool to healthy state"
+          );
+        });
+
+        it("will allow borrower to repay interest more than penalty + amount to get back to healthy", async () => {
+          "LendingPool: penalty+interest will not bring pool to healthy state";
+          const data = await loadFixture(uniPoolFixtureWithPenalty);
+          const { usdc, lendingPool, borrower } = data;
+
+          const penalty = await lendingPool.borrowerPenaltyAmount();
+
+          const outstandingInterestBefore =
+            await lendingPool.borrowerOutstandingInterest();
+          console.log("outstandingInterestBefore: ", outstandingInterestBefore);
+
+          // penalty: ~ 4026
+          // amount to get back to healthy: 4750
+          await usdc
+            .connect(borrower)
+            .approve(lendingPool.address, USDC(10000));
+          await expect(
+            lendingPool.connect(borrower).borrowerPayInterest(USDC(10000))
+          ).not.to.be.reverted;
+
+          const outstandingInterestAfter =
+            await lendingPool.borrowerOutstandingInterest();
+
+          console.log("outstandingInterestAfter: ", outstandingInterestAfter);
+
+          // everything but penalty went to the interest payments
+          expect(
+            outstandingInterestBefore.sub(outstandingInterestAfter)
+          ).to.be.eq(USDC(10000).sub(penalty));
+        });
+      });
     });
   });
 });

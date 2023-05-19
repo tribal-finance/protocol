@@ -550,8 +550,12 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
         uint penalty = borrowerPenaltyAmount();
-
         require(penalty < assets, "LendingPool: penalty cannot be more than assets");
+
+        if (penalty > 0) {
+            uint balanceDifference = poolBalanceThreshold() - poolBalance();
+            require(assets >= penalty + balanceDifference, "LendingPool: penalty+interest will not bring pool to healthy state");
+        }
 
         uint assetsToSendToFeeSharing = assets * protocolFeeWad() / WAD + penalty;
 

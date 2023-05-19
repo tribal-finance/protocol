@@ -98,7 +98,7 @@ describe("Lenders redeem rewards", function () {
      */
 
     context("after halve of the term passes", async () => {
-      it("allows borrower to withdraw $100 and rewards redeemable is $150", async () => {
+      it("allows lender to withdraw $100 and rewards redeemable is $150", async () => {
         const { lendingPool, usdc, lenders } = await loadFixture(
           uniPoolFixture
         );
@@ -125,6 +125,17 @@ describe("Lenders redeem rewards", function () {
           );
         expect(outstandingRewards).to.be.gte(USDC(150));
         expect(outstandingRewards).to.be.lte(USDC(150.1));
+
+        // partial withdrawal
+        await lendingPool.connect(lenders[0]).lenderRedeemRewards([USDC(100)]);
+
+        const outstandingRewardsAfterPartialWithdrawal =
+          await lendingPool.lenderRewardsByTrancheRedeemable(
+            await lenders[0].getAddress(),
+            0
+          );
+        expect(outstandingRewardsAfterPartialWithdrawal).to.be.gte(USDC(50));
+        expect(outstandingRewardsAfterPartialWithdrawal).to.be.lte(USDC(50.1));
       });
     });
   });
