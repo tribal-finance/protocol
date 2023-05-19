@@ -28,7 +28,19 @@ describe("When Lender deposits to Open state pool", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
+      await usdc
+        .connect(borrower)
+        .approve(
+          contracts.lendingPool.address,
+          await contracts.lendingPool.firstLossAssets()
+        );
+
+      await contracts.lendingPool
+        .connect(borrower)
+        .borrowerDepositFirstLossCapital();
+
       await contracts.lendingPool.connect(deployer).adminOpenPool();
+
       await usdc
         .connect(lender1)
         .approve(contracts.firstTrancheVault.address, USDC(10000));
@@ -63,6 +75,17 @@ describe("When Lender deposits to Open state pool", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
+      await usdc
+        .connect(borrower)
+        .approve(
+          contracts.lendingPool.address,
+          await contracts.lendingPool.firstLossAssets()
+        );
+
+      await contracts.lendingPool
+        .connect(borrower)
+        .borrowerDepositFirstLossCapital();
+
       await contracts.lendingPool.connect(deployer).adminOpenPool();
       await usdc
         .connect(lender1)
@@ -133,7 +156,7 @@ describe("When Lender deposits to Open state pool", function () {
     });
   });
 
-  describe("When duotranche pool opens", function () {
+  describe("When duotranche pool gets a deposit", function () {
     it("increases lenders balances", async function () {
       const { lenders, firstTrancheVault, secondTrancheVault } =
         await loadFixture(duoPoolFixture);

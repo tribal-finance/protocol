@@ -13,12 +13,15 @@ import {
   _getDeployedContracts,
 } from "../../lib/pool_deployments";
 import STAGES from "../helpers/stages";
+import testSetup from "../helpers/usdc";
 
 describe("When Pool moves to Open state", function () {
   async function uniPoolFixture() {
     const [deployer, lender1, lender2, lender3, borrower, foundation] =
       await ethers.getSigners();
     const lenders = [lender1, lender2, lender3];
+
+    const { usdc } = await testSetup();
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
@@ -28,6 +31,16 @@ describe("When Pool moves to Open state", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
+      await usdc
+        .connect(borrower)
+        .approve(
+          contracts.lendingPool.address,
+          await contracts.lendingPool.firstLossAssets()
+        );
+
+      await contracts.lendingPool
+        .connect(borrower)
+        .borrowerDepositFirstLossCapital();
       return contracts;
     };
 
@@ -49,6 +62,7 @@ describe("When Pool moves to Open state", function () {
     const [deployer, lender1, lender2, lender3, borrower, foundation] =
       await ethers.getSigners();
     const lenders = [lender1, lender2, lender3];
+    const { usdc } = await testSetup();
 
     const poolFactory: PoolFactory = await deployFactoryAndImplementations(
       deployer,
@@ -58,6 +72,16 @@ describe("When Pool moves to Open state", function () {
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
+      await usdc
+        .connect(borrower)
+        .approve(
+          contracts.lendingPool.address,
+          await contracts.lendingPool.firstLossAssets()
+        );
+
+      await contracts.lendingPool
+        .connect(borrower)
+        .borrowerDepositFirstLossCapital();
       return contracts;
     };
 

@@ -28,40 +28,21 @@ describe("Marking the pool as Funded", function () {
       foundation.address
     );
     const afterDeploy = async (contracts: DeployedContractsType) => {
+      await usdc
+        .connect(borrower)
+        .approve(
+          contracts.lendingPool.address,
+          await contracts.lendingPool.firstLossAssets()
+        );
+
+      await contracts.lendingPool
+        .connect(borrower)
+        .borrowerDepositFirstLossCapital();
       await contracts.lendingPool.connect(deployer).adminOpenPool();
       return contracts;
     };
 
     const data = await deployUnitranchePool(
-      poolFactory,
-      deployer,
-      borrower,
-      lenders,
-      {},
-      afterDeploy
-    );
-
-    return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
-  }
-
-  async function duoPoolFixture() {
-    const { signers, usdc } = await testSetup();
-    const [deployer, lender1, lender2, lender3, borrower, foundation] = signers;
-    const lenders = [lender1, lender2, lender3];
-
-    const poolFactory: PoolFactory = await deployFactoryAndImplementations(
-      deployer,
-      borrower,
-      lenders,
-      foundation.address
-    );
-
-    const afterDeploy = async (contracts: DeployedContractsType) => {
-      await contracts.lendingPool.connect(deployer).adminOpenPool();
-      return contracts;
-    };
-
-    const data = await deployDuotranchePool(
       poolFactory,
       deployer,
       borrower,

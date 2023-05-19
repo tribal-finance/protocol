@@ -262,6 +262,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         if (openedAt() != 0) {
             return Stages.OPEN;
         }
+        if (flcDepositedAt() != 0) {
+            return Stages.FLC_DEPOSITED;
+        }
 
         return Stages.INITIAL;
     }
@@ -270,7 +273,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
-    function adminOpenPool() external onlyWhitelisted atStage(Stages.INITIAL) {
+    function adminOpenPool() external onlyWhitelisted atStage(Stages.FLC_DEPOSITED) {
         for (uint i; i < trancheVaultAddresses().length; i++) {
             _trancheVaultContracts()[i].enableDeposits();
             _trancheVaultContracts()[i].enableWithdrawals();
@@ -526,7 +529,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        Borrower functions
     ///////////////////////////////////*/
-    function borrowerDepositFirstLossCapital() external onlyPoolBorrower() {
+    function borrowerDepositFirstLossCapital() external onlyPoolBorrower() atStage(Stages.INITIAL) {
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(stableCoinContractAddress()),
             msg.sender,
@@ -617,7 +620,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         uint penaltyCoefficientWad = WAD + penaltyRateWad();
         for(uint i; i < daysUnpaid - 1; ++i) {
-            penaltyCoefficientWad = penaltyCoefficientWad * penaltyCoefficient / WAD;
+            penaltyCoefficientWad = penaltyCoefficientWad * penaltyCoefficientWad / WAD;
         }
 
         uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;

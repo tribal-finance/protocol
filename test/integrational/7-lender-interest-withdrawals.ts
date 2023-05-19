@@ -31,6 +31,16 @@ describe("Lenders redeem rewards", function () {
       );
 
       const afterDeploy = async (contracts: DeployedContractsType) => {
+        await usdc
+          .connect(borrower)
+          .approve(
+            contracts.lendingPool.address,
+            await contracts.lendingPool.firstLossAssets()
+          );
+
+        await contracts.lendingPool
+          .connect(borrower)
+          .borrowerDepositFirstLossCapital();
         await contracts.lendingPool.connect(deployer).adminOpenPool();
 
         await usdc
