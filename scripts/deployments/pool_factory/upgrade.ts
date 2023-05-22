@@ -1,17 +1,17 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 
-dotenv.config();
-const { parseUnits } = ethers.utils;
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
-  if (!process.env.GOERLI_POOL_FACTORY_ADDRESS) {
-    console.error("ERROR: GOERLI_POOL_FACTORY_ADDRESS not set");
+  if (!process.env.POOL_FACTORY_ADDRESS) {
+    console.error("ERROR: POOL_FACTORY_ADDRESS not set");
     process.exit(2);
   }
   const PoolFactory = await ethers.getContractFactory("PoolFactory");
   const poolFactory = await upgrades.upgradeProxy(
-    process.env.GOERLI_POOL_FACTORY_ADDRESS!,
+    process.env.POOL_FACTORY_ADDRESS!,
     PoolFactory
   );
   await poolFactory.deployed();

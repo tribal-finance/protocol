@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 import {
   deployDuotranchePool,
@@ -8,7 +8,8 @@ import {
 import { STAGES_LOOKUP } from "../../test/helpers/stages";
 import { USDC } from "../../test/helpers/conversion";
 
-dotenv.config();
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 const LENDING_POOL_ADDRESS = "0x9BaCCc09785c86d4981331e72d5B49787378124d";
 
@@ -17,7 +18,7 @@ async function main() {
 
   const USDCContract = await ethers.getContractAt(
     "ERC20Upgradeable",
-    process.env.GOERLI_USDC_ADDRESS!
+    process.env.USDC_ADDRESS!
   );
 
   console.log("Reading contract...");

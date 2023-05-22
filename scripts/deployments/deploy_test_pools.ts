@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 import {
   deployDuotranchePool,
@@ -6,19 +6,20 @@ import {
   deployUnitranchePool,
 } from "../../lib/pool_deployments";
 
-dotenv.config();
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
 
   const USDCContract = await ethers.getContractAt(
     "ERC20Upgradeable",
-    process.env.GOERLI_USDC_ADDRESS!
+    process.env.USDC_ADDRESS!
   );
 
   const poolFactoryContract = await ethers.getContractAt(
     "PoolFactory",
-    process.env.GOERLI_POOL_FACTORY_ADDRESS!
+    process.env.POOL_FACTORY_ADDRESS!
   );
 
   // 1. Unitranche Pool
@@ -28,8 +29,8 @@ async function main() {
     borrower,
     [lender1, lender2],
     {
-      stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
-      platformTokenContractAddress: process.env.GOERLI_TRIBAL_TOKEN_ADDRESS!,
+      stableCoinContractAddress: process.env.USDC_ADDRESS!,
+      platformTokenContractAddress: process.env.TRIBAL_TOKEN_ADDRESS!,
       // fundingPeriodSeconds: 15 * 24 * 60 * 60,
     },
     async (contracts: DeployedContractsType) => {
@@ -46,8 +47,8 @@ async function main() {
   //   borrower,
   //   [lender1, lender2],
   //   {
-  //     stableCoinContractAddress: process.env.GOERLI_USDC_ADDRESS!,
-  //     platformTokenContractAddress: process.env.GOERLI_TRIBAL_TOKEN_ADDRESS!,
+  //     stableCoinContractAddress: process.env.USDC_ADDRESS!,
+  //     platformTokenContractAddress: process.env.TRIBAL_TOKEN_ADDRESS!,
   //     // fundingPeriodSeconds: 30 * 24 * 60 * 60,
   //   },
   //   async (contracts: DeployedContractsType) => {

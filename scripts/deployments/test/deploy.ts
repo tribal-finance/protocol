@@ -1,8 +1,8 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 
-dotenv.config();
-const { parseUnits } = ethers.utils;
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
   const TestContract = await ethers.getContractFactory("TestContract");

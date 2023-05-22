@@ -1,5 +1,7 @@
 node_modules
-.env
+.env.shared
+.env.goerli
+.env.mainnet
 coverage
 coverage.json
 typechain

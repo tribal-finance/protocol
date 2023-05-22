@@ -7,8 +7,9 @@ import "hardhat-contract-sizer";
 import "hardhat-docgen";
 import dotenv from "dotenv";
 import { ethers } from "ethers";
+import { network } from "hardhat";
 
-dotenv.config();
+dotenv.config({ path: `./.env.shared` });
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -32,19 +33,8 @@ const config: HardhatUserConfig = {
       chainId: 1,
     },
     goerli: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.GOERLI_ALCHEMY_API_KEY}`,
+      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       chainId: 5,
-      accounts: [
-        process.env.GOERLI_DEPLOYER_KEY!,
-        process.env.GOERLI_LENDER1_KEY!,
-        process.env.GOERLI_LENDER2_KEY!,
-        process.env.GOERLI_BORROWER_KEY!,
-      ],
-    },
-    fuji: {
-      url: `https://api.avax-test.network/ext/bc/C/rpc`,
-      gasPrice: 225000000000,
-      chainId: 43113,
       accounts: [
         process.env.GOERLI_DEPLOYER_KEY!,
         process.env.GOERLI_LENDER1_KEY!,

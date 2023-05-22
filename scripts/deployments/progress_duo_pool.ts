@@ -1,9 +1,11 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
+
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
+
 import { STAGES_LOOKUP } from "../../test/helpers/stages";
 import { USDC } from "../../test/helpers/conversion";
-
-dotenv.config();
 
 const LENDING_POOL_ADDRESS = "0xc6dC81d4A8eDadfDE5A878D896313346Fad8285a";
 
@@ -12,7 +14,7 @@ async function main() {
 
   const USDCContract = await ethers.getContractAt(
     "ERC20Upgradeable",
-    process.env.GOERLI_USDC_ADDRESS!
+    process.env.USDC_ADDRESS!
   );
 
   console.log("Reading contract...");

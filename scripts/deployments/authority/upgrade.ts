@@ -1,16 +1,16 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 
-dotenv.config();
-const { parseUnits } = ethers.utils;
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
-  if (!process.env.GOERLI_AUTHORITY_ADDRESS) {
-    throw new Error("GOERLI_AUTHORITY_ADDRESS should be set");
+  if (!process.env.AUTHORITY_ADDRESS) {
+    throw new Error("AUTHORITY_ADDRESS should be set");
   }
   const Authority = await ethers.getContractFactory("Authority");
   const authority = await upgrades.upgradeProxy(
-    process.env.GOERLI_AUTHORITY_ADDRESS,
+    process.env.AUTHORITY_ADDRESS,
     Authority
   );
   await authority.deployed();

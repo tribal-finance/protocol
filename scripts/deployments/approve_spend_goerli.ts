@@ -1,13 +1,13 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 
-dotenv.config();
-const { parseUnits } = ethers.utils;
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 const USDC_CONTRACT_ADDRESS_GOERLI =
   "0x07865c6E87B9F70255377e024ace6630C1Eaa37F";
 const POOL_ADDRESS_GOERLI = "0xdb3FCF05FfAF455eC4DB5aAea5918d7608191A1f";
-const APPROVAL_AMOUNT = parseUnits("10000", 6);
+const APPROVAL_AMOUNT = parseInt("10000", 6);
 
 async function main() {
   const usdcContract = await ethers.getContractAt(

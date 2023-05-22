@@ -1,7 +1,8 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 
-dotenv.config();
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
   const TrancheVault = await ethers.getContractFactory("TrancheVault");
@@ -9,15 +10,15 @@ async function main() {
 
   console.log(`TrancheVault implementation deployed to ${tv.address}`);
 
-  if (!process.env.GOERLI_POOL_FACTORY_ADDRESS) {
-    console.log("GOERLI_POOL_FACTORY_ADDRESS is not set");
+  if (!process.env.POOL_FACTORY_ADDRESS) {
+    console.log("POOL_FACTORY_ADDRESS is not set");
     process.exitCode = 2;
     return;
   }
 
   const poolFactory = await ethers.getContractAt(
     "PoolFactory",
-    process.env.GOERLI_POOL_FACTORY_ADDRESS
+    process.env.POOL_FACTORY_ADDRESS
   );
 
   await poolFactory.setTrancheVaultImplementation(tv.address);

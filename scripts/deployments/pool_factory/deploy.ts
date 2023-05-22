@@ -1,14 +1,18 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 
-dotenv.config();
-const { parseUnits } = ethers.utils;
+console.log("network: ", network.name);
+dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
+  if (!process.env.AUTHORITY_ADDRESS) {
+    throw new Error("AUTHORITY_ADDRESS must be set");
+  }
   const PoolFactory = await ethers.getContractFactory("PoolFactory");
-  const poolFactory = await PoolFactory.deploy();
+  const poolFactory = await upgrades.deployProxy(PoolFactory, [
+    process.env.AUTHORITY_ADDRESS,
+  ]);
   await poolFactory.deployed();
-  await poolFactory.initialize();
 
   console.log("Pool Factory deployed to: ", poolFactory.address);
 }
