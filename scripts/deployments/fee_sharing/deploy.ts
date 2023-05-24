@@ -18,15 +18,27 @@ async function main() {
     throw new Error("FOUNDATION_ADDRESS must be set");
   }
   const FeeSharing = await ethers.getContractFactory("FeeSharing");
-  const feeSharing = await upgrades.deployProxy(FeeSharing, [
+
+  const params = [
     process.env.AUTHORITY_ADDRESS,
     process.env.USDC_ADDRESS,
     [process.env.STAKING_ADDRESS, process.env.FOUNDATION_ADDRESS],
     [ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.8")],
-  ]);
-
+  ];
+  const feeSharing = await upgrades.deployProxy(FeeSharing, params);
   await feeSharing.deployed();
   console.log("Fee Sharing contract deployed to: ", feeSharing.address);
+
+  console.log(
+    "waiting a few blocks for the contract to be ready for verification..."
+  );
+  await new Promise((resolve) => setTimeout(resolve, 30000));
+  console.log("verifying contract...");
+
+  await hre.run("verify:verify", {
+    address: feeSharing.address,
+    constructorArguments: [],
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -213,6 +213,8 @@ export async function deployUnitranchePool(
   const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
   await tx.wait();
 
+  console.log("Deployed Unitranche Pool");
+
   const deployedContracts = await _getDeployedContracts(poolFactory);
 
   if (afterDeploy) {
@@ -280,7 +282,7 @@ export type DeployedContractsType = {
   authority: Authority;
   lendingPool: LendingPool;
   firstTrancheVault: TrancheVault;
-  secondTrancheVault: TrancheVault;
+  secondTrancheVault: TrancheVault | null;
   feeSharing: FeeSharing;
   staking: Staking;
   tribalToken: TribalToken;
@@ -295,30 +297,44 @@ export async function _getDeployedContracts(
     lastDeployedPoolRecord.poolAddress
   );
 
+  console.log("got lendign pool");
+
   const firstTrancheVault = await ethers.getContractAt(
     "TrancheVault",
     lastDeployedPoolRecord.firstTrancheVaultAddress
   );
 
-  const secondTrancheVault = await ethers.getContractAt(
-    "TrancheVault",
-    lastDeployedPoolRecord.secondTrancheVaultAddress
-  );
+  console.log("got first tranche vault");
+
+  let secondTrancheVault: TrancheVault | null = null;
+
+  if ((await lendingPool.tranchesCount()) > 1) {
+    secondTrancheVault = await ethers.getContractAt(
+      "TrancheVault",
+      lastDeployedPoolRecord.secondTrancheVaultAddress
+    );
+    console.log("got second tranche vault");
+  }
 
   const authorityAddress = await poolFactory.authority();
   const authority = await ethers.getContractAt("Authority", authorityAddress);
+  console.log("got authority");
 
   const feeSharingAddress = await poolFactory.feeSharingContractAddress();
   const feeSharing = await ethers.getContractAt(
     "FeeSharing",
     feeSharingAddress
   );
+  console.log("got fee sharing", feeSharingAddress);
 
   const stakingAddress = await feeSharing.stakingContract();
+  console.log("got staking address", stakingAddress);
   const staking = await ethers.getContractAt("Staking", stakingAddress);
+  console.log("got starking address");
 
   const tribalAddress = await staking.stakingToken();
   const tribalToken = await ethers.getContractAt("TribalToken", tribalAddress);
+  console.log("got tribal token");
 
   return {
     authority,

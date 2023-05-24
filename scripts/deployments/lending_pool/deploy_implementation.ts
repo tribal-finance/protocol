@@ -9,6 +9,15 @@ async function main() {
   const lp = await LendingPool.deploy();
 
   console.log(`LendingPool implementation deployed to ${lp.address}`);
+  console.log(
+    "waiting a few blocks for the contract to be ready for verification..."
+  );
+  await new Promise((resolve) => setTimeout(resolve, 30000));
+  console.log("verifying contract...");
+  await hre.run("verify:verify", {
+    address: lp.address,
+    constructorArguments: [],
+  });
 
   if (!process.env.POOL_FACTORY_ADDRESS) {
     console.log("POOL_FACTORY_ADDRESS is not set");

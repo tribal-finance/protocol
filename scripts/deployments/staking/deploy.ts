@@ -25,6 +25,16 @@ async function main() {
 
   await staking.deployed();
   console.log("Staking contract deployed to: ", staking.address);
+  console.log(
+    "waiting a few blocks for the contract to be ready for verification..."
+  );
+  await new Promise((resolve) => setTimeout(resolve, 30000));
+  console.log("verifying contract...");
+
+  await hre.run("verify:verify", {
+    address: staking.address,
+    constructorArguments: [],
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere
