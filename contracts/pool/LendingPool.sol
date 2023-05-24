@@ -872,6 +872,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function _stableCoinContract() internal view returns (IERC20Upgradeable) {
-        return _stableCoinContract();
+        return IERC20Upgradeable(stableCoinContractAddress);
     }
 }
