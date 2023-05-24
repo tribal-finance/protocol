@@ -297,14 +297,10 @@ export async function _getDeployedContracts(
     lastDeployedPoolRecord.poolAddress
   );
 
-  console.log("got lendign pool");
-
   const firstTrancheVault = await ethers.getContractAt(
     "TrancheVault",
     lastDeployedPoolRecord.firstTrancheVaultAddress
   );
-
-  console.log("got first tranche vault");
 
   let secondTrancheVault: TrancheVault | null = null;
 
@@ -313,28 +309,22 @@ export async function _getDeployedContracts(
       "TrancheVault",
       lastDeployedPoolRecord.secondTrancheVaultAddress
     );
-    console.log("got second tranche vault");
   }
 
   const authorityAddress = await poolFactory.authority();
   const authority = await ethers.getContractAt("Authority", authorityAddress);
-  console.log("got authority");
 
   const feeSharingAddress = await poolFactory.feeSharingContractAddress();
   const feeSharing = await ethers.getContractAt(
     "FeeSharing",
     feeSharingAddress
   );
-  console.log("got fee sharing", feeSharingAddress);
 
   const stakingAddress = await feeSharing.stakingContract();
-  console.log("got staking address", stakingAddress);
   const staking = await ethers.getContractAt("Staking", stakingAddress);
-  console.log("got starking address");
 
   const tribalAddress = await staking.stakingToken();
   const tribalToken = await ethers.getContractAt("TribalToken", tribalAddress);
-  console.log("got tribal token");
 
   return {
     authority,
