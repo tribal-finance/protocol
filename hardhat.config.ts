@@ -42,6 +42,16 @@ const config: HardhatUserConfig = {
         process.env.GOERLI_BORROWER_KEY!,
       ],
     },
+    staging: {
+      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      chainId: 5,
+      accounts: [
+        process.env.GOERLI_DEPLOYER_KEY!,
+        process.env.GOERLI_LENDER1_KEY!,
+        process.env.GOERLI_LENDER2_KEY!,
+        process.env.GOERLI_BORROWER_KEY!,
+      ],
+    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
