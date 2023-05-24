@@ -17,7 +17,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        CONSTANTS
     ///////////////////////////////////*/
-    uint public constant version = 1;
+    string public constant VERSION = "2023-05-24";
+
     uint internal constant WAD = 10 ** 18;
     uint internal constant DAY = 24 * 60 * 60;
     uint internal constant YEAR = 365 * DAY;
