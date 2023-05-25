@@ -378,6 +378,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint8 trancheId,
         uint platformTokens
     ) external onlyLender atStage(Stages.REPAID) {
+        require(!s_rolloverSettings[msg.sender].platformTokens, "LendingPool: tokens are locked for rollover");
         require(lenderRewardsByTrancheRedeemable(_msgSender(), trancheId) == 0, "LendingPool: rewards not redeemed");
 
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
@@ -401,6 +402,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint8 trancheId,
         uint toWithdraw
     ) public onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
+        require(!s_rolloverSettings[msg.sender].rewards, "LendingPool: rewards are locked for rollover");
         if (toWithdraw == 0) {
             return;
         }
@@ -424,6 +426,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function lenderRedeemRewards(
         uint[] calldata toWithdraws
     ) external onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
+        require(!s_rolloverSettings[msg.sender].rewards, "LendingPool: rewards are locked for rollover");
         require(toWithdraws.length == tranchesCount(), "LendingPool: wrong amount of tranches");
         for(uint8 i; i < toWithdraws.length; i++) {
             lenderRedeemRewardsByTranche(i, toWithdraws[i]);
@@ -526,6 +529,40 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
         uint maxLockablePlatformTokens = r.stakedAssets * trancheBoostRatios()[trancheId];
         return maxLockablePlatformTokens - r.lockedPlatformTokens;
+    }
+
+    /*///////////////////////////////////
+       Rollover settings
+    ///////////////////////////////////*/
+    struct RolloverSetting {
+        bool enabled;
+        bool principal;
+        bool interest;
+        bool platformTokens;
+    }
+
+    mapping(address => RolloverSetting) private s_rolloverSettings;
+
+    function lenderEnableRollOver(bool principal, bool interest, bool platformTokens) external onlyLenders {
+        s_rolloverSettings[lenderAddress] = RollOverSetting(
+            true,
+            principal,
+            interest,
+            platformTokens
+        );
+    }
+
+    function lenderDisableRollOver() external onlyLenders {
+        s_rolloverSettings[lenderAddress] = RollOverSetting(
+            false,
+            false,
+            false,
+            false
+        );
+    }
+
+    function lenderRollOverSettings(address lender) external view returns(RolloverSetting) {
+        return s_rolloverSettings[lender];
     }
 
     /*///////////////////////////////////
@@ -702,6 +739,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address depositorAddress,
         uint amount
     ) external authTrancheVault(trancheId) {
+        require(!s_rolloverSettings[depositorAddress].principal, "LendingPool: principal locked for rollover");
+
         if (currentStage() == Stages.REPAID) {
             emit LenderWithdraw(depositorAddress, trancheId, amount);
         } else {
