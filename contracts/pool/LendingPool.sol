@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
-import "hardhat/console.sol";
+// import "hardhat/.sol";
 
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable, LendingPoolState {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -662,16 +662,16 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         }
 
         uint balanceDifference = poolBalanceThreshold() - poolBalance();
-        console.log("balanceDifference", balanceDifference);
         uint daysUnpaid = balanceDifference / _dailyInterestAmount();
-        console.log("daysUnpaid", daysUnpaid);
 
         if (daysUnpaid == 0) {
             return 0;
         }
 
-        uint penaltyCoefficientWad = taylorOnePlusXtoThePowerOfNWad(penaltyRateWad(), daysUnpaid);
-        console.log("penaltyCoefficientWad", penaltyCoefficientWad);
+        uint penaltyCoefficientWad = WAD;
+        for(uint i; i < daysUnpaid; ++i) {
+            penaltyCoefficientWad = penaltyCoefficientWad * (WAD + penaltyRateWad()) / WAD;
+        }
         uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
         return penalty;
     }
@@ -802,38 +802,38 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /* approximation of (1+x)^n using taylor series */
-    function taylorOnePlusXtoThePowerOfNWad(uint256 xWad, uint256 n) public pure returns (uint256) {
-        uint MAX_ITERATIONS = 7;
-        uint result = WAD;
-        uint term = WAD;
+    // function taylorOnePlusXtoThePowerOfNWad(uint256 xWad, uint256 n) public pure returns (uint256) {
+    //     uint MAX_ITERATIONS = 7;
+    //     uint result = WAD;
+    //     uint term = WAD;
 
-        uint iterationsCount = n > MAX_ITERATIONS ? MAX_ITERATIONS : n;
+    //     uint iterationsCount = n > MAX_ITERATIONS ? MAX_ITERATIONS : n;
 
-        for(uint i = 1; i <= iterationsCount; ++i) {
-            term = term * (n-i+1) * xWad / (i * WAD);
-            result += term;
-        }
+    //     for(uint i = 1; i <= iterationsCount; ++i) {
+    //         term = term * (n-i+1) * xWad / (i * WAD);
+    //         result += term;
+    //     }
 
-        return result;
-    }
+    //     return result;
+    // }
 
-    /** @dev fast (O(log n)) algorithm for multiplying x(WAD) to the power of n (n is not wad). Exponentiation by squaring */
-    // TODO: does not work. WTF?
-    function wadPow(uint256 _xWad, uint256 _n) public pure returns (uint256) {
-        uint xWad = _xWad;
-        uint n = _n;
+    // /** @dev fast (O(log n)) algorithm for multiplying x(WAD) to the power of n (n is not wad). Exponentiation by squaring */
+    // // TODO: does not work. WTF?
+    // function wadPow(uint256 _xWad, uint256 _n) public pure returns (uint256) {
+    //     uint xWad = _xWad;
+    //     uint n = _n;
 
-        uint result = n % 2 != 0 ? xWad : WAD;
+    //     uint result = n % 2 != 0 ? xWad : WAD;
 
-        for(n /= 2; n != 0; n /= 2) {
-            xWad = (xWad * xWad) / WAD;
-            if (n % 2 != 0) {
-                result = (result * xWad) / WAD;
-            }
-        }
+    //     for(n /= 2; n != 0; n /= 2) {
+    //         xWad = (xWad * xWad) / WAD;
+    //         if (n % 2 != 0) {
+    //             result = (result * xWad) / WAD;
+    //         }
+    //     }
 
-        return result;
-    }
+    //     return result;
+    // }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
         emit LenderTrancheRewardsChange(
