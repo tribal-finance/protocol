@@ -179,9 +179,7 @@ describe("Interests", function () {
           await usdc.connect(borrower).approve(lendingPool.address, USDC(1000));
           await expect(
             lendingPool.connect(borrower).borrowerPayInterest(USDC(1000))
-          ).to.be.revertedWith(
-            "LendingPool: penalty cannot be more than assets"
-          );
+          ).to.be.revertedWith("LP201");
         });
 
         it("will allow borrower to repay interest more than penalty but less that will bring pool to healthy state", async () => {
@@ -193,9 +191,7 @@ describe("Interests", function () {
           await usdc.connect(borrower).approve(lendingPool.address, USDC(5000));
           await expect(
             lendingPool.connect(borrower).borrowerPayInterest(USDC(5000))
-          ).to.be.revertedWith(
-            "LendingPool: penalty+interest will not bring pool to healthy state"
-          );
+          ).to.be.revertedWith("LP202");
         });
 
         it("will allow borrower to repay interest more than penalty + amount to get back to healthy", async () => {

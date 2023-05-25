@@ -40,23 +40,23 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
        MODIFIERS
     ///////////////////////////////////*/
     modifier authTrancheVault(uint8 id) {
-        require(id < trancheVaultAddresses().length, "LendingPool: invalid trancheVault id");
-        require(trancheVaultAddresses()[id] == _msgSender(), "LendingPool: trancheVault auth");
+        require(id < trancheVaultAddresses().length, "LP001"); // "LendingPool: invalid trancheVault id"
+        require(trancheVaultAddresses()[id] == _msgSender(), "LP002"); // "LendingPool: trancheVault auth"
         _;
     }
 
     modifier onlyPoolBorrower() {
-        require(_msgSender() == borrowerAddress(), "LendingPool: not a borrower");
+        require(_msgSender() == borrowerAddress(), "LP003");// "LendingPool: not a borrower"
         _;
     }
 
     modifier atStage(Stages _stage) {
-        require(currentStage() == _stage, "LendingPool: not at correct stage");
+        require(currentStage() == _stage, "LP004");// "LendingPool: not at correct stage"
         _;
     }
 
     modifier atStages2(Stages _stage1, Stages _stage2) {
-        require(currentStage() == _stage1 || currentStage() == _stage2, "LendingPool: not at correct stage");
+        require(currentStage() == _stage1 || currentStage() == _stage2, "LP004");// "LendingPool: not at correct stage"
         _;
     }
 
@@ -67,7 +67,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     ) {
         require(
             currentStage() == _stage1 || currentStage() == _stage2 || currentStage() == _stage3,
-            "LendingPool: not at correct stage"
+            "LP004" // "LendingPool: not at correct stage"
         );
         _;
     }
@@ -186,44 +186,44 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address _feeSharingContractAddress,
         address _authorityAddress
     ) internal pure {
-        require(params.stableCoinContractAddress != address(0), "LendingPool: stableCoinContractAddress empty");
+        require(params.stableCoinContractAddress != address(0), "LP005");// "LendingPool: stableCoinContractAddress empty"
 
-        require(params.minFundingCapacity > 0, "LendingPool: minFundingCapacity == 0");
-        require(params.maxFundingCapacity > 0, "LendingPool: maxFundingCapacity == 0");
+        require(params.minFundingCapacity > 0, "LP006");// "LendingPool: minFundingCapacity == 0"
+        require(params.maxFundingCapacity > 0, "LP007");// "LendingPool: maxFundingCapacity == 0"
         require(
             params.maxFundingCapacity >= params.minFundingCapacity,
-            "LendingPool: maxFundingCapacity < minFundingCapacity"
+            "LP008" // "LendingPool: maxFundingCapacity < minFundingCapacity"
         );
 
-        require(params.fundingPeriodSeconds > 0, "LendingPool: fundingPeriodSeconds == 0");
-        require(params.lendingTermSeconds > 0, "LendingPool: lendingTermSeconds == 0");
-        require(params.borrowerAddress != address(0), "LendingPool: borrowerAddress empty");
-        require(params.borrowerTotalInterestRateWad > 0, "LendingPool: borrower interest rate = 0%");
-        require(params.protocolFeeWad > 0, "LendingPool: protocolFee == 0%");
-        require(params.penaltyRateWad > 0, "LendingPool: penaltyRate == 0");
+        require(params.fundingPeriodSeconds > 0, "LP009");// "LendingPool: fundingPeriodSeconds == 0"
+        require(params.lendingTermSeconds > 0, "LP010");// "LendingPool: lendingTermSeconds == 0"
+        require(params.borrowerAddress != address(0), "LP011");// "LendingPool: borrowerAddress empty"
+        require(params.borrowerTotalInterestRateWad > 0, "LP012");// "LendingPool: borrower interest rate = 0%"
+        require(params.protocolFeeWad > 0, "LP013");// "LendingPool: protocolFee == 0%"
+        require(params.penaltyRateWad > 0, "LP014");// "LendingPool: penaltyRate == 0"
 
-        require(params.tranchesCount > 0, "LendingPool: tranchesCount == 0");
-        require(_trancheVaultAddresses.length == params.tranchesCount, "LendingPool: trancheAddresses length");
-        require(params.trancheAPRsWads.length == params.tranchesCount, "LendingPool: tranche APRs length");
+        require(params.tranchesCount > 0, "LP015");// "LendingPool: tranchesCount == 0"
+        require(_trancheVaultAddresses.length == params.tranchesCount, "LP016");// "LendingPool: trancheAddresses length"
+        require(params.trancheAPRsWads.length == params.tranchesCount, "LP017");// "LP001");// "LendingPool: tranche APRs length"
         require(
             params.trancheBoostedAPRsWads.length == params.tranchesCount,
-            "LendingPool: tranche Boosted APRs length"
+            "LP018" // "LendingPool: tranche Boosted APRs length"
         );
         require(
             params.trancheBoostedAPRsWads.length == params.tranchesCount,
-            "LendingPool: tranche Coverage APRs length"
+            "LP019" // "LendingPool: tranche Coverage APRs length"
         );
 
         for (uint i; i < params.tranchesCount; ++i) {
             require(params.trancheAPRsWads[i] > 0, "tranche APRs == 0");
             require(
                 params.trancheBoostedAPRsWads[i] >= params.trancheAPRsWads[i],
-                "LendingPool: tranche boosted APRs < tranche APRs"
+                "LP020" // "LendingPool: tranche boosted APRs < tranche APRs"
             );
         }
 
-        require(_feeSharingContractAddress != address(0), "LendingPool: feeSharingAddress empty");
-        require(_authorityAddress != address(0), "LendingPool: authorityAddress empty");
+        require(_feeSharingContractAddress != address(0), "LP021");// "LendingPool: feeSharingAddress empty"
+        require(_authorityAddress != address(0), "LP022");// "LendingPool: authorityAddress empty"
     }
 
     /*///////////////////////////////////
@@ -342,6 +342,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /*///////////////////////////////////
       Lender (please also see onTrancheDeposit() and onTrancheWithdraw())
+      Error group: 1
     ///////////////////////////////////*/
 
     /** @notice Lock tribal tokens in order to get APR boost
@@ -354,7 +355,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     ) external onlyLender atStage(Stages.OPEN) {
         require(
             platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
-            "LendingPool: lock will lead to overboost"
+            "LP101" //"LendingPool: lock will lead to overboost"
         );
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
         SafeERC20Upgradeable.safeTransferFrom(
@@ -378,12 +379,12 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint8 trancheId,
         uint platformTokens
     ) external onlyLender atStage(Stages.REPAID) {
-        require(!s_rolloverSettings[msg.sender].platformTokens, "LendingPool: tokens are locked for rollover");
-        require(lenderRewardsByTrancheRedeemable(_msgSender(), trancheId) == 0, "LendingPool: rewards not redeemed");
+        require(!s_rollOverSettings[msg.sender].platformTokens, "LP102");// "LendingPool: tokens are locked for rollover"
+        require(lenderRewardsByTrancheRedeemable(_msgSender(), trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
 
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
 
-        require(r.lockedPlatformTokens >= platformTokens, "LendingPool: not enough locked tokens");
+        require(r.lockedPlatformTokens >= platformTokens, "LP104"); // LendingPool: not enough locked tokens"
         r.lockedPlatformTokens -= platformTokens;
         SafeERC20Upgradeable.safeTransfer(
             IERC20Upgradeable(platformTokenContractAddress()),
@@ -402,12 +403,12 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint8 trancheId,
         uint toWithdraw
     ) public onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
-        require(!s_rolloverSettings[msg.sender].rewards, "LendingPool: rewards are locked for rollover");
+        require(!s_rollOverSettings[msg.sender].rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
         if (toWithdraw == 0) {
             return;
         }
         uint maxWithdraw = lenderRewardsByTrancheRedeemable(_msgSender(), trancheId);
-        require(toWithdraw < maxWithdraw, "LendingPool: amount to withdraw is too big");
+        require(toWithdraw < maxWithdraw, "LP106"); // "LendingPool: amount to withdraw is too big"
         s_trancheRewardables[trancheId][_msgSender()].redeemedRewards += toWithdraw;
 
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(stableCoinContractAddress()), _msgSender(), toWithdraw);
@@ -426,8 +427,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function lenderRedeemRewards(
         uint[] calldata toWithdraws
     ) external onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
-        require(!s_rolloverSettings[msg.sender].rewards, "LendingPool: rewards are locked for rollover");
-        require(toWithdraws.length == tranchesCount(), "LendingPool: wrong amount of tranches");
+        require(!s_rollOverSettings[msg.sender].rewards, "LP105"); //"LendingPool: rewards are locked for rollover"
+        require(toWithdraws.length == tranchesCount(), "LP107"); //"LendingPool: wrong amount of tranches"
         for(uint8 i; i < toWithdraws.length; i++) {
             lenderRedeemRewardsByTranche(i, toWithdraws[i]);
         }
@@ -534,26 +535,26 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        Rollover settings
     ///////////////////////////////////*/
-    struct RolloverSetting {
+    struct RollOverSetting {
         bool enabled;
         bool principal;
-        bool interest;
+        bool rewards;
         bool platformTokens;
     }
 
-    mapping(address => RolloverSetting) private s_rolloverSettings;
+    mapping(address => RollOverSetting) private s_rollOverSettings;
 
-    function lenderEnableRollOver(bool principal, bool interest, bool platformTokens) external onlyLenders {
-        s_rolloverSettings[lenderAddress] = RollOverSetting(
+    function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
+        s_rollOverSettings[_msgSender()] = RollOverSetting(
             true,
             principal,
-            interest,
+            rewards,
             platformTokens
         );
     }
 
-    function lenderDisableRollOver() external onlyLenders {
-        s_rolloverSettings[lenderAddress] = RollOverSetting(
+    function lenderDisableRollOver() external onlyLender {
+        s_rollOverSettings[_msgSender()] = RollOverSetting(
             false,
             false,
             false,
@@ -561,12 +562,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         );
     }
 
-    function lenderRollOverSettings(address lender) external view returns(RolloverSetting) {
-        return s_rolloverSettings[lender];
+    function lenderRollOverSettings(address lender) external view returns(RollOverSetting memory) {
+        return s_rollOverSettings[lender];
     }
 
     /*///////////////////////////////////
        Borrower functions
+       Error group: 2
     ///////////////////////////////////*/
     function borrowerDepositFirstLossCapital() external onlyPoolBorrower() atStage(Stages.INITIAL) {
         SafeERC20Upgradeable.safeTransferFrom(
@@ -589,11 +591,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
         uint penalty = borrowerPenaltyAmount();
-        require(penalty < assets, "LendingPool: penalty cannot be more than assets");
+        require(penalty < assets, "LP201"); // "LendingPool: penalty cannot be more than assets"
 
         if (penalty > 0) {
             uint balanceDifference = poolBalanceThreshold() - poolBalance();
-            require(assets >= penalty + balanceDifference, "LendingPool: penalty+interest will not bring pool to healthy state");
+            require(assets >= penalty + balanceDifference, "LP202"); // "LendingPool: penalty+interest will not bring pool to healthy state"
         }
 
         uint assetsToSendToFeeSharing = assets * protocolFeeWad() / WAD + penalty;
@@ -707,6 +709,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /*///////////////////////////////////
        COMMUNICATION WITH VAULTS
+       Error group: 3
     ///////////////////////////////////*/
 
     /// @dev TrancheVault will call that callback function when a lender deposits assets
@@ -739,7 +742,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address depositorAddress,
         uint amount
     ) external authTrancheVault(trancheId) {
-        require(!s_rolloverSettings[depositorAddress].principal, "LendingPool: principal locked for rollover");
+        require(!s_rollOverSettings[depositorAddress].principal, "LP301"); // "LendingPool: principal locked for rollover"
 
         if (currentStage() == Stages.REPAID) {
             emit LenderWithdraw(depositorAddress, trancheId, amount);
