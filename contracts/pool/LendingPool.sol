@@ -173,9 +173,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address _authorityAddress
     );
     event PoolOpen(address indexed actor);
-    event PoolFunded();
-    event PoolFundingFailed();
-    event PoolRepaid();
+    event PoolFunded(uint64 fundedAt);
+    event PoolFundingFailed(uint64 fundingFailedAt);
+    event PoolRepaid(uint64 repaidAt);
     event PoolDelinquent();
     event PoolRecoverFromDelinquency();
     event PoolDefaulted();
@@ -375,7 +375,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             tv.sendAssetsToPool(tv.totalAssets());
         }
 
-        emit PoolFunded();
+        emit PoolFunded(fundedAt);
     }
 
     function _transitionToFundingFailedStage() internal {
@@ -385,7 +385,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             _trancheVaultContracts()[i].disableDeposits();
             _trancheVaultContracts()[i].enableWithdrawals();
         }
-        emit PoolFundingFailed();
+        emit PoolFundingFailed(fundingFailedAt);
     }
 
     function _transitionToFlcDepositedStage(uint flcAssets) internal {
@@ -403,7 +403,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
         repaidAt = uint64(block.timestamp);
         emit BorrowerRepayPrincipal(borrowerAddress, repaidPrincipal);
-        emit PoolRepaid();
+        emit PoolRepaid(repaidAt);
     }
 
     /*///////////////////////////////////
@@ -763,7 +763,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         if (borrowerOutstandingInterest() > 0) {
             return 0;
         }
-        return borrowerInterestRepaid - borrowerExpectedInterest();
+        return borrowerInterestRepaid - allLendersInterest();
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days
@@ -847,10 +847,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /// @notice average APR of all lenders across all tranches, boosted or not
-    function allLendersInterestByDate() public view returns (uint) {
-        if (!fundedAt) {
-            return 0;
-        }
+    function allLendersInterest() public view returns (uint) {
         uint sum = 0;
         uint totalStakedAssets = 0;
         for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
@@ -867,9 +864,38 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             sum += boostedAssets * trancheBoostedAPRsWads[trancheId];
         }
 
-        uint elapsedTime = block.timestamp - fundedAt;
         sum = sum * lendingTermSeconds / YEAR;
-        return sum * elapsedTime / lendingTermSeconds;
+        return sum;
+    }
+
+    function allLendersInterestByDate() public view returns (uint) {
+        if (fundedAt == 0 || block.timestamp <= fundedAt) {
+            return 0;
+        }
+        uint time = block.timestamp < fundedAt + lendingTermSeconds ? block.timestamp : fundedAt + lendingTermSeconds;
+        uint elapsedTime = time - fundedAt;
+        return allLendersInterest() * elapsedTime / lendingTermSeconds;
+    }
+
+    /// @notice average APR of all lenders across all tranches, boosted or not
+    function allLendersEffectiveAprWad() public view returns (uint) {
+        uint weightedSum = 0;
+        uint totalStakedAssets = 0;
+        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+            uint stakedAssets = s_totalStakedAssetsByTranche[trancheId];
+            totalStakedAssets += stakedAssets;
+
+            uint boostedAssets = s_totalLockedPlatformTokensByTranche[trancheId] / trancheBoostRatios[trancheId];
+            if (boostedAssets > stakedAssets) {
+                boostedAssets = stakedAssets;
+            }
+            uint unBoostedAssets = stakedAssets - boostedAssets;
+
+            weightedSum += unBoostedAssets * trancheAPRsWads[trancheId];
+            weightedSum += boostedAssets * trancheBoostedAPRsWads[trancheId];
+        }
+
+        return weightedSum / totalStakedAssets;
     }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
