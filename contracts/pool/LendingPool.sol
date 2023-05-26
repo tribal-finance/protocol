@@ -719,7 +719,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function poolBalance() public view returns (uint) {
-        return _stableCoinContract().balanceOf(address(this));
+        return firstLossAssets - allLendersInterestByDate() + borrowerInterestRepaid;
     }
 
     function borrowerPenaltyAmount() public view returns (uint) {
@@ -847,8 +847,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /// @notice average APR of all lenders across all tranches, boosted or not
-    function allLendersEffectiveAprWad() public view returns (uint) {
-        uint weightedSum = 0;
+    function allLendersInterestByDate() public view returns (uint) {
+        if (!fundedAt) {
+            return 0;
+        }
+        uint sum = 0;
         uint totalStakedAssets = 0;
         for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
             uint stakedAssets = s_totalStakedAssetsByTranche[trancheId];
@@ -860,46 +863,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             }
             uint unBoostedAssets = stakedAssets - boostedAssets;
 
-            weightedSum += unBoostedAssets * trancheAPRsWads[trancheId];
-            weightedSum += boostedAssets * trancheBoostedAPRsWads[trancheId];
+            sum += unBoostedAssets * trancheAPRsWads[trancheId];
+            sum += boostedAssets * trancheBoostedAPRsWads[trancheId];
         }
 
-        return weightedSum / totalStakedAssets;
+        uint elapsedTime = block.timestamp - fundedAt;
+        sum = sum * lendingTermSeconds / YEAR;
+        return sum * elapsedTime / lendingTermSeconds;
     }
-
-    /* approximation of (1+x)^n using taylor series */
-    // function taylorOnePlusXtoThePowerOfNWad(uint256 xWad, uint256 n) public pure returns (uint256) {
-    //     uint MAX_ITERATIONS = 7;
-    //     uint result = WAD;
-    //     uint term = WAD;
-
-    //     uint iterationsCount = n > MAX_ITERATIONS ? MAX_ITERATIONS : n;
-
-    //     for(uint i = 1; i <= iterationsCount; ++i) {
-    //         term = term * (n-i+1) * xWad / (i * WAD);
-    //         result += term;
-    //     }
-
-    //     return result;
-    // }
-
-    // /** @dev fast (O(log n)) algorithm for multiplying x(WAD) to the power of n (n is not wad). Exponentiation by squaring */
-    // // TODO: does not work. WTF?
-    // function wadPow(uint256 _xWad, uint256 _n) public pure returns (uint256) {
-    //     uint xWad = _xWad;
-    //     uint n = _n;
-
-    //     uint result = n % 2 != 0 ? xWad : WAD;
-
-    //     for(n /= 2; n != 0; n /= 2) {
-    //         xWad = (xWad * xWad) / WAD;
-    //         if (n % 2 != 0) {
-    //             result = (result * xWad) / WAD;
-    //         }
-    //     }
-
-    //     return result;
-    // }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
         emit LenderTrancheRewardsChange(
