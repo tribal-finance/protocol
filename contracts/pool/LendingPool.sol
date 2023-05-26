@@ -130,8 +130,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
        MODIFIERS
     ///////////////////////////////////*/
     modifier authTrancheVault(uint8 id) {
-        require(id < trancheVaultAddresses().length, "LP001"); // "LendingPool: invalid trancheVault id"
-        require(trancheVaultAddresses()[id] == _msgSender(), "LP002"); // "LendingPool: trancheVault auth"
+        require(id < trancheVaultAddresses.length, "LP001"); // "LendingPool: invalid trancheVault id"
+        require(trancheVaultAddresses[id] == _msgSender(), "LP002"); // "LendingPool: trancheVault auth"
         _;
     }
 
@@ -494,7 +494,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint[] calldata toWithdraws
     ) external onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); //"LendingPool: rewards are locked for rollover"
-        require(toWithdraws.length == tranchesCount(), "LP107"); //"LendingPool: wrong amount of tranches"
+        require(toWithdraws.length == tranchesCount, "LP107"); //"LendingPool: wrong amount of tranches"
         for(uint8 i; i < toWithdraws.length; i++) {
             lenderRedeemRewardsByTranche(i, toWithdraws[i]);
         }
@@ -736,7 +736,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         uint penaltyCoefficientWad = WAD;
         for(uint i; i < daysUnpaid; ++i) {
-            penaltyCoefficientWad = penaltyCoefficientWad * (WAD + penaltyRateWad()) / WAD;
+            penaltyCoefficientWad = penaltyCoefficientWad * (WAD + penaltyRateWad) / WAD;
         }
         uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
         return penalty;
