@@ -172,13 +172,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address _feeSharingContractAddress,
         address _authorityAddress
     );
-    event PoolOpen(address indexed actor);
-    event PoolFunded();
-    event PoolFundingFailed();
-    event PoolRepaid();
-    event PoolDelinquent();
-    event PoolRecoverFromDelinquency();
-    event PoolDefaulted();
+    event PoolOpen(uint64 openedAt);
+    event PoolFunded(uint64 fundedAt);
+    event PoolFundingFailed(uint64 fundingFailedAt);
+    event PoolRepaid(uint64 repaidAt);
+    event PoolDelinquent(uint64 delinquentAt);
+    event PoolRecoverFromDelinquency(uint64 recoveredAt);
+    event PoolDefaulted(uint64 defaultedAt);
 
     // Lender //
     event LenderDeposit(address indexed lender, uint8 indexed trancheId, uint256 amount);
@@ -351,7 +351,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             _trancheVaultContracts()[i].enableWithdrawals();
         }
         openedAt = uint64(block.timestamp);
-        emit PoolOpen(_msgSender());
+        emit PoolOpen(openedAt);
     }
 
     /** @notice Checks whether the pool was funded successfully or not.
@@ -375,7 +375,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             tv.sendAssetsToPool(tv.totalAssets());
         }
 
-        emit PoolFunded();
+        emit PoolFunded(fundedAt);
     }
 
     function _transitionToFundingFailedStage() internal {
@@ -385,7 +385,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             _trancheVaultContracts()[i].disableDeposits();
             _trancheVaultContracts()[i].enableWithdrawals();
         }
-        emit PoolFundingFailed();
+        emit PoolFundingFailed(fundingFailedAt);
     }
 
     function _transitionToFlcDepositedStage(uint flcAssets) internal {
@@ -403,7 +403,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
         repaidAt = uint64(block.timestamp);
         emit BorrowerRepayPrincipal(borrowerAddress, repaidPrincipal);
-        emit PoolRepaid();
+        emit PoolRepaid(repaidAt);
     }
 
     /*///////////////////////////////////
