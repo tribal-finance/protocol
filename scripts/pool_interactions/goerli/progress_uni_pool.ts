@@ -4,14 +4,14 @@ import {
   deployDuotranchePool,
   DeployedContractsType,
   deployUnitranchePool,
-} from "../../lib/pool_deployments";
-import { STAGES_LOOKUP } from "../../test/helpers/stages";
-import { USDC } from "../../test/helpers/conversion";
+} from "../../..//lib/pool_deployments";
+import { STAGES_LOOKUP } from "../../../test/helpers/stages";
+import { USDC } from "../../../test/helpers/conversion";
 
 console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });
 
-const LENDING_POOL_ADDRESS = "0x9BaCCc09785c86d4981331e72d5B49787378124d";
+const LENDING_POOL_ADDRESS = "0x234408847843711C03a484b9FaCa780fF893938b";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -42,13 +42,16 @@ async function main() {
     ethers.utils.formatUnits(await poolContract.collectedAssets(), 6)
   );
 
-  const trancheVaultAddresses = await poolContract.trancheVaultAddresses();
   const trancheContracts = [];
-  for (let tva of trancheVaultAddresses) {
+  for (let i = 0; i < tranchesCount; i++) {
+    const tva = await poolContract.trancheVaultAddresses(i);
     const contract = await ethers.getContractAt("TrancheVault", tva);
     trancheContracts.push(contract);
   }
-  console.log("Tranche Vault Addresses: ", trancheVaultAddresses);
+  console.log(
+    "Tranche Vault Addresses: ",
+    trancheContracts.map((c) => c.address)
+  );
 
   console.log(
     "Current Pool Stage:",
@@ -56,6 +59,15 @@ async function main() {
   );
 
   let tx;
+
+  /* !!!!!!!!!!!! 0. Deposit first loss capital !!!!!!!!!!!!!!!!!!!!*/
+  // tx = await USDCContract.connect(borrower).approve(
+  //   poolContract.address,
+  //   USDC(2000)
+  // );
+  // tx.wait();
+  // console.log("approved spend");
+  // tx = await poolContract.connect(borrower).borrowerDepositFirstLossCapital();
 
   /* !!!!!!!!!!!! 1. Open the Lending Pool !!!!!!!!!!!!!!!!!!!!*/
   // tx = await poolContract.connect(deployer).adminOpenPool();
@@ -102,18 +114,18 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  // const interestToRepay = USDC(30);
-  // tx = await USDCContract.connect(borrower).approve(
-  //   poolContract.address,
-  //   interestToRepay
-  // );
-  // await tx.wait();
-  // console.log("approved interst spend");
-  // tx = await poolContract
-  //   .connect(borrower)
-  //   .borrowerPayInterest(interestToRepay);
-  // await tx.wait();
-  // console.log("deposited interest money");
+  const interestToRepay = USDC(250);
+  tx = await USDCContract.connect(borrower).approve(
+    poolContract.address,
+    interestToRepay
+  );
+  await tx.wait();
+  console.log("approved interst spend");
+  tx = await poolContract
+    .connect(borrower)
+    .borrowerPayInterest(interestToRepay);
+  await tx.wait();
+  console.log("deposited interest money");
 
   /* !!!!!!!!!!!! 6. Redeem interest !!!!!!!!!!!!!!!!!!!!*/
   // tx = await poolContract.connect(lender1).lenderRedeemRewardsByTranche(0);
