@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
-// import "hardhat/.sol";
+import "hardhat/console.sol";
 
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -664,9 +664,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             uint balanceDifference = poolBalanceThreshold() - poolBalance();
             require(assets >= penalty + balanceDifference, "LP202"); // "LendingPool: penalty+interest will not bring pool to healthy state"
         }
+        
+        uint feeableInterestAmount = assets - penalty;
+        if (feeableInterestAmount > borrowerOutstandingInterest()) {
+            feeableInterestAmount = borrowerOutstandingInterest();
+        }
 
-        uint assetsToSendToFeeSharing = assets * protocolFeeWad / WAD + penalty;
-
+        uint assetsToSendToFeeSharing = feeableInterestAmount * protocolFeeWad / WAD + penalty;
         uint assetsForLenders = assets - assetsToSendToFeeSharing;
 
         SafeERC20Upgradeable.safeTransferFrom(
@@ -683,11 +687,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         );
 
         if (penalty > 0) {
-            SafeERC20Upgradeable.safeTransfer(
-                _stableCoinContract(),
-                feeSharingContractAddress,
-                penalty
-            );
             emit BorrowerPayPenalty(_msgSender(), penalty);
         }
 
@@ -720,7 +719,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function poolBalance() public view returns (uint) {
-        return firstLossAssets - allLendersInterestByDate() + borrowerInterestRepaid;
+        uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
+        if (allLendersInterestByDate() > positiveBalance) {
+            return 0;
+        }
+        return positiveBalance - allLendersInterestByDate();
     }
 
     function borrowerPenaltyAmount() public view returns (uint) {
@@ -764,7 +767,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         if (borrowerOutstandingInterest() > 0) {
             return 0;
         }
-        return borrowerInterestRepaid - allLendersInterest();
+        uint fees = borrowerExpectedInterest() * protocolFeeWad / WAD;
+        return borrowerInterestRepaid - allLendersInterest() - fees;
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days
@@ -866,7 +870,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         }
 
         sum = sum * lendingTermSeconds / YEAR;
-        return sum;
+        return sum / WAD;
     }
 
     function allLendersInterestByDate() public view returns (uint) {
