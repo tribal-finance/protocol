@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
-import "hardhat/console.sol";
 
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -715,7 +714,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /* VIEWS */
     function poolBalanceThreshold() public view returns (uint) {
-        return firstLossAssets - (repaymentRecurrenceDays + gracePeriodDays) * _dailyInterestAmount();
+        uint dailyBorrowerInterestAmount = borrowedAssets * borrowerTotalInterestRateWad / WAD / 365;
+        return firstLossAssets - (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
     }
 
     function poolBalance() public view returns (uint) {
@@ -731,17 +731,21 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             return 0;
         }
 
+        uint dailyLendersInterestAmount = collectedAssets * allLendersEffectiveAprWad() / WAD / 365;
         uint balanceDifference = poolBalanceThreshold() - poolBalance();
-        uint daysUnpaid = balanceDifference / _dailyInterestAmount();
+        uint daysDelinquent = balanceDifference / dailyLendersInterestAmount;
 
-        if (daysUnpaid == 0) {
+        if (daysDelinquent == 0) {
             return 0;
         }
 
         uint penaltyCoefficientWad = WAD;
-        for(uint i; i < daysUnpaid; ++i) {
+
+        // TODO: can it be optimized
+        for(uint i; i < daysDelinquent; ++i) {
             penaltyCoefficientWad = penaltyCoefficientWad * (WAD + penaltyRateWad) / WAD;
         }
+
         uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
         return penalty;
     }
@@ -837,10 +841,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        HELPERS
     ///////////////////////////////////*/
-
-    function _dailyInterestAmount() internal view returns (uint) {
-        return (borrowedAssets * borrowerTotalInterestRateWad) / (WAD * 365);
-    }
 
     function _trancheVaultContracts() internal view returns (TrancheVault[] memory contracts) {
         address[] memory addresses = trancheVaultAddresses;
