@@ -17,7 +17,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        CONSTANTS
     ///////////////////////////////////*/
-    string public constant VERSION = "2023-05-25";
+    string public constant VERSION = "2023-05-26";
 
     uint internal constant WAD = 10 ** 18;
     uint internal constant DAY = 24 * 60 * 60;
@@ -172,13 +172,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address _feeSharingContractAddress,
         address _authorityAddress
     );
-    event PoolOpen(address indexed actor);
+    event PoolOpen(uint64 openedAt);
     event PoolFunded(uint64 fundedAt);
     event PoolFundingFailed(uint64 fundingFailedAt);
     event PoolRepaid(uint64 repaidAt);
-    event PoolDelinquent();
-    event PoolRecoverFromDelinquency();
-    event PoolDefaulted();
+    event PoolDelinquent(uint64 delinquentAt);
+    event PoolRecoverFromDelinquency(uint64 recoveredAt);
+    event PoolDefaulted(uint64 defaultedAt);
 
     // Lender //
     event LenderDeposit(address indexed lender, uint8 indexed trancheId, uint256 amount);
@@ -351,7 +351,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             _trancheVaultContracts()[i].enableWithdrawals();
         }
         openedAt = uint64(block.timestamp);
-        emit PoolOpen(_msgSender());
+        emit PoolOpen(openedAt);
     }
 
     /** @notice Checks whether the pool was funded successfully or not.
@@ -375,6 +375,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             tv.sendAssetsToPool(tv.totalAssets());
         }
 
+        emit PoolFunded(fundedAt);
         emit PoolFunded(fundedAt);
     }
 
