@@ -739,12 +739,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             return 0;
         }
 
-        uint penaltyCoefficientWad = WAD;
-
-        // TODO: can it be optimized
-        for(uint i; i < daysDelinquent; ++i) {
-            penaltyCoefficientWad = penaltyCoefficientWad * (WAD + penaltyRateWad) / WAD;
-        }
+        uint penaltyCoefficientWad = _wadPow(WAD + penaltyRateWad, daysDelinquent);
 
         uint penalty = balanceDifference * penaltyCoefficientWad / WAD - balanceDifference;
         return penalty;
@@ -853,24 +848,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /// @notice average APR of all lenders across all tranches, boosted or not
     function allLendersInterest() public view returns (uint) {
-        uint sum = 0;
-        uint totalStakedAssets = 0;
-        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-            uint stakedAssets = s_totalStakedAssetsByTranche[trancheId];
-            totalStakedAssets += stakedAssets;
-
-            uint boostedAssets = s_totalLockedPlatformTokensByTranche[trancheId] / trancheBoostRatios[trancheId];
-            if (boostedAssets > stakedAssets) {
-                boostedAssets = stakedAssets;
-            }
-            uint unBoostedAssets = stakedAssets - boostedAssets;
-
-            sum += unBoostedAssets * trancheAPRsWads[trancheId];
-            sum += boostedAssets * trancheBoostedAPRsWads[trancheId];
-        }
-
-        sum = sum * lendingTermSeconds / YEAR;
-        return sum / WAD;
+        return allLendersEffectiveAprWad() * collectedAssets / WAD * lendingTermSeconds / YEAR;
     }
 
     function allLendersInterestByDate() public view returns (uint) {
@@ -902,7 +880,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         return weightedSum / totalStakedAssets;
     }
-
+    
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
         emit LenderTrancheRewardsChange(
             lenderAddress,
@@ -917,5 +895,23 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _stableCoinContract() internal view returns (IERC20Upgradeable) {
         return IERC20Upgradeable(stableCoinContractAddress);
+    }
+
+    /// @dev calculates WAD ** N using exponentiation by squaring algorithm.
+    /// it's O(log(N) instead of O(N) for naive repeated multiplication.
+    function _wadPow(uint _xWad, uint _n) internal pure returns(uint) {
+        uint xWad = _xWad;
+        uint n = _n;
+        uint result = n % 2 != 0 ? xWad : WAD;
+
+        for (n /= 2; n != 0; n /= 2) {
+            xWad = (xWad * xWad) / WAD;
+
+            if (n % 2 != 0) {
+                result = (result * xWad) / WAD;
+            }
+        }
+
+        return result;
     }
 }

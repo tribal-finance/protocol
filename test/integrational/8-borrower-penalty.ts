@@ -172,7 +172,7 @@ describe("Penalties", function () {
           ).to.be.revertedWith("LP202");
         });
 
-        it("will allow borrower to repay interest more than penalty + amount to get back to healthy", async () => {
+        it("will not allow borrower to repay interest more than penalty + amount to get back to healthy", async () => {
           "LendingPool: penalty+interest will not bring pool to healthy state";
           const data = await loadFixture(uniPoolFixtureWithPenalty);
           const { usdc, lendingPool, borrower } = data;
@@ -181,7 +181,6 @@ describe("Penalties", function () {
 
           const outstandingInterestBefore =
             await lendingPool.borrowerOutstandingInterest();
-          console.log("outstandingInterestBefore: ", outstandingInterestBefore);
 
           // penalty: ~ 7927
           // amount to get back to healthy: 4750
@@ -190,12 +189,10 @@ describe("Penalties", function () {
             .approve(lendingPool.address, USDC(13000));
           await expect(
             lendingPool.connect(borrower).borrowerPayInterest(USDC(13000))
-          ).not.to.be.reverted;
+          ).not.to.be.revertedWith("LP202");
 
           const outstandingInterestAfter =
             await lendingPool.borrowerOutstandingInterest();
-
-          console.log("outstandingInterestAfter: ", outstandingInterestAfter);
 
           const paymentMinusPenalty = USDC(13000).sub(penalty);
           // everything but penalty went to the interest payments
