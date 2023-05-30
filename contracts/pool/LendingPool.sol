@@ -39,7 +39,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         BORROWER_INTEREST_REPAID,
         DELINQUENT,
         REPAID,
-        DEFAULTED
+        DEFAULTED,
+        FLC_WITHDRAWN
     }
 
     struct LendingPoolParams {
@@ -102,6 +103,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     uint64 public flcDepositedAt;
     uint64 public borrowedAt;
     uint64 public repaidAt;
+    uint64 public flcWithdrawntAt;
+
     /* Interests & Yields */
     uint public collectedAssets;
     uint public borrowedAssets;
@@ -178,6 +181,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     event PoolDelinquent(uint64 delinquentAt);
     event PoolRecoverFromDelinquency(uint64 recoveredAt);
     event PoolDefaulted(uint64 defaultedAt);
+    event PoolFirstLossCapitalWithdrawn(uint64 flcWithdrawntAt);
 
     // Lender //
     event LenderDeposit(address indexed lender, uint8 indexed trancheId, uint256 amount);
@@ -206,6 +210,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     );
     event BorrowerPayPenalty(address indexed borrower, uint amount);
     event BorrowerRepayPrincipal(address indexed borrower, uint amount);
+    event BorrowerWithdrawFirstLossCapital(address indexed borrower, uint amount);
 
     /*///////////////////////////////////
        INITIALIZATION
@@ -318,6 +323,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /// @notice This function returns the current stage of the pool
     function currentStage() public view returns (Stages stage) {
+        if (flcWithdrawntAt != 0) {
+            return Stages.FLC_WITHDRAWN;
+        }
         if (repaidAt != 0) {
             return Stages.REPAID;
         }
@@ -406,6 +414,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         emit PoolRepaid(repaidAt);
     }
 
+    function _transitionToFlcWithdrawnStage(uint flcAssets) internal {
+        flcWithdrawntAt = uint64(block.timestamp);
+        emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
+    }
+
     /*///////////////////////////////////
       Lender (please also see onTrancheDeposit() and onTrancheWithdraw())
       Error group: 1
@@ -444,7 +457,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function lenderUnlockPlatformTokensByTranche(
         uint8 trancheId,
         uint platformTokens
-    ) external onlyLender atStage(Stages.REPAID) {
+    ) external onlyLender atStages2(Stages.REPAID, Stages.FLC_WITHDRAWN) {
         require(!s_rollOverSettings[msg.sender].platformTokens, "LP102");// "LendingPool: tokens are locked for rollover"
         require(lenderRewardsByTrancheRedeemable(_msgSender(), trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
 
@@ -468,13 +481,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function lenderRedeemRewardsByTranche(
         uint8 trancheId,
         uint toWithdraw
-    ) public onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
+    ) public onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) {
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
         if (toWithdraw == 0) {
             return;
         }
         uint maxWithdraw = lenderRewardsByTrancheRedeemable(_msgSender(), trancheId);
-        require(toWithdraw < maxWithdraw, "LP106"); // "LendingPool: amount to withdraw is too big"
+        require(toWithdraw <= maxWithdraw, "LP106"); // "LendingPool: amount to withdraw is too big"
         s_trancheRewardables[trancheId][_msgSender()].redeemedRewards += toWithdraw;
 
         SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), _msgSender(), toWithdraw);
@@ -492,7 +505,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderRedeemRewards(
         uint[] calldata toWithdraws
-    ) external onlyLender atStages3(Stages.BORROWED, Stages.BORROWER_INTEREST_REPAID, Stages.REPAID) {
+    ) external onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) {
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); //"LendingPool: rewards are locked for rollover"
         require(toWithdraws.length == tranchesCount, "LP107"); //"LendingPool: wrong amount of tranches"
         for(uint8 i; i < toWithdraws.length; i++) {
@@ -693,7 +706,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         emit BorrowerPayInterest(borrowerAddress, assets, assetsForLenders, assetsToSendToFeeSharing);
     }
 
-    function borrowerRepayPrincipal() external onlyPoolBorrower {
+    function borrowerRepayPrincipal() external onlyPoolBorrower atStage(Stages.BORROWED) {
+        require(borrowerOutstandingInterest() == 0, "LP203"); // "LendingPool: interest must be paid before repaying principal"
+        require(borrowerPenaltyAmount() == 0, "LP204"); // "LendingPool: penalty must be paid before repaying principal"
+
         SafeERC20Upgradeable.safeTransferFrom(
             _stableCoinContract(),
             _msgSender(),
@@ -710,6 +726,16 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             tv.enableWithdrawals();
         }
         _transitionToPrincipalRepaidStage(borrowedAssets);
+    }
+
+    function borrowerWithdrawFirstLossCapitalAndExcessSpread() external onlyPoolBorrower atStage(Stages.REPAID) {
+        uint assetsToSend = firstLossAssets + borrowerExcessSpread();
+        SafeERC20Upgradeable.safeTransfer(
+            _stableCoinContract(),
+            borrowerAddress,
+            assetsToSend
+        );
+        _transitionToFlcWithdrawnStage(assetsToSend);
     }
 
     /* VIEWS */
@@ -814,7 +840,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     ) external authTrancheVault(trancheId) {
         require(!s_rollOverSettings[depositorAddress].principal, "LP301"); // "LendingPool: principal locked for rollover"
 
-        if (currentStage() == Stages.REPAID) {
+        if (currentStage() == Stages.REPAID || currentStage() == Stages.FLC_WITHDRAWN) {
             emit LenderWithdraw(depositorAddress, trancheId, amount);
         } else {
             Rewardable storage rewardable = s_trancheRewardables[trancheId][depositorAddress];
