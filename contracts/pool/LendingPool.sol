@@ -29,6 +29,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint64 start;
     }
 
+    struct RollOverSetting {
+        bool enabled;
+        bool principal;
+        bool rewards;
+        bool platformTokens;
+    }
+
     enum Stages {
         INITIAL,
         OPEN,
@@ -122,6 +129,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /// @dev trancheId => lockedTokens
     mapping(uint8 => uint256) internal s_totalLockedPlatformTokensByTranche;
 
+    /// @dev lenderAddress => RollOverSetting
+    mapping(address => RollOverSetting) private s_rollOverSettings;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -179,8 +189,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     event PoolFunded(uint64 fundedAt, uint collectedAssets);
     event PoolFundingFailed(uint64 fundingFailedAt);
     event PoolRepaid(uint64 repaidAt);
-    event PoolDelinquent(uint64 delinquentAt);
-    event PoolRecoverFromDelinquency(uint64 recoveredAt);
     event PoolDefaulted(uint64 defaultedAt);
     event PoolFirstLossCapitalWithdrawn(uint64 flcWithdrawntAt);
 
@@ -193,9 +201,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint8 indexed trancheId,
         uint lenderEffectiveAprWad,
         uint totalExpectedRewards,
-        uint totalGeneratedRewards,
-        uint redeemedRewards,
-        uint redeemableRewards
+        uint redeemedRewards
     );
     event LenderLockPlatformTokens(address indexed lender, uint8 indexed trancheId, uint256 amount);
     event LenderUnlockPlatformTokens(address indexed lender, uint8 indexed trancheId, uint256 amount);
@@ -301,6 +307,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
                 "LP020" // "LendingPool: tranche boosted APRs < tranche APRs"
             );
         }
+
+        // TODO: confirm and check that trancheBoostedAPR + protocolFee <= borrowerInterest
 
         require(_feeSharingContractAddress != address(0), "LP021");// "LendingPool: feeSharingAddress empty"
         require(_authorityAddress != address(0), "LP022");// "LendingPool: authorityAddress empty"
@@ -616,15 +624,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        Rollover settings
     ///////////////////////////////////*/
-    struct RollOverSetting {
-        bool enabled;
-        bool principal;
-        bool rewards;
-        bool platformTokens;
-    }
-
-    mapping(address => RollOverSetting) private s_rollOverSettings;
-
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
         s_rollOverSettings[_msgSender()] = RollOverSetting(
             true,
@@ -915,9 +914,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             trancheId,
             lenderEffectiveAprByTrancheWad(lenderAddress, trancheId),
             lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId),
-            lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId),
-            lenderRewardsByTrancheRedeemed(lenderAddress, trancheId),
-            lenderRewardsByTrancheRedeemable(lenderAddress, trancheId)
+            lenderRewardsByTrancheRedeemed(lenderAddress, trancheId)
         );
     }
 
