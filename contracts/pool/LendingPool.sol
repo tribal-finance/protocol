@@ -94,6 +94,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     uint[] public trancheBoostRatios;
     uint[] public trancheCoveragesWads;
     /* Other contract addresses */
+    address public poolFactoryAddress;
     address public feeSharingContractAddress;
     address[] public trancheVaultAddresses;
     /* Some Timestamps */
@@ -220,7 +221,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
         address _feeSharingContractAddress,
-        address _authorityAddress
+        address _authorityAddress,
+        address _poolFactoryAddress
     ) external initializer {
         _validateInitParams(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
 
@@ -248,6 +250,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         trancheVaultAddresses = _trancheVaultAddresses;
         feeSharingContractAddress = _feeSharingContractAddress;
+        poolFactoryAddress = _poolFactoryAddress;
 
         __Ownable_init();
         __Pausable_init();

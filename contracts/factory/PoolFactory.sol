@@ -129,7 +129,8 @@ contract PoolFactory is AuthorityAware {
             params,
             trancheVaultAddresses,
             _feeSharingContractAddress,
-            address(authority)
+            address(authority),
+            address(this)
         );
         OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
 
