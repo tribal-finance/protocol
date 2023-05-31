@@ -175,7 +175,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address _authorityAddress
     );
     event PoolOpen(uint64 openedAt);
-    event PoolFunded(uint64 fundedAt);
+    event PoolFunded(uint64 fundedAt, uint collectedAssets);
     event PoolFundingFailed(uint64 fundingFailedAt);
     event PoolRepaid(uint64 repaidAt);
     event PoolDelinquent(uint64 delinquentAt);
@@ -382,8 +382,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             tv.sendAssetsToPool(tv.totalAssets());
         }
 
-        emit PoolFunded(fundedAt);
-        emit PoolFunded(fundedAt);
+        emit PoolFunded(fundedAt, collectedAssets);
     }
 
     function _transitionToFundingFailedStage() internal {
