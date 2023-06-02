@@ -143,24 +143,40 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
        MODIFIERS
     ///////////////////////////////////*/
     modifier authTrancheVault(uint8 id) {
+        _authTrancheVault(id);
+        _;
+    }
+
+    function _authTrancheVault(uint8 id) internal view {
         require(id < trancheVaultAddresses.length, "LP001"); // "LendingPool: invalid trancheVault id"
         require(trancheVaultAddresses[id] == _msgSender(), "LP002"); // "LendingPool: trancheVault auth"
-        _;
     }
 
     modifier onlyPoolBorrower() {
-        require(_msgSender() == borrowerAddress, "LP003");// "LendingPool: not a borrower"
+        _onlyPoolBorrower();
         _;
+    }
+
+    function _onlyPoolBorrower() internal view {
+        require(_msgSender() == borrowerAddress, "LP003");// "LendingPool: not a borrower"
     }
 
     modifier atStage(Stages _stage) {
-        require(currentStage() == _stage, "LP004");// "LendingPool: not at correct stage"
+        _atStage(_stage);
         _;
     }
 
+    function _atStage(Stages _stage) internal view {
+        require(currentStage() == _stage, "LP004");// "LendingPool: not at correct stage"
+    }
+
     modifier atStages2(Stages _stage1, Stages _stage2) {
-        require(currentStage() == _stage1 || currentStage() == _stage2, "LP004");// "LendingPool: not at correct stage"
+        _atStages2(_stage1, _stage2);
         _;
+    }
+
+    function _atStages2(Stages _stage1, Stages _stage2) internal view {
+        require(currentStage() == _stage1 || currentStage() == _stage2, "LP004");// "LendingPool: not at correct stage"
     }
 
     modifier atStages3(
@@ -168,11 +184,19 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         Stages _stage2,
         Stages _stage3
     ) {
+        _atStages3(_stage1, _stage2, _stage3);
+        _;
+    }
+
+    function _atStages3(
+        Stages _stage1,
+        Stages _stage2,
+        Stages _stage3
+    ) internal view {
         require(
             currentStage() == _stage1 || currentStage() == _stage2 || currentStage() == _stage3,
             "LP004" // "LendingPool: not at correct stage"
         );
-        _;
     }
 
     /*///////////////////////////////////
@@ -760,7 +784,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             uint balanceDifference = poolBalanceThreshold() - poolBalance();
             require(assets >= penalty + balanceDifference, "LP202"); // "LendingPool: penalty+interest will not bring pool to healthy state"
         }
-        
+
         uint feeableInterestAmount = assets - penalty;
         if (feeableInterestAmount > borrowerOutstandingInterest()) {
             feeableInterestAmount = borrowerOutstandingInterest();
