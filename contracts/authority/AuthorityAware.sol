@@ -18,7 +18,7 @@ abstract contract AuthorityAware is OwnableUpgradeable {
     function _onlyOwnerOrAdmin() internal view {
         require(
             owner() == msg.sender || authority.isAdmin(msg.sender),
-            "AuthorityAware: caller is not the owner or admin"
+            "AA:OA" // "AuthorityAware: caller is not the owner or admin"
         );
     }
 
@@ -28,7 +28,10 @@ abstract contract AuthorityAware is OwnableUpgradeable {
     }
     
     function _onlyAdmin() internal view {
-        require(authority.isAdmin(msg.sender), "AuthorityAware: caller is not an admin");
+        require(
+            authority.isAdmin(msg.sender),
+            "AA:A" // "AuthorityAware: caller is not an admin"
+        );
     }
 
     modifier onlyBorrower() {
@@ -37,11 +40,17 @@ abstract contract AuthorityAware is OwnableUpgradeable {
     }
 
     function _onlyBorrower() internal view {
-        require(authority.isWhitelistedBorrower(msg.sender), "AuthorityAware: caller is not a whitelisted borrower");
+        require(
+            authority.isWhitelistedBorrower(msg.sender),
+            "AA:B" // "AuthorityAware: caller is not a whitelisted borrower"
+        );
     }
 
     modifier onlyLender() {
-        require(authority.isWhitelistedLender(msg.sender), "AuthorityAware: caller is not a whitelisted lender");
+        require(
+            authority.isWhitelistedLender(msg.sender),
+            "AA:L" // "AuthorityAware: caller is not a whitelisted lender"
+        );
         _;
     }
 
@@ -56,7 +65,7 @@ abstract contract AuthorityAware is OwnableUpgradeable {
                 authority.isWhitelistedBorrower(msg.sender) ||
                 authority.isWhitelistedLender(msg.sender) ||
                 authority.isAdmin(msg.sender),
-            "AuthorityAware: caller is not a whitelisted borrower or lender"
+            "AA:W" // "AuthorityAware: caller is not a whitelisted borrower or lender"
         );
     }
 
