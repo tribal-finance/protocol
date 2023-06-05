@@ -800,11 +800,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             assets
         );
 
-        SafeERC20Upgradeable.safeTransfer(
-            _stableCoinContract(),
-            feeSharingContractAddress,
-            assetsToSendToFeeSharing
-        );
+        if (assetsToSendToFeeSharing > 0) {
+            SafeERC20Upgradeable.safeTransfer(
+                _stableCoinContract(),
+                feeSharingContractAddress,
+                assetsToSendToFeeSharing
+            );
+        }
 
         if (penalty > 0) {
             emit BorrowerPayPenalty(_msgSender(), penalty);
