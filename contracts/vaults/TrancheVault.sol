@@ -346,7 +346,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 shares) {
         if (isDefaulted()) {
-            return assets.mulDiv(10**18, s_defaultRatioWad, rounding);
+            return assets.mulDiv(10 ** 18, s_defaultRatioWad, rounding);
         }
         return _initialConvertToShares(assets, rounding);
     }
@@ -357,7 +357,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 assets) {
         if (isDefaulted()) {
-            return shares.mulDiv(s_defaultRatioWad, 10**18, rounding);
+            return shares.mulDiv(s_defaultRatioWad, 10 ** 18, rounding);
         }
         return _initialConvertToAssets(shares, rounding); // 1:1
     }

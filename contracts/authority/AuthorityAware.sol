@@ -11,7 +11,7 @@ abstract contract AuthorityAware is OwnableUpgradeable {
     IAuthority public authority;
 
     modifier onlyOwnerOrAdmin() {
-        _onlyOwnerOrAdmin();                            
+        _onlyOwnerOrAdmin();
         _;
     }
 
@@ -26,7 +26,7 @@ abstract contract AuthorityAware is OwnableUpgradeable {
         _onlyAdmin();
         _;
     }
-    
+
     function _onlyAdmin() internal view {
         require(
             authority.isAdmin(msg.sender),

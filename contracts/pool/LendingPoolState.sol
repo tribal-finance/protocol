@@ -6,5 +6,5 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 /** @dev state variables + getters, setters and events for LendingPool
  */
 abstract contract LendingPoolState {
-    
+
 }
