@@ -112,6 +112,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     uint64 public borrowedAt;
     uint64 public repaidAt;
     uint64 public flcWithdrawntAt;
+    uint64 public defaultedAt;
 
     /* Interests & Yields */
     uint public collectedAssets;
@@ -358,6 +359,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /// @notice This function returns the current stage of the pool
     function currentStage() public view returns (Stages stage) {
+        if (defaultedAt != 0) {
+            return Stages.DEFAULTED;
+        }
         if (flcWithdrawntAt != 0) {
             return Stages.FLC_WITHDRAWN;
         }
@@ -407,6 +411,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         }
     }
 
+    function adminTransitionToDefaultedState() external onlyOwnerOrAdmin atStage(Stages.BORROWED) {
+        require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023");// "LendingPool: maturityDate not reached"
+        _transitionToDefaultedStage();
+    }
+
     function _transitionToFundedStage() internal {
         fundedAt = uint64(block.timestamp);
 
@@ -451,6 +460,31 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function _transitionToFlcWithdrawnStage(uint flcAssets) internal {
         flcWithdrawntAt = uint64(block.timestamp);
         emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
+    }
+
+    function _transitionToDefaultedStage() internal {
+        defaultedAt = uint64(block.timestamp);
+
+        uint availableAssets = _stableCoinContract().balanceOf(address(this));
+
+        for(uint i; i < trancheVaultAddresses.length; i++) {
+            TrancheVault tv = _trancheVaultContracts()[i];
+            uint assetsToSend = trancheCoveragesWads[i] * availableAssets / WAD;
+
+            uint trancheDefaultRatioWad = assetsToSend * WAD / tv.totalAssets();
+            if (assetsToSend > 0) {
+                SafeERC20Upgradeable.safeTransfer(
+                    _stableCoinContract(),
+                    address(tv),
+                    assetsToSend
+                );
+            }
+
+            tv.setDefaultRatioWad(trancheDefaultRatioWad);
+            tv.enableWithdrawals();
+        }
+
+        emit PoolDefaulted(defaultedAt);
     }
 
     /*///////////////////////////////////
