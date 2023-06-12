@@ -2,6 +2,7 @@ import { ethers, upgrades, network } from "hardhat";
 import dotenv from "dotenv";
 import {
   DeployedContractsType,
+  deployDuotranchePool,
   deployUnitranchePool,
 } from "../../../lib/pool_deployments";
 import { USDC, WAD } from "../../../test/helpers/conversion";
@@ -9,6 +10,7 @@ import { USDC, WAD } from "../../../test/helpers/conversion";
 dotenv.config({ path: `./.env.${network.name}` });
 
 const WAIT_CONFIRMATIONS = 1;
+const AFTER_APPROVE_WAIT_CONFIRMATIONS = 3;
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -53,21 +55,21 @@ async function main() {
   await authorityContract.connect(deployer).addBorrower(customBorrower.address);
   console.log("Added borrower " + customBorrower.address + " to authority");
 
-  const cs = await deployUnitranchePool(
+  const cs = await deployDuotranchePool(
     poolFactoryContract,
     deployer,
     customBorrower,
     [customLender],
     {
-      name: "DontChange-SeedTestQAPool-1",
+      name: "DontChange-SeedTestQAPool-3",
       token: "TST",
       stableCoinContractAddress: USDCContract.address,
       platformTokenContractAddress: TribalTokenContract.address,
-      minFundingCapacity: USDC(100),
+      minFundingCapacity: USDC(200),
       maxFundingCapacity: USDC(300),
-      fundingPeriodSeconds: 60 * 30,
+      fundingPeriodSeconds: 60 * 60 * 24 * 300,
       lendingTermSeconds: 60 * 60 * 24 * 300,
-      borrowerAddress: customBorrower.address,
+      borrowerAddress: "0xbc2C99956b273AAE2bd06DD5ef92F5DDC1Dc310B",
       firstLossAssets: USDC(1),
       borrowerTotalInterestRateWad: WAD(0.3),
       repaymentRecurrenceDays: 30,
@@ -75,19 +77,27 @@ async function main() {
       protocolFeeWad: WAD(0.1),
       defaultPenalty: 0,
       penaltyRateWad: WAD(0.02),
-      tranchesCount: 1,
-      trancheAPRsWads: [WAD(0.1)],
-      trancheBoostedAPRsWads: [WAD(0.1)],
-      trancheBoostRatios: [ethers.utils.parseUnits("2", 12)],
-      trancheCoveragesWads: [WAD(1)],
+      tranchesCount: 2,
+      trancheAPRsWads: [WAD(0.1), WAD(0.12)],
+      trancheBoostedAPRsWads: [WAD(0.11), WAD(0.14)],
+      trancheBoostRatios: [
+        ethers.utils.parseUnits("2", 12),
+        ethers.utils.parseUnits("2", 12),
+      ],
+      trancheCoveragesWads: [WAD(0.8), WAD(0.2)],
     },
     async (contracts: DeployedContractsType) => {
       return contracts;
     }
   );
-  const { lendingPool, firstTrancheVault, secondTrancheVault } = cs;
+  const { lendingPool, firstTrancheVault } = cs;
+  const secondTrancheVault = await ethers.getContractAt(
+    "TrancheVault",
+    await lendingPool.trancheVaultAddresses(1)
+  );
+
   console.log(
-    "============== Deployed Unitranche Pool: ",
+    "============== Deployed Multi Pool: ",
     lendingPool.address,
     " =============="
   );
@@ -98,7 +108,7 @@ async function main() {
     lendingPool.address,
     await lendingPool.firstLossAssets()
   );
-  await tx.wait(3);
+  await tx.wait(AFTER_APPROVE_WAIT_CONFIRMATIONS);
   console.log("approved spend for borrower");
   tx = await lendingPool
     .connect(customBorrower)
@@ -111,23 +121,47 @@ async function main() {
   await tx.wait(WAIT_CONFIRMATIONS);
   console.log("the pool is open");
 
-  // 3. deposit as custom lender
+  // 3. deposit 50 usdc to first tranche as custom lender
   tx = await USDCContract.connect(customLender).approve(
     firstTrancheVault.address,
-    USDC(100)
+    USDC(50)
   );
-  await tx.wait(WAIT_CONFIRMATIONS);
+  await tx.wait(AFTER_APPROVE_WAIT_CONFIRMATIONS);
   console.log("approved spend for borrower");
+
   tx = await firstTrancheVault
     .connect(customLender)
-    .deposit(USDC(100), customLender.address);
+    .deposit(USDC(50), customLender.address);
   await tx.wait(WAIT_CONFIRMATIONS);
-  console.log("deposited 100 USDC as custom lender");
+  console.log("deposited 50 USDC to senior tranhce as custom lender");
 
-  // 4. deposit move to funded stage
-  tx = await lendingPool.connect(deployer).adminTransitionToFundedState();
+  // 4. Lock 100 tribal tokens and boost senior tranche to 11%
+  tx = await TribalTokenContract.connect(customLender).approve(
+    lendingPool.address,
+    ethers.utils.parseEther("100")
+  );
+  await tx.wait(AFTER_APPROVE_WAIT_CONFIRMATIONS);
+  console.log("approved TRIBAL spend for lender");
+
+  tx = await lendingPool
+    .connect(customLender)
+    .lenderLockPlatformTokensByTranche(0, ethers.utils.parseEther("100"));
+  await tx.wait(3);
+  console.log("locked 100 TRIBAL tokens");
+
+  // 5. deposit 20 usdc to second tranche as custom lender
+  tx = await USDCContract.connect(customLender).approve(
+    secondTrancheVault.address,
+    USDC(20)
+  );
+  await tx.wait(AFTER_APPROVE_WAIT_CONFIRMATIONS);
+  console.log("approved spend for custom lender");
+
+  tx = await secondTrancheVault
+    .connect(customLender)
+    .deposit(USDC(20), customLender.address);
   await tx.wait(WAIT_CONFIRMATIONS);
-  console.log("the pool is funded");
+  console.log("deposited 20 USDC to junior tranche as custom lender");
 }
 
 main().catch((error) => {

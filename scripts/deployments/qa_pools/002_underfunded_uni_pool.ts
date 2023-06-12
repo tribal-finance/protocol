@@ -59,7 +59,7 @@ async function main() {
     customBorrower,
     [customLender],
     {
-      name: "DontChange-SeedTestQAPool-1",
+      name: "DontChange-SeedTestQAPool-2",
       token: "TST",
       stableCoinContractAddress: USDCContract.address,
       platformTokenContractAddress: TribalTokenContract.address,
@@ -67,7 +67,7 @@ async function main() {
       maxFundingCapacity: USDC(300),
       fundingPeriodSeconds: 60 * 30,
       lendingTermSeconds: 60 * 60 * 24 * 300,
-      borrowerAddress: customBorrower.address,
+      borrowerAddress: "0xbc2C99956b273AAE2bd06DD5ef92F5DDC1Dc310B",
       firstLossAssets: USDC(1),
       borrowerTotalInterestRateWad: WAD(0.3),
       repaymentRecurrenceDays: 30,
@@ -77,7 +77,7 @@ async function main() {
       penaltyRateWad: WAD(0.02),
       tranchesCount: 1,
       trancheAPRsWads: [WAD(0.1)],
-      trancheBoostedAPRsWads: [WAD(0.1)],
+      trancheBoostedAPRsWads: [WAD(0.12)],
       trancheBoostRatios: [ethers.utils.parseUnits("2", 12)],
       trancheCoveragesWads: [WAD(1)],
     },
@@ -98,7 +98,7 @@ async function main() {
     lendingPool.address,
     await lendingPool.firstLossAssets()
   );
-  await tx.wait(3);
+  await tx.wait(WAIT_CONFIRMATIONS);
   console.log("approved spend for borrower");
   tx = await lendingPool
     .connect(customBorrower)
@@ -114,20 +114,20 @@ async function main() {
   // 3. deposit as custom lender
   tx = await USDCContract.connect(customLender).approve(
     firstTrancheVault.address,
-    USDC(100)
+    USDC(50)
   );
   await tx.wait(WAIT_CONFIRMATIONS);
   console.log("approved spend for borrower");
   tx = await firstTrancheVault
     .connect(customLender)
-    .deposit(USDC(100), customLender.address);
+    .deposit(USDC(50), customLender.address);
   await tx.wait(WAIT_CONFIRMATIONS);
-  console.log("deposited 100 USDC as custom lender");
+  console.log("deposited 50 USDC as custom lender");
 
   // 4. deposit move to funded stage
-  tx = await lendingPool.connect(deployer).adminTransitionToFundedState();
-  await tx.wait(WAIT_CONFIRMATIONS);
-  console.log("the pool is funded");
+  // tx = await lendingPool.connect(deployer).adminTransitionToFundedState();
+  // await tx.wait(WAIT_CONFIRMATIONS);
+  // console.log("the pool is funded");
 }
 
 main().catch((error) => {
