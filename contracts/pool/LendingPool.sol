@@ -16,7 +16,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        CONSTANTS
     ///////////////////////////////////*/
-    string public constant VERSION = "2023-06-07";
+    string public constant VERSION = "2023-06-12";
 
     uint internal constant WAD = 10 ** 18;
     uint internal constant DAY = 24 * 60 * 60;
@@ -410,6 +410,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function adminTransitionToDefaultedState() external onlyOwnerOrAdmin atStage(Stages.BORROWED) {
         require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023"); // "LendingPool: maturityDate not reached"
         _transitionToDefaultedStage();
+    }
+
+    function __todoRemoveMeChangeFundedAt(uint64 newFundedAt) external onlyOwnerOrAdmin {
+        fundedAt = newFundedAt;
+        emit PoolFunded(fundedAt, collectedAssets);
     }
 
     function _transitionToFundedStage() internal {
