@@ -6,7 +6,6 @@ import {
   deployUnitranchePool,
 } from "../../lib/pool_deployments";
 
-console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
