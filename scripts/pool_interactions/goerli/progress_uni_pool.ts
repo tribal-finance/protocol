@@ -11,7 +11,7 @@ import { USDC } from "../../../test/helpers/conversion";
 console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });
 
-const LENDING_POOL_ADDRESS = "0x234408847843711C03a484b9FaCa780fF893938b";
+const LENDING_POOL_ADDRESS = "0x5D78987A47acc7F0aA20eb37475d5D2eEEF26599";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -25,6 +25,11 @@ async function main() {
   const poolContract = await ethers.getContractAt(
     "LendingPool",
     LENDING_POOL_ADDRESS
+  );
+
+  const tribalTokenContract = await ethers.getContractAt(
+    "TribalToken",
+    process.env.TRIBAL_TOKEN_ADDRESS!
   );
 
   const tranchesCount = await poolContract.tranchesCount();
@@ -65,9 +70,11 @@ async function main() {
   //   poolContract.address,
   //   USDC(2000)
   // );
-  // tx.wait();
+  // await tx.wait(3);
   // console.log("approved spend");
   // tx = await poolContract.connect(borrower).borrowerDepositFirstLossCapital();
+  // await tx.wait();
+  // console.log("deposited money");
 
   /* !!!!!!!!!!!! 1. Open the Lending Pool !!!!!!!!!!!!!!!!!!!!*/
   // tx = await poolContract.connect(deployer).adminOpenPool();
@@ -79,13 +86,25 @@ async function main() {
   //   trancheContracts[0].address,
   //   USDC(10000)
   // );
-  // await tx.wait();
+  // await tx.wait(3);
   // console.log("approved spend");
   // tx = await trancheContracts[0]
   //   .connect(lender1)
   //   .deposit(USDC(10000), lender1.address);
   // await tx.wait();
   // console.log("deposited money");
+
+  /* !!!!!!!!!!!! 2b. Boost deposit !!!!!!!!!!!!!!!!!!!!*/
+  // const boostAmount = ethers.utils.parseUnits("20000", 18);
+  // tx = await tribalTokenContract
+  //   .connect(lender1)
+  //   .approve(poolContract.address, boostAmount);
+  // await tx.wait(3);
+  // console.log("approved boost spend");
+
+  // tx = await poolContract
+  //   .connect(lender1)
+  //   .lenderLockPlatformTokensByTranche(0, boostAmount);
 
   /* !!!!!!!!!!!! 3. Move to funded state !!!!!!!!!!!!!!!!!!!!*/
   // tx = await poolContract.connect(deployer).adminTransitionToFundedState();
@@ -114,18 +133,18 @@ async function main() {
   // );
 
   /* !!!!!!!!!!!! 6. Pay interest !!!!!!!!!!!!!!!!!!!!*/
-  const interestToRepay = USDC(250);
-  tx = await USDCContract.connect(borrower).approve(
-    poolContract.address,
-    interestToRepay
-  );
-  await tx.wait();
-  console.log("approved interst spend");
-  tx = await poolContract
-    .connect(borrower)
-    .borrowerPayInterest(interestToRepay);
-  await tx.wait();
-  console.log("deposited interest money");
+  // const interestToRepay = USDC(250);
+  // tx = await USDCContract.connect(borrower).approve(
+  //   poolContract.address,
+  //   interestToRepay
+  // );
+  // await tx.wait();
+  // console.log("approved interst spend");
+  // tx = await poolContract
+  //   .connect(borrower)
+  //   .borrowerPayInterest(interestToRepay);
+  // await tx.wait();
+  // console.log("deposited interest money");
 
   /* !!!!!!!!!!!! 6. Redeem interest !!!!!!!!!!!!!!!!!!!!*/
   // tx = await poolContract.connect(lender1).lenderRedeemRewardsByTranche(0);

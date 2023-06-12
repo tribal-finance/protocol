@@ -5,6 +5,7 @@ import {
   DeployedContractsType,
   deployUnitranchePool,
 } from "../../lib/pool_deployments";
+import { WAD } from "../../test/helpers/conversion";
 
 dotenv.config({ path: `./.env.${network.name}` });
 
@@ -30,6 +31,7 @@ async function main() {
     {
       stableCoinContractAddress: process.env.USDC_ADDRESS!,
       platformTokenContractAddress: process.env.TRIBAL_TOKEN_ADDRESS!,
+      trancheBoostedAPRsWads: [WAD(0.11)],
       // fundingPeriodSeconds: 15 * 24 * 60 * 60,
     },
     async (contracts: DeployedContractsType) => {
