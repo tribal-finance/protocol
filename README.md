@@ -14,4 +14,4 @@ You will find a bunch of scripts for QA pool deployments in `scripts/deployments
 In order to deploy and recreate pools:
 
 1. make sure `.env.goerli` file is populated with latest pool factory address, lending pool implementation and tranche vault implementation addressess.
-2. run `hhr --network goerli scripts/deployments/qa_pools/001_funded_uni_pool.ts`
+2. run `npx hardhat run --network goerli scripts/deployments/qa_pools/001_funded_uni_pool.ts`
