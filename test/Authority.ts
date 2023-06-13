@@ -47,6 +47,10 @@ describe("Authority", function () {
       ).to.be.false;
     });
 
+    it("should not add borrower to the whilist as owner", async () => {
+      
+    })
+
     describe("onlyOwnerOrAdmin", async () => {
 
       it("Prevents senders who are not in admin set", async () => {
