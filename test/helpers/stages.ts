@@ -9,6 +9,7 @@ const STAGES = {
   DILINQUENT: 7,
   REPAID: 8,
   DEFAULTED: 9,
+  FLC_WITHDRAWN: 10,
 };
 
 export default STAGES;

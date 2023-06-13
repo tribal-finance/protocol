@@ -7,13 +7,19 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
 import "../authority/AuthorityAware.sol";
-import "../pool/ILendingPool.sol";
+import "../pool/LendingPool.sol";
+import "../factory/PoolFactory.sol";
 
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
+    using MathUpgradeable for uint256;
+
     /*////////////////////////////////////////////////
       State
     ////////////////////////////////////////////////*/
+
+    mapping(address => mapping(address => uint256)) approvedRollovers;
 
     /* id */
     uint8 private s_id;
@@ -119,6 +125,28 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         bool oldValue = s_transferEnabled;
         s_transferEnabled = newValue;
         emit ChangeTransferEnabled(msg.sender, oldValue, newValue);
+    }
+
+    /* defaultRatio */
+    uint private s_defaultRatioWad;
+    event ChangeDefaultRatio(address indexed actor, uint oldValue, uint newValue);
+
+    function defaultRatioWad() public view returns (uint) {
+        return s_defaultRatioWad;
+    }
+
+    function isDefaulted() public view returns (bool) {
+        return s_defaultRatioWad != 0;
+    }
+
+    function _setDefaultRatioWad(uint newValue) internal {
+        uint oldValue = s_defaultRatioWad;
+        s_defaultRatioWad = newValue;
+        emit ChangeDefaultRatio(msg.sender, oldValue, newValue);
+    }
+
+    function setDefaultRatioWad(uint newValue) external onlyPool {
+        _setDefaultRatioWad(newValue);
     }
 
     /*////////////////////////////////////////////////
@@ -227,6 +255,38 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
+    /**@dev used to approve the process of the rollover to deployments that do not yet exist (executed with older tranche before creation of next tranche) */
+    function approveRollover(address lender, uint256 assets) external onlyOwnerOrPool {
+        LendingPool pool = LendingPool(poolAddress());
+        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
+
+        address[8] memory futureTranches = factory.nextTranches();
+        for (uint256 i = 0; i < futureTranches.length; i++) {
+            //super.approve(futureTranches[i], convertToShares(amount));
+            approvedRollovers[lender][futureTranches[i]] = assets;
+        }
+    }
+
+    function executeRolloverAndBurn(address lender, uint256 rewards) external returns (uint256) {
+        TrancheVault newTranche = TrancheVault(_msgSender());
+        uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
+        uint256 shares = convertToAssets(assets - rewards);
+        _burn(lender, shares);
+        return assets;
+    }
+
+    /**@dev used to process the rollover (executed with newer tranche on deploy) */
+    function rollover(address lender, address deadTrancheAddr, uint256 rewards) external onlyPool {
+        TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
+        require(deadTranche.asset() == asset(), "Incompatible asset types");
+        // transfer in capital from prev tranche
+        uint256 assetsRolled = deadTranche.executeRolloverAndBurn(lender, rewards);
+        IERC20Upgradeable(asset()).approve(address(this), assetsRolled);
+        uint256 shares = previewDeposit(assetsRolled);
+        _deposit(address(this), lender, assetsRolled, shares);
+    }
+
     /*////////////////////////////////////////////////
         ERC-4626 Overrides
     ////////////////////////////////////////////////*/
@@ -321,6 +381,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 assets,
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 shares) {
+        if (isDefaulted()) {
+            return assets.mulDiv(10 ** 18, s_defaultRatioWad, rounding);
+        }
         return _initialConvertToShares(assets, rounding);
     }
 
@@ -329,6 +392,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 shares,
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 assets) {
+        if (isDefaulted()) {
+            return shares.mulDiv(s_defaultRatioWad, 10 ** 18, rounding);
+        }
         return _initialConvertToAssets(shares, rounding); // 1:1
     }
 
@@ -342,7 +408,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // slither-disable-next-line reentrancy-no-eth
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
-        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
+        LendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -363,7 +429,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
         _burn(owner, shares);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), receiver, assets);
-        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
+        LendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }

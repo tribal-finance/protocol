@@ -4,14 +4,14 @@ import {
   deployDuotranchePool,
   DeployedContractsType,
   deployUnitranchePool,
-} from "../../lib/pool_deployments";
-import { STAGES_LOOKUP } from "../../test/helpers/stages";
-import { USDC } from "../../test/helpers/conversion";
+} from "../../../lib/pool_deployments";
+import { STAGES_LOOKUP } from "../../../test/helpers/stages";
+import { USDC } from "../../../test/helpers/conversion";
 
 console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });
 
-const LENDING_POOL_ADDRESS = "0xFb2C9dD9bEDDfaCc6F3CE79691cb7EC92c22A1e7";
+const LENDING_POOL_ADDRESS = "0x58966a3dC0492859a59D22326DC86165ED8e6c74";
 
 async function main() {
   const [deployer, lender1, lender2, borrower] = await ethers.getSigners();
@@ -42,7 +42,8 @@ async function main() {
     ethers.utils.formatUnits(await poolContract.collectedAssets(), 6)
   );
 
-  const trancheVaultAddresses = await poolContract.trancheVaultAddresses();
+  const trancheVaultAddresses = [await poolContract.trancheVaultAddresses(0)];
+
   const trancheContracts = [];
   for (let tva of trancheVaultAddresses) {
     const contract = await ethers.getContractAt("TrancheVault", tva);

@@ -1,14 +1,17 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-solhint";
-import "@openzeppelin/hardhat-upgrades";
+import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-etherscan";
+import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
+import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-docgen";
-import dotenv from "dotenv";
-import { ethers } from "ethers";
-import { network } from "hardhat";
+import "hardhat-gas-reporter"
+import "@nomicfoundation/hardhat-chai-matchers"
+import "@nomiclabs/hardhat-waffle"
 
+import dotenv from "dotenv";
 dotenv.config({ path: `./.env.shared` });
 
 const config: HardhatUserConfig = {
@@ -61,6 +64,18 @@ const config: HardhatUserConfig = {
     clear: true,
     runOnCompile: false,
   },
+
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  },
+
+  gasReporter: {
+    enabled: true,
+    currency: 'USD',
+    gasPrice: 25
+  }
 };
 
 export default config;
