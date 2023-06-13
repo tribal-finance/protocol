@@ -18,16 +18,6 @@ abstract contract AuthorityAware is OwnableUpgradeable {
         _;
     }
 
-    modifier onlyAdmin() {
-        require(authority.isAdmin(msg.sender), "AuthorityAware: caller is not an admin");
-        _;
-    }
-
-    modifier onlyBorrower() {
-        require(authority.isWhitelistedBorrower(msg.sender), "AuthorityAware: caller is not a whitelisted borrower");
-        _;
-    }
-
     modifier onlyLender() {
         require(authority.isWhitelistedLender(msg.sender), "AuthorityAware: caller is not a whitelisted lender");
         _;

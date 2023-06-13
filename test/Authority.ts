@@ -46,6 +46,24 @@ describe("Authority", function () {
         await authority.isWhitelistedBorrower(await borrower2.getAddress())
       ).to.be.false;
     });
+
+    describe("onlyOwnerOrAdmin", async () => {
+
+      it("Prevents senders who are not in admin set", async () => {
+        const adminSet = await authority.allAdmins();
+        expect(await borrower2.getAddress()).to.not.hexEqual(adminSet[0])
+        await expect(
+          authority.connect(borrower2).addBorrower(await borrower2.getAddress())
+        ).to.be.revertedWith("Authority: caller is not the owner or admin");
+      })
+
+      it("Prevents senders who are not the owner", async () => {
+        const owner = await authority.owner();
+        expect(await borrower1.getAddress()).to.not.hexEqual(await borrower2.getAddress());
+        await expect(
+          authority.connect(borrower1).addBorrower(await borrower2.getAddress())
+        ).to.be.revertedWith("Authority: caller is not the owner or admin");      })
+    })
   });
 
   describe("removeBorrower", function () {
