@@ -15,7 +15,7 @@ import {
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 
-describe("Interests", function () {
+describe("Penalties", function () {
   context("For unitranche pool", function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -86,7 +86,7 @@ describe("Interests", function () {
      * - funds collected: $365,000
      * - lender 1 deposit: $365,000
      * - lending term: 365 days
-     * - lender annual yield: 10%
+     * - lender annual yield: 10% (total: $36,500), $100/day
      * - borrower annual interest rate: 15% (total: $54,750), $150/day
      * - payments expected every 30 days with 5 days grace period
      * - first loss capital: $100,000
@@ -98,7 +98,8 @@ describe("Interests", function () {
         const data = await loadFixture(uniPoolFixture);
         const { usdc, lendingPool, borrower } = data;
         expect(await lendingPool.borrowerPenaltyAmount()).to.be.equal(USDC(0));
-        expect(await lendingPool.poolBalance()).to.be.equal(USDC(100_000));
+        expect(await lendingPool.poolBalance()).to.be.gt(USDC(99_999));
+        expect(await lendingPool.poolBalance()).to.be.lt(USDC(100_000));
       });
 
       it("has zero penalty after 30 days", async () => {
@@ -111,51 +112,30 @@ describe("Interests", function () {
         expect(await lendingPool.borrowerPenaltyAmount()).to.be.equal(USDC(0));
       });
 
-      it("has zero penalty after 100 days because nobody withdrew interest", async () => {
+      it("has ~7297 USDC penalty after 100 days if borrower made no payments", async () => {
         const data = await loadFixture(uniPoolFixture);
         const { usdc, lendingPool, borrower } = data;
 
         // wait 100 days
         await ethers.provider.send("evm_increaseTime", [100 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
-        expect(await lendingPool.borrowerPenaltyAmount()).to.be.equal(USDC(0));
-      });
 
-      it("has penalty after 100 days when lenders did withdraw interest", async () => {
-        const data = await loadFixture(uniPoolFixture);
-        const { usdc, lendingPool, borrower, lenders } = data;
-        const [lender1, lender2] = lenders;
-
-        // wait 100 days
-        await ethers.provider.send("evm_increaseTime", [100 * 24 * 60 * 60]);
-        await ethers.provider.send("evm_mine", []);
-
-        // lender 1 withdraws 10000. Pool balance = 100,000 - 10,000 = 90,000
-        await lendingPool
-          .connect(lender1)
-          .lenderRedeemRewardsByTranche(0, USDC(10000));
-
-        // math:
-        // . pool threshold = 94,750;
-        // . pool balance = 90,000;
-        // . interest per day = $150;
-        // . we need 4,750 more to reach the threshold;
-        // . that's 4,750 / 150 = 31.666 days = 31 day; (we round down)
-        // . penalty = 4,750 * (1.02) ** 31 - 4750 = 4,750 * 1.847588 - 4,750 = 4,026.04687
-        // . but current implementation will lose accuracy if you power 1.02 to 31 (will return 1.36..)
-
-        console.log("penalty: ", await lendingPool.borrowerPenaltyAmount());
+        // pool balance = 100,000 - 100 days * (100$/day interest owed to lenders) = 90,000
+        // pool balance threshold = 94,750
+        // penalty rate = 2%
+        // difference = 4,750
+        // pool delinquent for 4,750 / (100$/day) = 47 days
+        // penalty = 4,750 * (1 + 0.02)^47 - 4,750 = 4,750 * 2.5363435 - 4,750 = 7297.63
 
         expect(await lendingPool.borrowerPenaltyAmount()).to.be.gt(
-          USDC(4026.04)
+          USDC(7297.63)
         );
-
         expect(await lendingPool.borrowerPenaltyAmount()).to.be.lt(
-          USDC(4026.05)
+          USDC(7297.64)
         );
       });
 
-      describe("when there is ~4026 USDC penalty", async () => {
+      describe("when there is ~7297 USDC penalty", async () => {
         async function uniPoolFixtureWithPenalty() {
           const data = await loadFixture(uniPoolFixture);
           const { usdc, lendingPool, borrower, lenders } = data;
@@ -163,11 +143,7 @@ describe("Interests", function () {
           await ethers.provider.send("evm_increaseTime", [100 * 24 * 60 * 60]);
           await ethers.provider.send("evm_mine", []);
 
-          await lendingPool
-            .connect(lender1)
-            .lenderRedeemRewardsByTranche(0, USDC(10000));
-
-          // Pool penalty is now ~4026 USDC
+          // Pool penalty is now ~7297 USDC
 
           return data;
         }
@@ -179,26 +155,24 @@ describe("Interests", function () {
           await usdc.connect(borrower).approve(lendingPool.address, USDC(1000));
           await expect(
             lendingPool.connect(borrower).borrowerPayInterest(USDC(1000))
-          ).to.be.revertedWith(
-            "LendingPool: penalty cannot be more than assets"
-          );
+          ).to.be.revertedWith("LP201");
         });
 
         it("will allow borrower to repay interest more than penalty but less that will bring pool to healthy state", async () => {
           const data = await loadFixture(uniPoolFixtureWithPenalty);
           const { usdc, lendingPool, borrower } = data;
 
-          // penalty: ~ 4026
+          // penalty: ~ 7927
           // amount to get back to healthy: 4750
-          await usdc.connect(borrower).approve(lendingPool.address, USDC(5000));
+          await usdc
+            .connect(borrower)
+            .approve(lendingPool.address, USDC(10000));
           await expect(
-            lendingPool.connect(borrower).borrowerPayInterest(USDC(5000))
-          ).to.be.revertedWith(
-            "LendingPool: penalty+interest will not bring pool to healthy state"
-          );
+            lendingPool.connect(borrower).borrowerPayInterest(USDC(10000))
+          ).to.be.revertedWith("LP202");
         });
 
-        it("will allow borrower to repay interest more than penalty + amount to get back to healthy", async () => {
+        it("will not allow borrower to repay interest more than penalty + amount to get back to healthy", async () => {
           "LendingPool: penalty+interest will not bring pool to healthy state";
           const data = await loadFixture(uniPoolFixtureWithPenalty);
           const { usdc, lendingPool, borrower } = data;
@@ -207,26 +181,27 @@ describe("Interests", function () {
 
           const outstandingInterestBefore =
             await lendingPool.borrowerOutstandingInterest();
-          console.log("outstandingInterestBefore: ", outstandingInterestBefore);
 
-          // penalty: ~ 4026
+          // penalty: ~ 7927
           // amount to get back to healthy: 4750
           await usdc
             .connect(borrower)
-            .approve(lendingPool.address, USDC(10000));
+            .approve(lendingPool.address, USDC(13000));
           await expect(
-            lendingPool.connect(borrower).borrowerPayInterest(USDC(10000))
-          ).not.to.be.reverted;
+            lendingPool.connect(borrower).borrowerPayInterest(USDC(13000))
+          ).not.to.be.revertedWith("LP202");
 
           const outstandingInterestAfter =
             await lendingPool.borrowerOutstandingInterest();
 
-          console.log("outstandingInterestAfter: ", outstandingInterestAfter);
-
+          const paymentMinusPenalty = USDC(13000).sub(penalty);
           // everything but penalty went to the interest payments
           expect(
             outstandingInterestBefore.sub(outstandingInterestAfter)
-          ).to.be.eq(USDC(10000).sub(penalty));
+          ).to.be.gt(paymentMinusPenalty.sub(USDC(1)));
+          expect(
+            outstandingInterestBefore.sub(outstandingInterestAfter)
+          ).to.be.lt(paymentMinusPenalty.add(USDC(1)));
         });
       });
     });

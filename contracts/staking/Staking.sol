@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../authority/AuthorityAware.sol";
@@ -27,9 +28,9 @@ contract Staking is IStaking, Initializable, AuthorityAware {
        STATE VARIABLES
     ///////////////////////////////////*/
     /// @notice The ERC-20 token being staked (TRIBL)
-    IERC20 public stakingToken;
+    ERC20Upgradeable public stakingToken;
     /// @notice the ERC-20 token used for rewards (USDC)
-    IERC20 public rewardToken;
+    ERC20Upgradeable public rewardToken;
     /// @notice cooldown period in seconds
     uint public cooldownPeriodSeconds;
     /// @notice Total amount of TRIBL staked by each user
@@ -65,8 +66,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
      */
     function initialize(
         address _authority,
-        IERC20 _stakingToken,
-        IERC20 _rewardToken,
+        ERC20Upgradeable _stakingToken,
+        ERC20Upgradeable _rewardToken,
         uint256 _cooldownPeriodSeconds
     ) public initializer {
         stakingToken = _stakingToken;
@@ -83,7 +84,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
      *  @param amount Amount of rewards to add
      */
     function addReward(uint256 amount) external {
-        rewardToken.transferFrom(msg.sender, address(this), amount);
+        SafeERC20Upgradeable.safeTransferFrom(rewardToken, msg.sender, address(this), amount);
         rewardIndex += (amount * WAD) / totalSupply;
     }
 
@@ -102,7 +103,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         stakedBalanceOf[msg.sender] += amount;
         totalSupply += amount;
 
-        stakingToken.transferFrom(msg.sender, address(this), amount);
+        SafeERC20Upgradeable.safeTransferFrom(stakingToken, msg.sender, address(this), amount);
 
         emit Staked(msg.sender, amount);
     }
@@ -124,7 +125,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         r.amount = 0;
         r.timestampExecutable = 0;
 
-        stakingToken.transfer(msg.sender, toSend);
+        SafeERC20Upgradeable.safeTransfer(stakingToken, msg.sender, toSend);
         emit Unstaked(msg.sender, r.amount);
     }
 
@@ -149,7 +150,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         uint reward = earned[msg.sender];
         if (reward > 0) {
             earned[msg.sender] = 0;
-            rewardToken.transfer(msg.sender, reward);
+            SafeERC20Upgradeable.safeTransfer(rewardToken, msg.sender, reward);
             emit RewardsClaimed(msg.sender, reward);
         }
 

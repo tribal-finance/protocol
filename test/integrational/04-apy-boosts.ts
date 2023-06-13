@@ -161,7 +161,7 @@ describe("Boosting the APR", function () {
         lendingPool
           .connect(lenders[0])
           .lenderLockPlatformTokensByTranche(0, amountToLock)
-      ).to.be.reverted;
+      ).to.be.revertedWith("LP101");
 
       const trancheAprAfter = await lendingPool.lenderEffectiveAprByTrancheWad(
         await lenders[0].getAddress(),
@@ -171,4 +171,26 @@ describe("Boosting the APR", function () {
       expect(trancheAprAfter).to.eq(WAD("0.1"));
     });
   });
+
+  it("Prevents invalid user from locking tokens for APR boost in a specific tranche.", async () => {
+    const { usdc, tribalToken, lenders, lendingPool } =
+        await loadFixture(uniPoolFixture);
+
+      const amountToLock = ethers.utils.parseEther("2000");
+
+      await tribalToken
+        .connect(lenders[0])
+        .approve(lendingPool.address, amountToLock);
+
+      await expect(
+        lendingPool.lenderLockPlatformTokensByTranche(0, amountToLock)
+      ).to.be.revertedWith("AA:L");
+
+      const trancheAprAfter = await lendingPool.lenderEffectiveAprByTrancheWad(
+        await lenders[0].getAddress(),
+        0
+      );
+
+      expect(trancheAprAfter).to.eq(WAD("0.1"));
+  })
 });

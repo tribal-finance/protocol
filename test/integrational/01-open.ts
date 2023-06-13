@@ -104,6 +104,14 @@ describe("When Pool moves to Open state", function () {
       const { lendingPool } = await loadFixture(uniPoolFixture);
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
+
+    it("Not able to be OPENED if called by non-admin ", async () => {
+      const { lendingPool } = await loadFixture(uniPoolFixture);
+      const signer = (await ethers.getSigners())[10];
+      expect(await signer.getAddress()).to.not.hexEqual(await lendingPool.owner());
+      await expect(lendingPool.connect(signer).adminOpenPool()).to.be.revertedWith("AA:W");
+    });
+
     describe("Tranche vault", async () => {
       it("does allows withdrawals and deposits", async () => {
         const { firstTrancheVault } = await loadFixture(uniPoolFixture);
