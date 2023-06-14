@@ -45,12 +45,20 @@ describe("Authority", function () {
       expect(
         await authority.isWhitelistedBorrower(await borrower2.getAddress())
       ).to.be.false;
+
     });
+    
+    it("ensure set will not create duplicates", async () => {
+      expect((await authority.allBorrowers()).length).equals(0)
+      expect(await authority.isWhitelistedBorrower(await borrower1.getAddress())).equals(false)
+      await authority.connect(admin1).addBorrower(await borrower1.getAddress())
+      await authority.connect(admin1).addBorrower(await borrower1.getAddress())
+      expect((await authority.allBorrowers()).length).equals(1)
+      expect(await authority.isWhitelistedBorrower(await borrower1.getAddress())).equals(true)
+      await authority.connect(admin1).addBorrower(await borrower1.getAddress())
+      expect((await authority.allBorrowers()).length).equals(1)
 
-    it("should not add borrower to the whilist as owner", async () => {
-      
     })
-
     describe("onlyOwnerOrAdmin", async () => {
 
       it("Prevents senders who are not in admin set", async () => {
@@ -62,7 +70,6 @@ describe("Authority", function () {
       })
 
       it("Prevents senders who are not the owner", async () => {
-        const owner = await authority.owner();
         expect(await borrower1.getAddress()).to.not.hexEqual(await borrower2.getAddress());
         await expect(
           authority.connect(borrower1).addBorrower(await borrower2.getAddress())
@@ -91,6 +98,21 @@ describe("Authority", function () {
       expect(
         await authority.isWhitelistedBorrower(await borrower1.getAddress())
       ).to.be.false;
+    });
+
+    it("should fail to remove a borrower if it doesn't exist", async function () {
+      expect(
+        await authority.isWhitelistedBorrower(await borrower1.getAddress())
+      ).to.be.true;
+      await authority
+        .connect(admin1)
+        .removeBorrower(await borrower1.getAddress());
+      expect(
+        await authority.isWhitelistedBorrower(await borrower1.getAddress())
+      ).to.be.false;
+      expect(await authority
+        .connect(admin1)
+        .removeBorrower(await borrower1.getAddress())).to.not.be.reverted;
     });
 
     it("should not allow a non-owner to remove a borrower", async function () {
@@ -141,6 +163,17 @@ describe("Authority", function () {
       expect(await authority.isWhitelistedLender(await lender2.getAddress())).to
         .be.false;
     });
+
+    it("ensure set will not create duplicates", async () => {
+      expect((await authority.allLenders()).length).equals(0)
+      expect(await authority.isWhitelistedLender(await borrower1.getAddress())).equals(false)
+      await authority.connect(admin1).addLender(await borrower1.getAddress())
+      expect((await authority.allLenders()).length).equals(1)
+      expect(await authority.isWhitelistedLender(await borrower1.getAddress())).equals(true)
+      await authority.connect(admin1).addLender(await borrower1.getAddress())
+      expect((await authority.allLenders()).length).equals(1)
+
+    })
   });
 
   describe("removeLender", function () {
@@ -166,6 +199,21 @@ describe("Authority", function () {
       ).to.be.revertedWith("Authority: caller is not the owner or admin");
       expect(await authority.isWhitelistedLender(await lender1.getAddress())).to
         .be.true;
+    });
+
+    it("should fail to remove a lender if it doesn't exist", async function () {
+      expect(
+        await authority.isWhitelistedLender(await lender1.getAddress())
+      ).to.be.true;
+      await authority
+        .connect(admin1)
+        .removeLender(await lender1.getAddress());
+      expect(
+        await authority.isWhitelistedLender(await lender1.getAddress())
+      ).to.be.false;
+      expect(await authority
+        .connect(admin1)
+        .removeLender(await lender1.getAddress())).to.not.be.reverted;
     });
   });
 
@@ -204,6 +252,7 @@ describe("Authority", function () {
   describe("removeAdmin", function () {
     beforeEach(async function () {
       await authority.connect(owner).addAdmin(await admin1.getAddress());
+      await authority.connect(owner).addAdmin(await admin2.getAddress());
     });
 
     it("should remove an admin from the whitelist as owner", async function () {
@@ -221,6 +270,24 @@ describe("Authority", function () {
         authority.connect(lender1).removeAdmin(await admin1.getAddress())
       ).to.be.revertedWith("Authority: caller is not the owner or admin");
       expect(await authority.isAdmin(await admin1.getAddress())).to.be.true;
+    });
+
+    it("should fail to remove an admin if it doesn't exist", async function () {
+      expect(
+        await authority.isAdmin(await admin1.getAddress())
+      ).to.be.true;
+      expect(
+        await authority.isAdmin(await admin2.getAddress())
+      ).to.be.true;
+      await authority
+        .connect(admin2)
+        .removeAdmin(await admin1.getAddress());
+      expect(
+        await authority.isAdmin(await admin1.getAddress())
+      ).to.be.false;
+      expect(await authority
+        .connect(admin2)
+        .removeAdmin(await admin1.getAddress())).to.not.be.reverted;
     });
   });
 
