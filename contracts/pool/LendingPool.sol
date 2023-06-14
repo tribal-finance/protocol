@@ -853,7 +853,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function poolBalanceThreshold() public view returns (uint) {
         uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
-        return firstLossAssets - (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
+        uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
+        if (interestGoDownAmount > firstLossAssets) {
+            return 0;
+        }
+        return firstLossAssets - interestGoDownAmount;
     }
 
     /** @notice Pool balance
