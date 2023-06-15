@@ -386,11 +386,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      * - enables deposits and withdrawals to tranche vaults
      */
     function adminOpenPool() external onlyWhitelisted atStage(Stages.FLC_DEPOSITED) {
+        openedAt = uint64(block.timestamp);
+
         for (uint i; i < trancheVaultAddresses.length; i++) {
             _trancheVaultContracts()[i].enableDeposits();
             _trancheVaultContracts()[i].enableWithdrawals();
         }
-        openedAt = uint64(block.timestamp);
+
         emit PoolOpen(openedAt);
     }
 
@@ -500,14 +502,15 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             "LP101" //"LendingPool: lock will lead to overboost"
         );
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
+        r.lockedPlatformTokens += platformTokens;
+        s_totalLockedPlatformTokensByTranche[trancheId] += platformTokens;
+
         SafeERC20Upgradeable.safeTransferFrom(
             IERC20Upgradeable(platformTokenContractAddress),
             _msgSender(),
             address(this),
             platformTokens
         );
-        r.lockedPlatformTokens += platformTokens;
-        s_totalLockedPlatformTokensByTranche[trancheId] += platformTokens;
 
         emit LenderLockPlatformTokens(_msgSender(), trancheId, platformTokens);
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
@@ -528,6 +531,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         require(r.lockedPlatformTokens >= platformTokens, "LP104"); // LendingPool: not enough locked tokens"
         r.lockedPlatformTokens -= platformTokens;
+
         SafeERC20Upgradeable.safeTransfer(
             IERC20Upgradeable(platformTokenContractAddress),
             _msgSender(),
@@ -771,14 +775,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  should be called by the borrower before the pool can start
      */
     function borrowerDepositFirstLossCapital() external onlyPoolBorrower atStage(Stages.INITIAL) {
-        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), msg.sender, address(this), firstLossAssets);
         _transitionToFlcDepositedStage(firstLossAssets);
+        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), msg.sender, address(this), firstLossAssets);
     }
 
     /** @notice Borrows collected funds from the pool */
     function borrow() external onlyPoolBorrower atStage(Stages.FUNDED) {
-        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), borrowerAddress, collectedAssets);
         _transitionToBorrowedStage(collectedAssets);
+        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), borrowerAddress, collectedAssets);
     }
 
     /** @notice Make an interest payment.
@@ -801,7 +805,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint assetsToSendToFeeSharing = (feeableInterestAmount * protocolFeeWad) / WAD + penalty;
         uint assetsForLenders = assets - assetsToSendToFeeSharing;
 
-        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
+        borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
 
         if (assetsToSendToFeeSharing > 0) {
             SafeERC20Upgradeable.safeTransfer(
@@ -811,11 +815,12 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             );
         }
 
+        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
+
         if (penalty > 0) {
             emit BorrowerPayPenalty(_msgSender(), penalty);
         }
 
-        borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
         emit BorrowerPayInterest(borrowerAddress, assets, assetsForLenders, assetsToSendToFeeSharing);
     }
 
@@ -827,13 +832,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         require(borrowerOutstandingInterest() == 0, "LP203"); // "LendingPool: interest must be paid before repaying principal"
         require(borrowerPenaltyAmount() == 0, "LP204"); // "LendingPool: penalty must be paid before repaying principal"
 
+        _transitionToPrincipalRepaidStage(borrowedAssets);
+
         SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), borrowedAssets);
         for (uint i; i < tranchesCount; ++i) {
             TrancheVault tv = _trancheVaultContracts()[i];
             SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), address(tv), tv.totalAssets());
             tv.enableWithdrawals();
         }
-        _transitionToPrincipalRepaidStage(borrowedAssets);
     }
 
     /** @notice Withdraw first loss capital and excess spread
@@ -841,8 +847,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function borrowerWithdrawFirstLossCapitalAndExcessSpread() external onlyPoolBorrower atStage(Stages.REPAID) {
         uint assetsToSend = firstLossAssets + borrowerExcessSpread();
-        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
         _transitionToFlcWithdrawnStage(assetsToSend);
+        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
     }
 
     /* VIEWS */
