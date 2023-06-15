@@ -329,8 +329,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             );
         }
 
-        // TODO: confirm and check that trancheBoostedAPR + protocolFee <= borrowerInterest
-
         require(_feeSharingContractAddress != address(0), "LP021"); // "LendingPool: feeSharingAddress empty"
         require(_authorityAddress != address(0), "LP022"); // "LendingPool: authorityAddress empty"
     }
