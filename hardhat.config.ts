@@ -6,9 +6,8 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-contract-sizer";
 import "hardhat-docgen";
 import dotenv from "dotenv";
-import { ethers } from "ethers";
-import { network } from "hardhat";
 import "hardhat-contract-sizer"
+import "hardhat-gas-reporter"
 
 dotenv.config({ path: `./.env.shared` });
 
@@ -62,11 +61,18 @@ const config: HardhatUserConfig = {
     clear: true,
     runOnCompile: false,
   },
+
   contractSizer: {
     alphaSort: true,
     runOnCompile: true,
     disambiguatePaths: false,
   },
+
+  gasReporter: {
+    enabled: true,
+    currency: 'USD',
+    gasPrice: 25
+  }
 };
 
 export default config;
