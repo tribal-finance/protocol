@@ -8,6 +8,7 @@ import "hardhat-docgen";
 import dotenv from "dotenv";
 import { ethers } from "ethers";
 import { network } from "hardhat";
+import "hardhat-contract-sizer"
 
 dotenv.config({ path: `./.env.shared` });
 
@@ -60,6 +61,11 @@ const config: HardhatUserConfig = {
     path: "./docs",
     clear: true,
     runOnCompile: false,
+  },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
   },
 };
 
