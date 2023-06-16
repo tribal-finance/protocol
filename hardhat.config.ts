@@ -1,14 +1,15 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-solhint";
+import "@nomiclabs/hardhat-ethers"
 import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-contract-sizer";
 import "hardhat-docgen";
-import dotenv from "dotenv";
 import "hardhat-contract-sizer"
 import "hardhat-gas-reporter"
 
+import dotenv from "dotenv";
 dotenv.config({ path: `./.env.shared` });
 
 const config: HardhatUserConfig = {
