@@ -1,5 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { Signer, Contract } from "ethers";
+
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
@@ -109,4 +111,37 @@ describe("PoolFactory", function () {
       });
     });
   });
+
+  describe("Ensure poolRegistry gets cleared properly", async () => {
+
+    let poolFactory: Contract;
+    let admin: Signer;
+    let addr1: Signer;
+
+    beforeEach(async () => {
+      const setupData = await loadFixture(
+        uniPoolFixture
+      );
+      admin = setupData.deployer
+      addr1 = setupData.borrower
+      poolFactory = setupData.poolFactory
+    })
+
+    it('should not allow unauthorized address to clear pool records', async function () {
+      const initialSize = await poolFactory.poolRecordsLength();
+      expect(await poolFactory.poolRecordsLength()).to.not.equal(0);
+
+      await expect(poolFactory.connect(addr1).clearPoolRecords())
+        .to.be.revertedWith('AuthorityAware: caller is not the owner or admin');
+
+      expect(await poolFactory.poolRecordsLength()).equals(initialSize);
+    });
+
+    it('should clear all records when called by admin', async function () {
+      const initialSize = await poolFactory.poolRecordsLength();
+      expect(initialSize).greaterThan(0);
+      await poolFactory.connect(admin).clearPoolRecords();
+      expect(await poolFactory.poolRecordsLength()).to.equal(0);
+    });
+  })
 });
