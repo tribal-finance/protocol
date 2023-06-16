@@ -2,9 +2,10 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomiclabs/hardhat-solhint";
 import "@nomiclabs/hardhat-ethers"
-import "@openzeppelin/hardhat-upgrades";
 import "@nomiclabs/hardhat-etherscan";
+import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
+import "ethereum-waffle"
 import "hardhat-docgen";
 import "hardhat-contract-sizer"
 import "hardhat-gas-reporter"
