@@ -2,26 +2,27 @@ import { use, expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import {deployMockContract} from '@ethereum-waffle/mock-contract';
-import {waffleChai} from "@ethereum-waffle/chai";
+import { deployMockContract } from '@ethereum-waffle/mock-contract';
+import { waffleChai } from "@ethereum-waffle/chai";
 import { BigNumber } from "ethers";
 
-import ERC20 from '../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json';
+import ERC20 from '../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json'
 import Authority from "../../artifacts/contracts/authority/Authority.sol/Authority.json"
+import Staking from "../../artifacts/contracts/staking/Staking.sol/Staking.json"
 import { MockProvider } from "ethereum-waffle";
 
 async function deployFeeSharingStandaloneFixture() {
 
-    const [owner, dev, stakingContract, otherBeneficiary] = await ethers.getSigners();
+    const [owner, dev, otherBeneficiary] = await ethers.getSigners();
 
     const FeeSharing = await ethers.getContractFactory("FeeSharing");
     const feeSharing = await FeeSharing.deploy();
 
     const mockAuthority = await deployMockContract(owner, Authority.abi);
-
     const mockAssetContract = await deployMockContract(owner, ERC20.abi);
+    const mockStakingContract = await deployMockContract(owner, Staking.abi);
 
-    const beneficiaries = [stakingContract.address, otherBeneficiary.address];
+    const beneficiaries = [mockStakingContract.address, otherBeneficiary.address];
 
     const wad = await feeSharing.WAD();
 
@@ -32,7 +33,7 @@ async function deployFeeSharingStandaloneFixture() {
     await feeSharing.initialize(mockAuthority.address, mockAssetContract.address, beneficiaries, shares);
 
     return {
-        feeSharing, dev, beneficiaries, shares, wad, stakingContract, otherBeneficiary, mockAssetContract, owner, mockAuthority
+        feeSharing, dev, beneficiaries, shares, wad, otherBeneficiary, mockAssetContract, owner, mockAuthority, mockStakingContract
     }
 }
 
@@ -40,7 +41,7 @@ describe.only("FeeSharing", function () {
 
     describe("Initialization", function () {
         it("Should initialize correctly", async function () {
-            const {feeSharing, dev, beneficiaries, shares, mockAssetContract, mockAuthority} = await loadFixture(deployFeeSharingStandaloneFixture)
+            const { feeSharing, dev, beneficiaries, shares, mockAssetContract, mockAuthority } = await loadFixture(deployFeeSharingStandaloneFixture)
 
             expect(await feeSharing.assetContract()).to.equal(mockAssetContract.address);
             expect(await feeSharing.beneficiaries(0)).to.equal(beneficiaries[0]);
@@ -52,14 +53,14 @@ describe.only("FeeSharing", function () {
 
     describe("updateBenificiariesAndShares", function () {
         it("Should update beneficiaries and their shares", async function () {
-            const {feeSharing, stakingContract, otherBeneficiary, mockAuthority, wad} = await loadFixture(deployFeeSharingStandaloneFixture)
+            const { feeSharing, mockStakingContract, otherBeneficiary, mockAuthority, wad } = await loadFixture(deployFeeSharingStandaloneFixture)
             await mockAuthority.mock.isAdmin.returns(true)
 
-            const newBeneficiaries: string[] = [otherBeneficiary.address, stakingContract.address];
+            const newBeneficiaries: string[] = [otherBeneficiary.address, mockStakingContract.address];
             const newShares: BigNumber[] = [wad, BigNumber.from("0")]; // 100% to stakingContract, 0% to otherBeneficiary
 
             await feeSharing.updateBenificiariesAndShares(newBeneficiaries, newShares);
-            
+
             expect(await feeSharing.beneficiaries(0)).to.equal(newBeneficiaries[0]);
             expect(await feeSharing.beneficiaries(1)).to.equal(newBeneficiaries[1]);
             expect(await feeSharing.beneficiariesSharesWad(0)).to.equal(newShares[0]);
@@ -67,20 +68,20 @@ describe.only("FeeSharing", function () {
         });
 
         it("Should revert if it fails onlyOwnerOrAdmin check", async function () {
-            const {feeSharing, stakingContract, otherBeneficiary, dev, wad, mockAuthority} = await loadFixture(deployFeeSharingStandaloneFixture)
+            const { feeSharing, mockStakingContract, otherBeneficiary, dev, wad, mockAuthority } = await loadFixture(deployFeeSharingStandaloneFixture)
             await mockAuthority.mock.isAdmin.returns(false)
 
-            const newBeneficiaries: string[] = [stakingContract.address, otherBeneficiary.address];
+            const newBeneficiaries: string[] = [mockStakingContract.address, otherBeneficiary.address];
             const newShares: BigNumber[] = [wad, BigNumber.from("0")]; // 100% to stakingContract, 0% to otherBeneficiary
 
             await expect(feeSharing.connect(dev).updateBenificiariesAndShares(newBeneficiaries, newShares)).to.be.revertedWith("AuthorityAware: caller is not the owner or admin");
         });
 
         it("Should revert if array length mismatch", async () => {
-            const {feeSharing, stakingContract, mockAuthority, owner, wad} = await loadFixture(deployFeeSharingStandaloneFixture)
-            
-            const newBeneficiaries: string[] = [stakingContract.address];
-            const newShares: BigNumber[] = [wad, BigNumber.from("0")]; 
+            const { feeSharing, mockStakingContract, mockAuthority, owner, wad } = await loadFixture(deployFeeSharingStandaloneFixture)
+
+            const newBeneficiaries: string[] = [mockStakingContract.address];
+            const newShares: BigNumber[] = [wad, BigNumber.from("0")];
 
             await expect(feeSharing.connect(owner).updateBenificiariesAndShares(newBeneficiaries, newShares)).to.be.revertedWith("beneficiaries and shares must have the same length");
         })
@@ -88,8 +89,8 @@ describe.only("FeeSharing", function () {
 
     describe("updateShares", function () {
         it("Should update beneficiaries shares correctly", async function () {
-            const {feeSharing, owner, otherBeneficiary, dev, wad} = await loadFixture(deployFeeSharingStandaloneFixture)
-            
+            const { feeSharing, owner, otherBeneficiary, dev, wad } = await loadFixture(deployFeeSharingStandaloneFixture)
+
             const newShares: BigNumber[] = [wad, BigNumber.from("0")]; // 100% to stakingContract, 0% to otherBeneficiary
             await feeSharing.connect(owner).updateShares(newShares);
 
@@ -98,20 +99,20 @@ describe.only("FeeSharing", function () {
         });
 
         it("Should revert if shares and beneficiaries length mismatch", async function () {
-            const {feeSharing, owner, otherBeneficiary, dev, wad} = await loadFixture(deployFeeSharingStandaloneFixture)
-            
+            const { feeSharing, owner, otherBeneficiary, dev, wad } = await loadFixture(deployFeeSharingStandaloneFixture)
+
             const newShares: BigNumber[] = [wad]; // Only one share is provided
             await expect(feeSharing.connect(owner).updateShares(newShares)).to.be.revertedWith("beneficiaries and shares must have the same length");
         });
 
         it("Should revert if sum of all shares != WAD", async () => {
-            const {feeSharing, stakingContract, otherBeneficiary, owner, wad} = await loadFixture(deployFeeSharingStandaloneFixture)
+            const { feeSharing, mockStakingContract, otherBeneficiary, owner, wad } = await loadFixture(deployFeeSharingStandaloneFixture)
 
-            const newBeneficiaries: string[] = [stakingContract.address, otherBeneficiary.address, owner.address];
+            const newBeneficiaries: string[] = [mockStakingContract.address, otherBeneficiary.address, owner.address];
             const newShares: BigNumber[] = [wad.sub(ethers.utils.parseUnits(".75", 18)), BigNumber.from("0"), ethers.utils.parseUnits(".75", 18)]; // 25/0/75
 
             await feeSharing.connect(owner).updateBenificiariesAndShares(newBeneficiaries, newShares);
-            
+
             expect(await feeSharing.beneficiaries(0)).to.equal(newBeneficiaries[0]);
             expect(await feeSharing.beneficiaries(1)).to.equal(newBeneficiaries[1]);
             expect(await feeSharing.beneficiaries(2)).to.equal(newBeneficiaries[2]);
@@ -126,4 +127,49 @@ describe.only("FeeSharing", function () {
 
         })
     });
+    describe("distributeFees", function () {
+        it("Should distribute fees correctly", async function () {
+            const { feeSharing, beneficiaries, mockAssetContract, shares, owner, wad, mockStakingContract } = await loadFixture(deployFeeSharingStandaloneFixture);
+    
+            const balance = ethers.utils.parseUnits("10000000", 18);
+            await mockAssetContract.mock.balanceOf.returns(balance);
+    
+            const expectedDistribution = [
+                balance.mul(await feeSharing.beneficiariesSharesWad(0)).div(wad),
+                balance.mul(await feeSharing.beneficiariesSharesWad(1)).div(wad)
+            ];
+    
+            // Mock the approve and transfer methods for all calls
+            await mockAssetContract.mock.approve.returns(true);
+            await mockAssetContract.mock.transfer.returns(true);
+            await mockAssetContract.mock.allowance.returns(0);
+    
+            // Mock the staking contract
+            await mockStakingContract.mock.addReward.returns();
+    
+            await feeSharing.distributeFees();
+
+
+            // Check the 'approve' method was called with correct arguments
+            expect('approve').to.be.calledOnContractWith(mockAssetContract, [beneficiaries[0], expectedDistribution[0]]);
+            
+            // Check the 'addReward' method was called with correct arguments
+            expect('addReward').to.be.calledOnContractWith(mockStakingContract, [expectedDistribution[0]]);
+
+    
+            // Check the 'transfer' method was called with correct arguments for remaining beneficiaries
+            for (let i = 1; i < beneficiaries.length; i++) {
+                expect('transfer').to.be.calledOnContractWith(mockAssetContract, [beneficiaries[i], expectedDistribution[i]]);
+            }
+        });
+    });
+
+    describe("stakingContract", function () {
+        it("Should return correct staking contract", async function () {
+            const { feeSharing, mockStakingContract } = await loadFixture(deployFeeSharingStandaloneFixture);
+
+            expect(await feeSharing.stakingContract()).to.equal(mockStakingContract.address);
+        });
+    });
+
 });
