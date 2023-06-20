@@ -9,14 +9,16 @@ import { BigNumber } from "ethers";
 import ERC20 from '../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json'
 import Authority from "../../artifacts/contracts/authority/Authority.sol/Authority.json"
 import Staking from "../../artifacts/contracts/staking/Staking.sol/Staking.json"
-import { MockProvider } from "ethereum-waffle";
+import FeeSharing  from "../../artifacts/contracts/fee_sharing/FeeSharing.sol/FeeSharing.json";
+import {deployContract, MockProvider, solidity} from 'ethereum-waffle';
+
+use(solidity);
 
 async function deployFeeSharingStandaloneFixture() {
 
-    const [owner, dev, otherBeneficiary] = await ethers.getSigners();
+    const [owner, dev, otherBeneficiary] = new MockProvider().getWallets();
 
-    const FeeSharing = await ethers.getContractFactory("FeeSharing");
-    const feeSharing = await FeeSharing.deploy();
+    const feeSharing = await deployContract(owner, FeeSharing)
 
     const mockAuthority = await deployMockContract(owner, Authority.abi);
     const mockAssetContract = await deployMockContract(owner, ERC20.abi);
@@ -116,7 +118,6 @@ describe.only("FeeSharing", function () {
             expect(await feeSharing.beneficiaries(0)).to.equal(newBeneficiaries[0]);
             expect(await feeSharing.beneficiaries(1)).to.equal(newBeneficiaries[1]);
             expect(await feeSharing.beneficiaries(2)).to.equal(newBeneficiaries[2]);
-
             expect(await feeSharing.beneficiariesSharesWad(0)).to.equal(newShares[0]);
             expect(await feeSharing.beneficiariesSharesWad(1)).to.equal(newShares[1]);
             expect(await feeSharing.beneficiariesSharesWad(2)).to.equal(newShares[2]);
@@ -148,7 +149,6 @@ describe.only("FeeSharing", function () {
             await mockStakingContract.mock.addReward.returns();
     
             await feeSharing.distributeFees();
-
 
             // Check the 'approve' method was called with correct arguments
             expect('approve').to.be.calledOnContractWith(mockAssetContract, [beneficiaries[0], expectedDistribution[0]]);
