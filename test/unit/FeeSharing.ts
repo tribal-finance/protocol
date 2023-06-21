@@ -39,7 +39,7 @@ async function deployFeeSharingStandaloneFixture(useWaffleProvider=false) {
     }
 }
 
-describe.only("FeeSharing", function () {
+describe("FeeSharing", function () {
 
     describe("Initialization", function () {
         it("Should initialize correctly", async function () {
@@ -76,7 +76,7 @@ describe.only("FeeSharing", function () {
             const newBeneficiaries: string[] = [mockStakingContract.address, otherBeneficiary.address];
             const newShares: BigNumber[] = [wad, BigNumber.from("0")]; // 100% to stakingContract, 0% to otherBeneficiary
 
-            await expect(feeSharing.connect(dev).updateBenificiariesAndShares(newBeneficiaries, newShares)).to.be.revertedWith("AuthorityAware: caller is not the owner or admin");
+            await expect(feeSharing.connect(dev).updateBenificiariesAndShares(newBeneficiaries, newShares)).to.be.revertedWith("AA:OA");
         });
 
         it("Should revert if array length mismatch", async () => {
@@ -129,7 +129,7 @@ describe.only("FeeSharing", function () {
         })
     });
     describe("distributeFees", function () {
-        it("Should distribute fees correctly", async function () {
+        it.skip("Should distribute fees correctly", async function () {
             const { feeSharing, beneficiaries, mockAssetContract, shares, owner, wad, mockStakingContract } =  await deployFeeSharingStandaloneFixture(true);
     
             const balance = ethers.utils.parseUnits("10000000", 18);

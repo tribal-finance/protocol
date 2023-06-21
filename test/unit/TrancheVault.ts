@@ -143,7 +143,7 @@ describe("TrancheVault contract", function () {
 
     describe("pause() and unpause() function tests", () => {
         it("should fail to pause if the sender is not the owner or admin", async () => {
-            await expect(trancheVault.connect(nonOwner).pause()).to.be.revertedWith("AuthorityAware: caller is not the owner or admin");
+            await expect(trancheVault.connect(nonOwner).pause()).to.be.revertedWith("AA:OA");
         });
 
         it("should pause the contract successfully", async () => {
@@ -156,7 +156,7 @@ describe("TrancheVault contract", function () {
         });
 
         it("should fail to unpause if the sender is not the owner or admin", async () => {
-            await expect(trancheVault.connect(nonOwner).unpause()).to.be.revertedWith("AuthorityAware: caller is not the owner or admin");
+            await expect(trancheVault.connect(nonOwner).unpause()).to.be.revertedWith("AA:OA");
         });
 
         it("should unpause the contract successfully", async () => {

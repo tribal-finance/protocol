@@ -132,7 +132,7 @@ describe("PoolFactory", function () {
       expect(await poolFactory.poolRecordsLength()).to.not.equal(0);
 
       await expect(poolFactory.connect(addr1).clearPoolRecords())
-        .to.be.revertedWith('AuthorityAware: caller is not the owner or admin');
+        .to.be.revertedWith('AA:OA');
 
       expect(await poolFactory.poolRecordsLength()).equals(initialSize);
     });

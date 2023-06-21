@@ -161,7 +161,7 @@ describe("Boosting the APR", function () {
         lendingPool
           .connect(lenders[0])
           .lenderLockPlatformTokensByTranche(0, amountToLock)
-      ).to.be.revertedWith("LendingPool: lock will lead to overboost");
+      ).to.be.revertedWith("LP101");
 
       const trancheAprAfter = await lendingPool.lenderEffectiveAprByTrancheWad(
         await lenders[0].getAddress(),
@@ -184,7 +184,7 @@ describe("Boosting the APR", function () {
 
       await expect(
         lendingPool.lenderLockPlatformTokensByTranche(0, amountToLock)
-      ).to.be.revertedWith("AuthorityAware: caller is not a whitelisted lender");
+      ).to.be.revertedWith("AA:L");
 
       const trancheAprAfter = await lendingPool.lenderEffectiveAprByTrancheWad(
         await lenders[0].getAddress(),
