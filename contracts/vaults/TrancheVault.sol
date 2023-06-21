@@ -11,6 +11,8 @@ import "../authority/AuthorityAware.sol";
 import "../pool/ILendingPool.sol";
 
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
+    using MathUpgradeable for uint256;
+
     /*////////////////////////////////////////////////
       State
     ////////////////////////////////////////////////*/
@@ -119,6 +121,28 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         bool oldValue = s_transferEnabled;
         s_transferEnabled = newValue;
         emit ChangeTransferEnabled(msg.sender, oldValue, newValue);
+    }
+
+    /* defaultRatio */
+    uint private s_defaultRatioWad;
+    event ChangeDefaultRatio(address indexed actor, uint oldValue, uint newValue);
+
+    function defaultRatioWad() public view returns (uint) {
+        return s_defaultRatioWad;
+    }
+
+    function isDefaulted() public view returns (bool) {
+        return s_defaultRatioWad != 0;
+    }
+
+    function _setDefaultRatioWad(uint newValue) internal {
+        uint oldValue = s_defaultRatioWad;
+        s_defaultRatioWad = newValue;
+        emit ChangeDefaultRatio(msg.sender, oldValue, newValue);
+    }
+
+    function setDefaultRatioWad(uint newValue) external onlyPool {
+        _setDefaultRatioWad(newValue);
     }
 
     /*////////////////////////////////////////////////
@@ -321,6 +345,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 assets,
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 shares) {
+        if (isDefaulted()) {
+            return assets.mulDiv(10 ** 18, s_defaultRatioWad, rounding);
+        }
         return _initialConvertToShares(assets, rounding);
     }
 
@@ -329,6 +356,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 shares,
         MathUpgradeable.Rounding rounding
     ) internal view override returns (uint256 assets) {
+        if (isDefaulted()) {
+            return shares.mulDiv(s_defaultRatioWad, 10 ** 18, rounding);
+        }
         return _initialConvertToAssets(shares, rounding); // 1:1
     }
 

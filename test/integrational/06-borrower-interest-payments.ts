@@ -186,10 +186,15 @@ describe("Interests", function () {
           );
         });
 
-        it("has zero borrowerExcessSpread", async () => {
+        it("sends $75 to fee sharing", async () => {
+          const { usdc, feeSharing } = await loadFixture(fullyRepaidFixture);
+          expect(await usdc.balanceOf(feeSharing.address)).to.equal(USDC(75));
+        });
+
+        it("has $175 borrowerExcessSpread ($750 - $500 for lenders - $75 for fee sharing)", async () => {
           const { lendingPool } = await loadFixture(fullyRepaidFixture);
 
-          expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(0));
+          expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(175));
         });
       }
     );
@@ -215,10 +220,15 @@ describe("Interests", function () {
           );
         });
 
-        it("changes borrowerExcessSpread to $250", async () => {
+        it("sends $75 to fee sharing (we cant chatge fees over the interest that has to be paid)", async () => {
+          const { usdc, feeSharing } = await loadFixture(overRepaidFixture);
+          expect(await usdc.balanceOf(feeSharing.address)).to.equal(USDC(75));
+        });
+
+        it("changes borrowerExcessSpread to $425 ($1000 - $500 for lenders - $75 for fee sharing)", async () => {
           const { lendingPool } = await loadFixture(overRepaidFixture);
 
-          expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(250));
+          expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(425));
         });
       }
     );

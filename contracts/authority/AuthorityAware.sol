@@ -11,27 +11,62 @@ abstract contract AuthorityAware is OwnableUpgradeable {
     IAuthority public authority;
 
     modifier onlyOwnerOrAdmin() {
+        _onlyOwnerOrAdmin();
+        _;
+    }
+
+    function _onlyOwnerOrAdmin() internal view {
         require(
             owner() == msg.sender || authority.isAdmin(msg.sender),
-            "AuthorityAware: caller is not the owner or admin"
+            "AA:OA" // "AuthorityAware: caller is not the owner or admin"
+        );
+    }
+
+    modifier onlyAdmin() {
+        _onlyAdmin();
+        _;
+    }
+
+    function _onlyAdmin() internal view {
+        require(
+            authority.isAdmin(msg.sender),
+            "AA:A" // "AuthorityAware: caller is not an admin"
+        );
+    }
+
+    modifier onlyBorrower() {
+        _onlyBorrower();
+        _;
+    }
+
+    function _onlyBorrower() internal view {
+        require(
+            authority.isWhitelistedBorrower(msg.sender),
+            "AA:B" // "AuthorityAware: caller is not a whitelisted borrower"
+        );
+    }
+
+    modifier onlyLender() {
+        require(
+            authority.isWhitelistedLender(msg.sender),
+            "AA:L" // "AuthorityAware: caller is not a whitelisted lender"
         );
         _;
     }
 
-    modifier onlyLender() {
-        require(authority.isWhitelistedLender(msg.sender), "AuthorityAware: caller is not a whitelisted lender");
+    modifier onlyWhitelisted() {
+        _onlyWhitelisted();
         _;
     }
 
-    modifier onlyWhitelisted() {
+    function _onlyWhitelisted() internal view {
         require(
             owner() == msg.sender ||
                 authority.isWhitelistedBorrower(msg.sender) ||
                 authority.isWhitelistedLender(msg.sender) ||
                 authority.isAdmin(msg.sender),
-            "AuthorityAware: caller is not a whitelisted borrower or lender"
+            "AA:W" // "AuthorityAware: caller is not a whitelisted borrower or lender"
         );
-        _;
     }
 
     function __AuthorityAware__init(address _authority) internal {
