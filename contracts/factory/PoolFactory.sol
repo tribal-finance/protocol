@@ -65,7 +65,7 @@ contract PoolFactory is AuthorityAware {
         delete poolRegistry;
     }
 
-    /// @dev gets the length of the pool of recrods 
+    /// @dev gets the length of the pool of records 
     function poolRecordsLength() external view returns (uint) {
         return poolRegistry.length;
     }
