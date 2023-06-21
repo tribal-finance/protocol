@@ -4,6 +4,7 @@ import { ethers, waffle } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
+import {MockProvider} from '@ethereum-waffle/provider';
 
 import ERC20 from '../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json'
 import Authority from "../../artifacts/contracts/authority/Authority.sol/Authority.json"
@@ -13,9 +14,9 @@ import FeeSharing  from "../../artifacts/contracts/fee_sharing/FeeSharing.sol/Fe
 const { deployContract, deployMockContract } = waffle;
 
 
-async function deployFeeSharingStandaloneFixture() {
+async function deployFeeSharingStandaloneFixture(useWaffleProvider=false) {
 
-    const [owner, dev, otherBeneficiary] = await ethers.getSigners();
+    const [owner, dev, otherBeneficiary] = useWaffleProvider ? new MockProvider().getWallets() : await ethers.getSigners();
 
     const feeSharing = await deployContract(owner, FeeSharing)
 
@@ -129,7 +130,7 @@ describe.only("FeeSharing", function () {
     });
     describe("distributeFees", function () {
         it("Should distribute fees correctly", async function () {
-            const { feeSharing, beneficiaries, mockAssetContract, shares, owner, wad, mockStakingContract } = await loadFixture(deployFeeSharingStandaloneFixture);
+            const { feeSharing, beneficiaries, mockAssetContract, shares, owner, wad, mockStakingContract } =  await deployFeeSharingStandaloneFixture(true);
     
             const balance = ethers.utils.parseUnits("10000000", 18);
             await mockAssetContract.mock.balanceOf.returns(balance);
