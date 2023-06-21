@@ -5,10 +5,12 @@ import "@nomiclabs/hardhat-ethers"
 import "@nomiclabs/hardhat-etherscan";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
-import "ethereum-waffle"
+import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-docgen";
 import "hardhat-contract-sizer"
 import "hardhat-gas-reporter"
+import "@nomicfoundation/hardhat-chai-matchers"
+import "@nomiclabs/hardhat-waffle"
 
 import dotenv from "dotenv";
 dotenv.config({ path: `./.env.shared` });

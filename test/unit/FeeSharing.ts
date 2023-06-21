@@ -1,22 +1,21 @@
-import { use, expect } from "chai";
-import { ethers } from "hardhat";
+import { expect } from "chai";
+
+import { ethers, waffle } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployMockContract } from '@ethereum-waffle/mock-contract';
-import { waffleChai } from "@ethereum-waffle/chai";
 import { BigNumber } from "ethers";
 
 import ERC20 from '../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json'
 import Authority from "../../artifacts/contracts/authority/Authority.sol/Authority.json"
 import Staking from "../../artifacts/contracts/staking/Staking.sol/Staking.json"
 import FeeSharing  from "../../artifacts/contracts/fee_sharing/FeeSharing.sol/FeeSharing.json";
-import {deployContract, MockProvider, solidity} from 'ethereum-waffle';
 
-use(solidity);
+const { deployContract, deployMockContract } = waffle;
+
 
 async function deployFeeSharingStandaloneFixture() {
 
-    const [owner, dev, otherBeneficiary] = new MockProvider().getWallets();
+    const [owner, dev, otherBeneficiary] = await ethers.getSigners();
 
     const feeSharing = await deployContract(owner, FeeSharing)
 
