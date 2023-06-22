@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../authority/AuthorityAware.sol";
-import "../pool/ILendingPool.sol";
+import "../pool/LendingPool.sol";
 
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
@@ -158,6 +158,11 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         _;
     }
 
+    modifier onlyOwnerOrPoolorRollover() {
+        // check if sender if a prior trench
+        _;
+    }
+
     modifier whenWithdrawEnabled() {
         require(withdrawEnabled(), "Vault: withdraw disabled");
         _;
@@ -249,6 +254,18 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     /** @dev called by the pool in order to send assets*/
     function sendAssetsToPool(uint assets) external onlyPool {
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
+    }
+
+    /**@dev used to process the rollover */
+    function rollover(address lender, address deadLendingPool, address deadTranche) external {
+        TrancheVault deadTranche = TrancheVault(deadTranche);
+        require(deadTranche.asset() == asset(), "Incompatible asset types");
+        LendingPool deadpool = LendingPool(deadLendingPool); // lol deadpool
+        LendingPool.RollOverSetting memory settings = deadpool.lenderRollOverSettings(lender);
+        require(settings.enabled, "Lender must approve rollover");
+
+        // transfer in capital from preview tranches
+
     }
 
     /*////////////////////////////////////////////////
@@ -372,7 +389,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // slither-disable-next-line reentrancy-no-eth
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
-        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
+        LendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -393,7 +410,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
         _burn(owner, shares);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), receiver, assets);
-        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
+        LendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }

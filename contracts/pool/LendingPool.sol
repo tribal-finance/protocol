@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "./LendingPoolState.sol";
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
+import "../factory/PoolFactory.sol";
+import "./ILendingPool.sol";
 
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -138,6 +140,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[50] private __gap;
+    // TODO: Gaps and Upgradeable don't seem to always be used correctly throughout the codebase
+    // Why should such a concrete, opinionated, and immutable contract be using this?
 
     /*///////////////////////////////////
        MODIFIERS
@@ -380,6 +384,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         return Stages.INITIAL;
     }
+    // TODO: Fix: this is a gas inefficient / bug prone state machine
+    // State machine patterns frequent single enum ref as source of truth
+    // The above state machines allows for multiple states to exist at the same time which is potentially scary
 
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
      * - sets openedAt to current block timestamp
@@ -752,6 +759,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
         s_rollOverSettings[_msgSender()] = RollOverSetting(true, principal, rewards, platformTokens);
+
+        PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
+        address spender = poolFactory.nextLender();
+
+        // todo: approve spender to transferFrom future tranche vault tokens 
+        // approve spender to transferFrom future lendingppool tokens to support tribal token lock
+
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
