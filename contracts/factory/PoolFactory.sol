@@ -14,7 +14,6 @@ import "../authority/AuthorityAware.sol";
 
 contract PoolFactory is AuthorityAware {
     using MathUpgradeable for uint;
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     struct PoolRecord {
         string name;
@@ -100,7 +99,6 @@ contract PoolFactory is AuthorityAware {
     function _clonePool() internal onlyOwner returns (address poolAddress) {
         address impl = poolImplementationAddress;
         poolAddress = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
-        priorProtocol.add(poolAddress);
         emit PoolCloned(poolAddress, poolImplementationAddress);
     }
 
@@ -127,10 +125,6 @@ contract PoolFactory is AuthorityAware {
     }
 
 
-    function wasProtocol(address protocol) public view returns(bool) {
-        return priorProtocol.contains(protocol);
-    }
-
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads,
@@ -143,7 +137,6 @@ contract PoolFactory is AuthorityAware {
         for (uint8 i; i < params.tranchesCount; ++i) {
             address impl = poolImplementationAddress;
             trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
-            priorProtocol.add(trancheVaultAddresses[i]);
 
             emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
 
