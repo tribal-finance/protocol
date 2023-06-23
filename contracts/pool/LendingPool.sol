@@ -764,10 +764,16 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
 
         if(platformTokens) {
-            address[5] memory futureLenders = poolFactory.nextLenders();
+            address[4] memory futureLenders = poolFactory.nextLenders();
             Rewardable storage r = s_trancheRewardables[0][_msgSender()];
             for (uint256 i = 0; i < futureLenders.length; i++) {
                 SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], r.lockedPlatformTokens);
+            }
+        }
+
+        if(principal || rewards) {
+            for(uint256 i = 0; i < trancheVaultAddresses.length; i++) {
+                uint256 amount;
             }
         }
 

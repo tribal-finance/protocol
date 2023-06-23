@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "../authority/AuthorityAware.sol";
 import "../pool/LendingPool.sol";
+import "../factory/PoolFactory.sol";
 
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
@@ -256,16 +257,31 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
-    /**@dev used to process the rollover */
-    function rollover(address lender, address deadLendingPool, address deadTranche) external {
+    /**@dev used to approve the process of the rollover (executed with older tranche) */
+    function approveRollover(uint256 amount) external onlyOwnerOrPool {
+        LendingPool lender = LendingPool(poolAddress());
+        PoolFactory factory = PoolFactory(lender.poolFactoryAddress());
+
+        address[8] memory futureTranches = factory.nextTranches();
+        for(uint256 i = 0; i < futureTranches.length; i++) {
+            super.approve(futureTranches[i], convertToShares(amount));
+        }
+    }
+
+    function redeemAndSendRollover() external {
+
+    }
+
+    /**@dev used to process the rollover (executed with newer tranche on deploy) */
+    function rollover(address lender, address deadLendingPool, address deadTranche) external onlyOwnerOrPool {
         TrancheVault deadTranche = TrancheVault(deadTranche);
         require(deadTranche.asset() == asset(), "Incompatible asset types");
         LendingPool deadpool = LendingPool(deadLendingPool); // lol deadpool
         LendingPool.RollOverSetting memory settings = deadpool.lenderRollOverSettings(lender);
         require(settings.enabled, "Lender must approve rollover");
 
+        deadTranche.transfer(address(this), deadTranche.allowance(lender, address(this)));
         // transfer in capital from preview tranches
-
     }
 
     /*////////////////////////////////////////////////
