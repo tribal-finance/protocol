@@ -39,7 +39,6 @@ contract PoolFactory is AuthorityAware {
 
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
-    EnumerableSetUpgradeable.AddressSet priorProtocol;
 
 
     function initialize(address _authority) public initializer {
