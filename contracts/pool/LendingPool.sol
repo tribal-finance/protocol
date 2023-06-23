@@ -773,7 +773,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         if(principal || rewards) {
             for(uint256 i = 0; i < trancheVaultAddresses.length; i++) {
-                uint256 amount;
+                uint256 amount; // todo: read amounts
+                TrancheVault vault = TrancheVault(trancheVaultAddresses[i]);
+                vault.approveRollover(_msgSender(), amount);
             }
         }
 
