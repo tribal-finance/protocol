@@ -265,7 +265,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
-    /**@dev used to approve the process of the rollover (executed with older tranche) */
+    /**@dev used to approve the process of the rollover to deployments that do not yet exist (executed with older tranche before creation of next tranche) */
     function approveRollover(address lender, uint256 assets) external onlyOwnerOrPool {
         LendingPool pool = LendingPool(poolAddress());
         PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
@@ -288,7 +288,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
-    function _rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) internal /* todo: nonReentrant */ {
+    function rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) external onlyLender {
         TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
         require(deadTranche.asset() == asset(), "Incompatible asset types");
         LendingPool deadpool = LendingPool(deadLendingPoolAddr); // lol deadpool

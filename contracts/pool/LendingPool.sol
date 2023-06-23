@@ -752,35 +752,61 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        Rollover settings
     ///////////////////////////////////*/
-    /** @notice marks the intent of the lender to roll over their capital to the upcoming pool
+    /** @notice marks the intent of the lender to roll over their capital to the upcoming pool (called by older pool)
      *  if you opt to roll over you will not be able to withdraw stablecoins / platform tokens from the pool
      *  @param principal whether the principal should be rolled over
      *  @param rewards whether the rewards should be rolled over
      *  @param platformTokens whether the platform tokens should be rolled over
      */
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
-        s_rollOverSettings[_msgSender()] = RollOverSetting(true, principal, rewards, platformTokens);
+        address lender = _msgSender();
+        s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
 
         PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
 
-        if(platformTokens) {
-            address[4] memory futureLenders = poolFactory.nextLenders();
-            Rewardable storage r = s_trancheRewardables[0][_msgSender()];
-            for (uint256 i = 0; i < futureLenders.length; i++) {
-                SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], r.lockedPlatformTokens);
-            }
+        uint256 lockedPlatformTokens;
+        for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
+            uint256 amount = s_totalStakedAssetsByTranche[trancheId];
+            TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
+            lockedPlatformTokens += s_trancheRewardables[trancheId][lender].lockedPlatformTokens;
+            vault.approveRollover(lender, amount);
         }
 
-        if(principal || rewards) {
-            for(uint256 i = 0; i < trancheVaultAddresses.length; i++) {
-                uint256 amount; // todo: read amounts
-                TrancheVault vault = TrancheVault(trancheVaultAddresses[i]);
-                vault.approveRollover(_msgSender(), amount);
-            }
+        address[4] memory futureLenders = poolFactory.nextLenders();
+        for (uint256 i = 0; i < futureLenders.length; i++) {
+            SafeERC20Upgradeable.safeApprove(
+                IERC20Upgradeable(platformTokenContractAddress),
+                futureLenders[i],
+                lockedPlatformTokens
+            );
         }
-
         // todo: approve spender to transferFrom future tranche vault tokens
         // approve spender to transferFrom future lendingppool tokens to support tribal token lock
+    }
+
+    /**
+     * @dev This function needs to be batched due to it getting processed over all the lenders. The most optimal way to run this function should be computed off-chain
+     * @param deadLendingPoolAddr The address of the lender whose funds are transfering over to the new lender
+     * @param deadTrancheAddrs The address of the tranches whose funds are mapping 1:1 with the next traches
+     * @param lenderStartIndex The first lender to start migrating over
+     * @param lenderEndIndex The last lender to migrate
+     */
+    function executeRollover(address deadLendingPoolAddr, address[] memory deadTrancheAddrs, uint256 lenderStartIndex, uint256 lenderEndIndex) internal {
+        require(keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code), "rollover incampatible due to version mismatch"); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
+        require(deadTrancheAddrs.length == trancheVaultAddresses.length, "tranche ids mismatch");
+        // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
+
+        for(uint256 i = lenderStartIndex; i < lenderEndIndex; i++) {
+            address lender = s_lenders.at(i);
+            // ask deadpool to move platform token into this new contract
+            IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
+            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platoken.allowance(deadLendingPoolAddr, address(this)));
+
+            for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
+                TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
+                vault.rollover(lender, deadLendingPoolAddr, deadTrancheAddrs[trancheId]);
+            }
+        }
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
