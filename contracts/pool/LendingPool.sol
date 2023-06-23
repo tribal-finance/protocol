@@ -384,6 +384,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         return Stages.INITIAL;
     }
+
     // TODO: Fix: this is a gas inefficient / bug prone state machine
     // State machine patterns frequent single enum ref as source of truth
     // The above state machines allows for multiple states to exist at the same time which is potentially scary
@@ -761,11 +762,17 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         s_rollOverSettings[_msgSender()] = RollOverSetting(true, principal, rewards, platformTokens);
 
         PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
-        address spender = poolFactory.nextLender();
 
-        // todo: approve spender to transferFrom future tranche vault tokens 
+        if(platformTokens) {
+            address[5] memory futureLenders = poolFactory.nextLenders();
+            Rewardable storage r = s_trancheRewardables[0][_msgSender()];
+            for (uint256 i = 0; i < futureLenders.length; i++) {
+                SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], r.lockedPlatformTokens);
+            }
+        }
+
+        // todo: approve spender to transferFrom future tranche vault tokens
         // approve spender to transferFrom future lendingppool tokens to support tribal token lock
-
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.

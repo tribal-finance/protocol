@@ -108,13 +108,24 @@ contract PoolFactory is AuthorityAware {
         return nextAddress(poolImplementationAddress);
     }
 
+    function nextLenders() public view returns(address[5] memory lenders) {
+        address impl = poolImplementationAddress;
+        for(uint256 i = 0; i < lenders.length; i++) {
+            lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
+        }
+    }
+
+    function nextTranches() public view returns(address[5] memory lenders) {
+        address impl = trancheVaultImplementationAddress;
+        for(uint256 i = 0; i < lenders.length; i++) {
+            lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
+        }
+    }
+
     function nextAddress(address impl) public view returns(address) {
         return Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + 1));
     }
 
-    function willBeProtocol(uint256 generations) public view returns(address[] memory) {
-
-    }
 
     function wasProtocol(address protocol) public view returns(bool) {
         return priorProtocol.contains(protocol);
