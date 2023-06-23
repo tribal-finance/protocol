@@ -14,9 +14,12 @@ import "../factory/PoolFactory.sol";
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
 
+
     /*////////////////////////////////////////////////
       State
     ////////////////////////////////////////////////*/
+
+    mapping(address => mapping(address => uint256)) approvedRollovers;
 
     /* id */
     uint8 private s_id;
@@ -206,6 +209,11 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         __Ownable_init();
         __ERC4626_init(IERC20Upgradeable(_underlying));
         __AuthorityAware__init(_authority);
+
+        // collect lenders
+        // get prev tranche
+        // call _rollover for each lender
+        
     }
 
     /*////////////////////////////////////////////////
@@ -258,30 +266,39 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     /**@dev used to approve the process of the rollover (executed with older tranche) */
-    function approveRollover(uint256 amount) external onlyOwnerOrPool {
-        LendingPool lender = LendingPool(poolAddress());
-        PoolFactory factory = PoolFactory(lender.poolFactoryAddress());
+    function approveRollover(address lender, uint256 assets) external onlyOwnerOrPool {
+        LendingPool pool = LendingPool(poolAddress());
+        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
 
         address[8] memory futureTranches = factory.nextTranches();
         for(uint256 i = 0; i < futureTranches.length; i++) {
-            super.approve(futureTranches[i], convertToShares(amount));
+            //super.approve(futureTranches[i], convertToShares(amount));
+            approvedRollovers[lender][futureTranches[i]] = assets;
         }
     }
 
-    function redeemAndSendRollover() external {
+    function redeemAndSendRollover(address lender) external returns(uint256) {
+        uint256 assets = approvedRollovers[lender][msg.sender];
+        uint256 shares = convertToAssets(assets);
 
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), _msgSender(), assets);
+        _burn(lender, shares);
+
+        return assets;
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
-    function rollover(address lender, address deadLendingPool, address deadTranche) external onlyOwnerOrPool {
-        TrancheVault deadTranche = TrancheVault(deadTranche);
+    function _rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) internal /* todo: nonReentrant */ {
+        TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
         require(deadTranche.asset() == asset(), "Incompatible asset types");
-        LendingPool deadpool = LendingPool(deadLendingPool); // lol deadpool
+        LendingPool deadpool = LendingPool(deadLendingPoolAddr); // lol deadpool
         LendingPool.RollOverSetting memory settings = deadpool.lenderRollOverSettings(lender);
         require(settings.enabled, "Lender must approve rollover");
 
-        deadTranche.transfer(address(this), deadTranche.allowance(lender, address(this)));
-        // transfer in capital from preview tranches
+        // transfer in capital from prev tranche
+        uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender);
+        deposit(assetsRolled, lender);
+
     }
 
     /*////////////////////////////////////////////////
