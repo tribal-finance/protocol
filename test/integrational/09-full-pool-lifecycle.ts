@@ -374,11 +374,25 @@ describe("Full cycle sequential test", function () {
       const futureLenders = await poolFactory.nextLenders();
       const futureTranches = await poolFactory.nextTranches();
     
-      const data = await poolFactory.callStatic.deployPool({ ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() }, [WAD(1)]);
+      const lendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
+
+      const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
+      await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
+
+      const nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
+
       console.log(futureLenders);
       console.log(futureTranches);
 
-      console.log(data);
+      console.log("nextPoolAddr", nextPoolAddr)
+
+      expect(nextPoolAddr).equals(futureLenders[0]);
+
+      console.log("tranche count", await nextLendingPool.tranchesCount());
+
+      const nextTrancheAddr = await nextLendingPool.trancheVaultAddresses(0);
+
+      console.log("nextTrancheAddr", nextTrancheAddr);
 
     })
   });

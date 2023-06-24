@@ -133,9 +133,8 @@ contract PoolFactory is AuthorityAware {
         trancheVaultAddresses = new address[](params.tranchesCount);
 
         for (uint8 i; i < params.tranchesCount; ++i) {
-            address impl = poolImplementationAddress;
-            nonces[impl]++;
-            trancheVaultAddresses[i] = address(new TrancheVault());
+            address impl = trancheVaultImplementationAddress;
+            trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
 
             emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
 
