@@ -791,7 +791,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      * @param lenderStartIndex The first lender to start migrating over
      * @param lenderEndIndex The last lender to migrate
      */
-    function executeRollover(address deadLendingPoolAddr, address[] memory deadTrancheAddrs, uint256 lenderStartIndex, uint256 lenderEndIndex) internal {
+    function executeRollover(address deadLendingPoolAddr, address[] memory deadTrancheAddrs, uint256 lenderStartIndex, uint256 lenderEndIndex) external onlyOwnerOrAdmin {
         require(keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code), "rollover incampatible due to version mismatch"); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
         require(deadTrancheAddrs.length == trancheVaultAddresses.length, "tranche ids mismatch");
         // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs

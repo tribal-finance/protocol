@@ -5,6 +5,8 @@ import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
+import { DEFAULT_LENDING_POOL_PARAMS } from "../../lib/pool_deployments";
+
 import {
   ITestUSDC,
   LendingPool,
@@ -84,6 +86,7 @@ describe("Full cycle sequential test", function () {
       tribalToken: TribalToken,
       lendingPool: LendingPool,
       firstTrancheVault: TrancheVault,
+      poolFactory: PoolFactory,
       deployer: Signer,
       borrower: Signer,
       lender1: Signer,
@@ -95,6 +98,7 @@ describe("Full cycle sequential test", function () {
       tribalToken = data.tribalToken;
       lendingPool = data.lendingPool;
       firstTrancheVault = data.firstTrancheVault;
+      poolFactory = data.poolFactory;
       deployer = data.deployer;
       borrower = data.borrower;
       lender1 = data.lenders[0];
@@ -365,5 +369,17 @@ describe("Full cycle sequential test", function () {
           await lender2.getAddress()
         );
     });
+
+    it("prepare next generation of protocol to roll into", async () => {
+      const futureLenders = await poolFactory.nextLenders();
+      const futureTranches = await poolFactory.nextTranches();
+    
+      const data = await poolFactory.callStatic.deployPool({ ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() }, [WAD(1)]);
+      console.log(futureLenders);
+      console.log(futureTranches);
+
+      console.log(data);
+
+    })
   });
 });
