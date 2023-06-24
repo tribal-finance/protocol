@@ -370,30 +370,44 @@ describe("Full cycle sequential test", function () {
         );
     });
 
-    it("prepare next generation of protocol to roll into", async () => {
-      const futureLenders = await poolFactory.nextLenders();
-      const futureTranches = await poolFactory.nextTranches();
-    
-      const lendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
+    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
+      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
+    })
 
-      const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
-      await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
+    describe("test out rolling over into next protocol", async () => {
+      it("prepare next generation of protocol to roll into", async () => {
+        const futureLenders = await poolFactory.nextLenders();
+        const futureTranches = await poolFactory.nextTranches();
 
-      const nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
+        const lendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
 
-      console.log(futureLenders);
-      console.log(futureTranches);
+        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
+        await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
 
-      console.log("nextPoolAddr", nextPoolAddr)
+        const nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
 
-      expect(nextPoolAddr).equals(futureLenders[0]);
+        console.log(futureLenders);
+        console.log(futureTranches);
 
-      console.log("tranche count", await nextLendingPool.tranchesCount());
+        console.log("nextPoolAddr", nextPoolAddr)
 
-      const nextTrancheAddr = await nextLendingPool.trancheVaultAddresses(0);
+        expect(nextPoolAddr).hexEqual(futureLenders[0]);
 
-      console.log("nextTrancheAddr", nextTrancheAddr);
+        console.log("tranche count", await nextLendingPool.tranchesCount());
+
+        const nextTrancheAddr = await nextLendingPool.trancheVaultAddresses(0);
+
+        console.log("nextTrancheAddr", nextTrancheAddr);
+
+        expect(nextTrancheAddr).hexEqual(futureTranches[0]);
+
+      })
+
+      it("not exactly sure how we ought to call this rollover in practice due to it's linear nature", async () => {
+        // TODO: discuss realistic mins/maxes for lender caps. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
+      })
 
     })
+
   });
 });
