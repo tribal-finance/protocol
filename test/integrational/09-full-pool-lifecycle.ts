@@ -350,7 +350,8 @@ describe("Full cycle sequential test", function () {
       expect(await usdc.balanceOf(lendingPool.address)).to.equal(0);
     });
 
-    it("👛 8000 usdc principal withdrawal for lender 1", async () => {
+    // skipping for now because we want to test if lender1 can withdraw rolled over funds from next gen protocol
+    it.skip("👛 8000 usdc principal withdrawal for lender 1", async () => {
       await firstTrancheVault
         .connect(lender1)
         .withdraw(

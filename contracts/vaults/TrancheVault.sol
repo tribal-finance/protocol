@@ -292,9 +292,13 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // it's trying to move underlying asset from old tranche into new tranche
         // is this confimed to be the deadtranche?
         // yes
-        // 
+        // Does this old tranche have any asset?
+        // Yes, it has the principal 
+        // Where does the interest get paid to?????????????????
+        // check if lender has it
         console.log("Exected old tranche");
         console.logAddress(address(this));
+        console.log("Trying to transfer assets", assets);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), _msgSender(), assets);
         console.log("BD");
 
@@ -321,7 +325,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
         require(settings.enabled, "Lender must approve rollover");
         console.log("AF");
-        
+
         console.log("Exected new tranche");
         console.logAddress(address(this));
 
