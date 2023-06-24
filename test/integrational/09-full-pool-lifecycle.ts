@@ -375,6 +375,10 @@ describe("Full cycle sequential test", function () {
     })
 
     describe("test out rolling over into next protocol", async () => {
+
+      let nextLendingPool: LendingPool;
+      let nextTrancheVault: TrancheVault;
+
       it("prepare next generation of protocol to roll into", async () => {
         const futureLenders = await poolFactory.nextLenders();
         const futureTranches = await poolFactory.nextTranches();
@@ -384,7 +388,7 @@ describe("Full cycle sequential test", function () {
         const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
         await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
 
-        const nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
+        nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
 
         console.log(futureLenders);
         console.log(futureTranches);
@@ -401,10 +405,53 @@ describe("Full cycle sequential test", function () {
 
         expect(nextTrancheAddr).hexEqual(futureTranches[0]);
 
+        nextTrancheVault = await ethers.getContractAt("TrancheVault", nextTrancheAddr);
+
       })
 
+      it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
+        expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
+        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(2000));
+      });
+  
+      it("🏛️ 2000 USDC flc deposit from the borrower", async () => {
+        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(2000));
+        await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
+      });
+  
+      it("transitions to the FLC_DEPOSITED stage", async () => {
+        expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
+      });
+  
+      it("👮 receives adminOpenPool() from deployer", async () => {
+        await nextLendingPool.connect(deployer).adminOpenPool();
+      });
+  
+      it("transitions to OPEN stage", async () => {
+        expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
+      });
+  
+      it("👛 8000 USDC deposit from lender 1", async () => {
+        await usdc
+          .connect(lender1)
+          .approve(nextTrancheVault.address, USDC(8000));
+        await nextTrancheVault
+          .connect(lender1)
+          .deposit(USDC(8000), await lender1.getAddress());
+      });
+  
+      it("gives 8000 tranche vault tokens to lender 1", async () => {
+        expect(
+          await nextTrancheVault.balanceOf(await lender1.getAddress())
+        ).to.equal(USDC(8000));
+      });
+
       it("not exactly sure how we ought to call this rollover in practice due to it's linear nature", async () => {
-        // TODO: discuss realistic mins/maxes for lender caps. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
+        // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
+
+
+        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
+
       })
 
     })

@@ -11,6 +11,8 @@ import "../fee_sharing/IFeeSharing.sol";
 import "../factory/PoolFactory.sol";
 import "./ILendingPool.sol";
 
+import "hardhat/console.sol";
+
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using MathUpgradeable for uint;
@@ -796,8 +798,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         require(deadTrancheAddrs.length == trancheVaultAddresses.length, "tranche ids mismatch");
         // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
 
-        for(uint256 i = lenderStartIndex; i < lenderEndIndex; i++) {
+        for(uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
+            console.log("trying to rollover", s_lenders.length());
             address lender = s_lenders.at(i);
+            console.logAddress(lender);
             // ask deadpool to move platform token into this new contract
             IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
             SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platoken.allowance(deadLendingPoolAddr, address(this)));

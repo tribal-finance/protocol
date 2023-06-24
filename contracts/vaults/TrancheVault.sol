@@ -7,13 +7,15 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
 import "../authority/AuthorityAware.sol";
 import "../pool/LendingPool.sol";
 import "../factory/PoolFactory.sol";
 
+import "hardhat/console.sol";
+
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
-
 
     /*////////////////////////////////////////////////
       State
@@ -213,7 +215,6 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // collect lenders
         // get prev tranche
         // call _rollover for each lender
-        
     }
 
     /*////////////////////////////////////////////////
@@ -271,34 +272,65 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
 
         address[8] memory futureTranches = factory.nextTranches();
-        for(uint256 i = 0; i < futureTranches.length; i++) {
+        for (uint256 i = 0; i < futureTranches.length; i++) {
             //super.approve(futureTranches[i], convertToShares(amount));
             approvedRollovers[lender][futureTranches[i]] = assets;
+
         }
     }
 
-    function redeemAndSendRollover(address lender) external returns(uint256) {
+    function redeemAndSendRollover(address lender) external returns (uint256) {
+        console.log("BA");
         uint256 assets = approvedRollovers[lender][msg.sender];
-        uint256 shares = convertToAssets(assets);
+        console.log("BB");
 
+        uint256 shares = convertToAssets(assets);
+        console.log("BC");
+        console.log(TrancheVault(asset()).balanceOf(address(this)));
+
+        // what's being transfered?
+        // it's trying to move underlying asset from old tranche into new tranche
+        // is this confimed to be the deadtranche?
+        // yes
+        // 
+        console.log("Exected old tranche");
+        console.logAddress(address(this));
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), _msgSender(), assets);
+        console.log("BD");
+
         _burn(lender, shares);
+        console.log("BE");
 
         return assets;
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
-    function rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) external onlyLender {
+    function rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) external onlyPool {
+        console.log("AA");
         TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
+        console.log("AB");
+
         require(deadTranche.asset() == asset(), "Incompatible asset types");
+        console.log("AC");
+
         LendingPool deadpool = LendingPool(deadLendingPoolAddr); // lol deadpool
+        console.log("AD");
+
         LendingPool.RollOverSetting memory settings = deadpool.lenderRollOverSettings(lender);
+        console.log("AE");
+
         require(settings.enabled, "Lender must approve rollover");
+        console.log("AF");
+        
+        console.log("Exected new tranche");
+        console.logAddress(address(this));
 
         // transfer in capital from prev tranche
         uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender);
-        deposit(assetsRolled, lender);
+        console.log("AG");
 
+        deposit(assetsRolled, lender);
+        console.log("AH");
     }
 
     /*////////////////////////////////////////////////
