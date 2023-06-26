@@ -458,21 +458,12 @@ describe.only("Full cycle sequential test", function () {
         // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
         // If lenderCounts are low, this is a non-issue but will come up in audit so need to discuss anyways
 
-        console.log("test lenderRewardsByTrancheRedeemable");
-        console.log(await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0));
-
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
         console.log("[pre-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
         console.log("[pre-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
         console.log("[pre-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
         console.log("[pre-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
-        console.log("test lenderRewardsByTrancheRedeemable");
-        console.log(await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0));
-
-        // why does calling lenderRewardsByTrancheRedeemable internally result in one less interest payment as reward????
-        // BUGGGG
-
         console.log("[post-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
         console.log("[post-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
         console.log("[post-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
