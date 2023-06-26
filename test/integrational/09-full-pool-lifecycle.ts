@@ -127,18 +127,19 @@ describe.only("Full cycle sequential test", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
 
+    
+    it("👛 8000 USDC deposit from lender 1", async () => {
+      await usdc
+      .connect(lender1)
+      .approve(firstTrancheVault.address, USDC(8000));
+      await firstTrancheVault
+      .connect(lender1)
+      .deposit(USDC(8000), await lender1.getAddress());
+    });
+    
     it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
       await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
     })
-
-    it("👛 8000 USDC deposit from lender 1", async () => {
-      await usdc
-        .connect(lender1)
-        .approve(firstTrancheVault.address, USDC(8000));
-      await firstTrancheVault
-        .connect(lender1)
-        .deposit(USDC(8000), await lender1.getAddress());
-    });
 
     it("gives 8000 tranche vault tokens to lender 1", async () => {
       expect(
@@ -457,8 +458,16 @@ describe.only("Full cycle sequential test", function () {
         // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
         // If lenderCounts are low, this is a non-issue but will come up in audit
 
+        const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
+        console.log("[pre-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
+        console.log("[pre-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
+        console.log("[pre-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
+        console.log("[pre-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
-
+        console.log("[post-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
+        console.log("[post-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
+        console.log("[post-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
+        console.log("[post-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
       })
 
     })

@@ -279,8 +279,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     function redeemAndSendRollover(address lender, uint256 rewards) external returns (uint256) {
         TrancheVault newTranche = TrancheVault(_msgSender());
         uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
-        uint256 shares = convertToAssets(assets);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
+        uint256 shares = convertToAssets(assets - rewards);
         _burn(lender, shares);
         return assets;
     }
@@ -291,7 +291,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         require(deadTranche.asset() == asset(), "Incompatible asset types");
         // transfer in capital from prev tranche
         uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender, rewards);
-        IERC20Upgradeable(asset()).approve(address(this), 2 ** 256 - 1);
+        IERC20Upgradeable(asset()).approve(address(this), assetsRolled);
         uint256 shares = previewDeposit(assetsRolled);
         _deposit(address(this), lender, assetsRolled, shares);
     }
