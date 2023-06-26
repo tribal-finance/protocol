@@ -390,7 +390,7 @@ describe.only("Full cycle sequential test", function () {
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         
 
-        const lendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
+        const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
         const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
         await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
