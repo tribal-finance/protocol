@@ -26,7 +26,7 @@ import {
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 
-describe("Full cycle sequential test", function () {
+describe.only("Full cycle sequential test", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -384,6 +384,12 @@ describe("Full cycle sequential test", function () {
         const futureLenders = await poolFactory.nextLenders();
         const futureTranches = await poolFactory.nextTranches();
 
+        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+
+        defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
+        defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
+        
+
         const lendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
 
         const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
@@ -415,7 +421,7 @@ describe("Full cycle sequential test", function () {
         expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(2000));
       });
   
-      it("🏛️ 2000 USDC flc deposit from the borrower", async () => {
+      it("2000 USDC flc deposit from the borrower", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(2000));
         await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
       });
@@ -424,7 +430,7 @@ describe("Full cycle sequential test", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
       });
   
-      it("👮 receives adminOpenPool() from deployer", async () => {
+      it("receives adminOpenPool() from deployer", async () => {
         await nextLendingPool.connect(deployer).adminOpenPool();
       });
   
@@ -432,7 +438,7 @@ describe("Full cycle sequential test", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
       });
   
-      it("👛 8000 USDC deposit from lender 1", async () => {
+      it("8000 USDC deposit from lender 1", async () => {
         await usdc
           .connect(lender1)
           .approve(nextTrancheVault.address, USDC(8000));
@@ -450,6 +456,8 @@ describe("Full cycle sequential test", function () {
       it("not exactly sure how we ought to call this rollover in practice due to it's linear nature", async () => {
         // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
 
+        console.log("Rewards redeemable by lender1 in deadLendingPool");
+        console.log(await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0));
 
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
 

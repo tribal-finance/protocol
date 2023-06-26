@@ -279,9 +279,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         }
     }
 
-    function redeemAndSendRollover(address lender) external returns (uint256) {
+    function redeemAndSendRollover(address lender, uint256 rewards) external returns (uint256) {
         console.log("BA");
-        uint256 assets = approvedRollovers[lender][msg.sender];
+        uint256 assets = approvedRollovers[lender][msg.sender] + rewards;
         console.log("BB");
 
         uint256 shares = convertToAssets(assets);
@@ -296,6 +296,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // Yes, it has the principal 
         // Where does the interest get paid to?????????????????
         // check if lender has it
+            // what do we do here? The lender has interest accrued. How does that get rollover over?
+            // which tranche do we put it in?
         console.log("Exected old tranche");
         console.logAddress(address(this));
         console.log("Trying to transfer assets", assets);
@@ -309,7 +311,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
-    function rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) external onlyPool {
+    function rollover(address lender, address deadTrancheAddr, uint256 rewards) external onlyPool {
         console.log("AA");
         TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
         console.log("AB");
@@ -317,20 +319,15 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         require(deadTranche.asset() == asset(), "Incompatible asset types");
         console.log("AC");
 
-        LendingPool deadpool = LendingPool(deadLendingPoolAddr); // lol deadpool
-        console.log("AD");
-
-        LendingPool.RollOverSetting memory settings = deadpool.lenderRollOverSettings(lender);
         console.log("AE");
 
-        require(settings.enabled, "Lender must approve rollover");
         console.log("AF");
 
         console.log("Exected new tranche");
         console.logAddress(address(this));
 
         // transfer in capital from prev tranche
-        uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender);
+        uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender, rewards);
         console.log("AG");
 
         deposit(assetsRolled, lender);
