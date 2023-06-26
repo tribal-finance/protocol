@@ -279,8 +279,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     function redeemAndSendRollover(address lender, uint256 rewards) external returns (uint256) {
+        TrancheVault newTranche = TrancheVault(_msgSender());
         console.log("BA");
-        uint256 assets = approvedRollovers[lender][msg.sender] + rewards;
+        uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
         console.log("BB");
 
         uint256 shares = convertToAssets(assets);
@@ -297,10 +298,13 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // Gets paid to lender
         // what do we do here? The lender has interest accrued. How does that get rollover over?
         // which tranche do we put it in?
-        console.log("Exected old tranche");
+        console.log("Exected old tranche xyz");
         console.logAddress(address(this));
+        console.log("Expected new tranche abc");
+        console.logAddress(msg.sender);
+        console.logAddress(_msgSender());
         console.log("Trying to transfer assets", assets);
-        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), _msgSender(), assets);
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
         console.log("BD");
 
         _burn(lender, shares);
@@ -322,12 +326,13 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
         console.log("AF");
 
-        console.log("Exected new tranche");
+        console.log("Exected new tranche abc");
         console.logAddress(address(this));
 
         // transfer in capital from prev tranche
         console.log("totalAssets before redeemAndSendRollover");
         console.log(totalAssets());
+        console.log(TrancheVault(asset()).balanceOf(address(this)));
 
         uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender, rewards);
         console.log("AG");
@@ -335,8 +340,15 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         console.log("assets rolled", assetsRolled);
         console.log("totalAssets after redeemAndSendRollover");
         console.log(totalAssets());
+        console.log(TrancheVault(asset()).balanceOf(address(this)));
 
-        super.deposit(assetsRolled, lender);
+        console.log(IERC20Upgradeable(asset()).allowance(address(this), address(this)));
+        IERC20Upgradeable(asset()).approve(address(this), 2 ** 256 - 1);
+        console.log(IERC20Upgradeable(asset()).allowance(address(this), address(this)));
+
+        uint256 shares = previewDeposit(assetsRolled);
+        _deposit(address(this), lender, assetsRolled, shares);
+
         console.log("AH");
     }
 
