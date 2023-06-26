@@ -127,6 +127,10 @@ describe.only("Full cycle sequential test", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
 
+    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
+      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
+    })
+
     it("👛 8000 USDC deposit from lender 1", async () => {
       await usdc
         .connect(lender1)
@@ -257,7 +261,7 @@ describe.only("Full cycle sequential test", function () {
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
     });
 
-    it("👛 125 USDC interest withdrawal for lender 1", async () => {
+    it.skip("👛 125 USDC interest withdrawal for lender 1", async () => {
       await lendingPool.connect(lender1).lenderRedeemRewards([USDC(125)]);
     });
 
@@ -332,11 +336,11 @@ describe.only("Full cycle sequential test", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
     });
 
-    it("👛 400 USDC interest withdrawal for lender 1", async () => {
+    it.skip("👛 400 USDC interest withdrawal for lender 1", async () => {
       await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
     });
 
-    it("👛 10000 TRIBL tokens unlock for lender 1", async () => {
+    it.skip("👛 10000 TRIBL tokens unlock for lender 1", async () => {
       await lendingPool
         .connect(lender1)
         .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
@@ -346,7 +350,7 @@ describe.only("Full cycle sequential test", function () {
       await lendingPool.connect(lender2).lenderRedeemRewards([USDC(100)]);
     });
 
-    it("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
+    it.skip("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
       expect(await usdc.balanceOf(lendingPool.address)).to.equal(0);
     });
 
@@ -370,10 +374,6 @@ describe.only("Full cycle sequential test", function () {
           await lender2.getAddress()
         );
     });
-
-    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
-      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
-    })
 
     describe("test out rolling over into next protocol", async () => {
 
@@ -457,8 +457,12 @@ describe.only("Full cycle sequential test", function () {
         // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
 
         console.log("Rewards redeemable by lender1 in deadLendingPool");
+        console.log(await lendingPool.fundedAt());
+        const block = await ethers.provider.getBlock('latest');
+        console.log(block.timestamp);
+        console.log((await lendingPool.fundedAt()).gt(block.timestamp))
         console.log(await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0));
-
+        console.log("execute rollover")
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
 
       })

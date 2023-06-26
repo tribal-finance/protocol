@@ -275,7 +275,6 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         for (uint256 i = 0; i < futureTranches.length; i++) {
             //super.approve(futureTranches[i], convertToShares(amount));
             approvedRollovers[lender][futureTranches[i]] = assets;
-
         }
     }
 
@@ -293,11 +292,11 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // is this confimed to be the deadtranche?
         // yes
         // Does this old tranche have any asset?
-        // Yes, it has the principal 
-        // Where does the interest get paid to?????????????????
-        // check if lender has it
-            // what do we do here? The lender has interest accrued. How does that get rollover over?
-            // which tranche do we put it in?
+        // Yes, it has the principal
+        // Where does the interest get paid to?\
+        // Gets paid to lender
+        // what do we do here? The lender has interest accrued. How does that get rollover over?
+        // which tranche do we put it in?
         console.log("Exected old tranche");
         console.logAddress(address(this));
         console.log("Trying to transfer assets", assets);
@@ -327,10 +326,17 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         console.logAddress(address(this));
 
         // transfer in capital from prev tranche
+        console.log("totalAssets before redeemAndSendRollover");
+        console.log(totalAssets());
+
         uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender, rewards);
         console.log("AG");
 
-        deposit(assetsRolled, lender);
+        console.log("assets rolled", assetsRolled);
+        console.log("totalAssets after redeemAndSendRollover");
+        console.log(totalAssets());
+
+        super.deposit(assetsRolled, lender);
         console.log("AH");
     }
 

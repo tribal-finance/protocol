@@ -706,9 +706,12 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        return
-            lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId) -
-            lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        uint256 toReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
+        console.log("Toreward", toReward);
+        uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        console.log("hasRwarded", hasRewarded);
+        return toReward - hasRewarded;
+            
     }
 
     /** @notice Returns APR for the lender taking into account all the deposited USDC + platform tokens
@@ -827,6 +830,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
                 TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
                 uint256 rewards = settings.rewards ? lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
+                // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
                 console.log("Rewards", rewards);
                 console.log("BalanceOf deadLendingPoolAddr");
                 console.log(TrancheVault(stableCoinContractAddress).balanceOf(deadLendingPoolAddr));
