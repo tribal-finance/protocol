@@ -456,12 +456,6 @@ describe.only("Full cycle sequential test", function () {
       it("not exactly sure how we ought to call this rollover in practice due to it's linear nature", async () => {
         // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
 
-        console.log(await lendingPool.fundedAt());
-        const block = await ethers.provider.getBlock('latest');
-        console.log(block.timestamp);
-        console.log((await lendingPool.fundedAt()).gt(block.timestamp))
-        console.log(await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0));
-        console.log("execute rollover")
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
 
       })
