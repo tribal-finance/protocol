@@ -275,13 +275,13 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         for (uint256 i = 0; i < futureTranches.length; i++) {
             //super.approve(futureTranches[i], convertToShares(amount));
             approvedRollovers[lender][futureTranches[i]] = assets;
-
         }
     }
 
-    function redeemAndSendRollover(address lender) external returns (uint256) {
+    function redeemAndSendRollover(address lender, uint256 rewards) external returns (uint256) {
+        TrancheVault newTranche = TrancheVault(_msgSender());
         console.log("BA");
-        uint256 assets = approvedRollovers[lender][msg.sender];
+        uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
         console.log("BB");
 
         uint256 shares = convertToAssets(assets);
@@ -293,13 +293,18 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // is this confimed to be the deadtranche?
         // yes
         // Does this old tranche have any asset?
-        // Yes, it has the principal 
-        // Where does the interest get paid to?????????????????
-        // check if lender has it
-        console.log("Exected old tranche");
+        // Yes, it has the principal
+        // Where does the interest get paid to?\
+        // Gets paid to lender
+        // what do we do here? The lender has interest accrued. How does that get rollover over?
+        // which tranche do we put it in?
+        console.log("Exected old tranche xyz");
         console.logAddress(address(this));
+        console.log("Expected new tranche abc");
+        console.logAddress(msg.sender);
+        console.logAddress(_msgSender());
         console.log("Trying to transfer assets", assets);
-        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), _msgSender(), assets);
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
         console.log("BD");
 
         _burn(lender, shares);
@@ -309,7 +314,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
-    function rollover(address lender, address deadLendingPoolAddr, address deadTrancheAddr) external onlyPool {
+    function rollover(address lender, address deadTrancheAddr, uint256 rewards) external onlyPool {
         console.log("AA");
         TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
         console.log("AB");
@@ -317,23 +322,33 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         require(deadTranche.asset() == asset(), "Incompatible asset types");
         console.log("AC");
 
-        LendingPool deadpool = LendingPool(deadLendingPoolAddr); // lol deadpool
-        console.log("AD");
-
-        LendingPool.RollOverSetting memory settings = deadpool.lenderRollOverSettings(lender);
         console.log("AE");
 
-        require(settings.enabled, "Lender must approve rollover");
         console.log("AF");
 
-        console.log("Exected new tranche");
+        console.log("Exected new tranche abc");
         console.logAddress(address(this));
 
         // transfer in capital from prev tranche
-        uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender);
+        console.log("totalAssets before redeemAndSendRollover");
+        console.log(totalAssets());
+        console.log(TrancheVault(asset()).balanceOf(address(this)));
+
+        uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender, rewards);
         console.log("AG");
 
-        deposit(assetsRolled, lender);
+        console.log("assets rolled", assetsRolled);
+        console.log("totalAssets after redeemAndSendRollover");
+        console.log(totalAssets());
+        console.log(TrancheVault(asset()).balanceOf(address(this)));
+
+        console.log(IERC20Upgradeable(asset()).allowance(address(this), address(this)));
+        IERC20Upgradeable(asset()).approve(address(this), 2 ** 256 - 1);
+        console.log(IERC20Upgradeable(asset()).allowance(address(this), address(this)));
+
+        uint256 shares = previewDeposit(assetsRolled);
+        _deposit(address(this), lender, assetsRolled, shares);
+
         console.log("AH");
     }
 
