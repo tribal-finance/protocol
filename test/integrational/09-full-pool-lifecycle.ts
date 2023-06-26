@@ -468,6 +468,8 @@ describe.only("Full cycle sequential test", function () {
         console.log("[post-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
         console.log("[post-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
         console.log("[post-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
+
+        // rollovers look like great success in this scenario
       })
 
     })
