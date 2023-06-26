@@ -384,7 +384,13 @@ describe.only("Full cycle sequential test", function () {
         const futureLenders = await poolFactory.nextLenders();
         const futureTranches = await poolFactory.nextTranches();
 
-        const lendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
+        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+
+        defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
+        defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
+
+        const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
+
 
         const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
         await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
