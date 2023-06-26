@@ -455,6 +455,8 @@ describe.only("Full cycle sequential test", function () {
       });
 
       it("not exactly sure how we ought to call this rollover in practice due to it's linear nature", async () => {
+        // we can call this badboy at any lender transitioning stage given we mitigate the following and supply some new params
+
         // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
         // If lenderCounts are low, this is a non-issue but will come up in audit so need to discuss anyways
 
