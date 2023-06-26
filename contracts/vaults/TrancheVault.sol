@@ -12,8 +12,6 @@ import "../authority/AuthorityAware.sol";
 import "../pool/LendingPool.sol";
 import "../factory/PoolFactory.sol";
 
-import "hardhat/console.sol";
-
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
 
@@ -280,76 +278,22 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
     function redeemAndSendRollover(address lender, uint256 rewards) external returns (uint256) {
         TrancheVault newTranche = TrancheVault(_msgSender());
-        console.log("BA");
         uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
-        console.log("BB");
-
         uint256 shares = convertToAssets(assets);
-        console.log("BC");
-        console.log(TrancheVault(asset()).balanceOf(address(this)));
-
-        // what's being transfered?
-        // it's trying to move underlying asset from old tranche into new tranche
-        // is this confimed to be the deadtranche?
-        // yes
-        // Does this old tranche have any asset?
-        // Yes, it has the principal
-        // Where does the interest get paid to?\
-        // Gets paid to lender
-        // what do we do here? The lender has interest accrued. How does that get rollover over?
-        // which tranche do we put it in?
-        console.log("Exected old tranche xyz");
-        console.logAddress(address(this));
-        console.log("Expected new tranche abc");
-        console.logAddress(msg.sender);
-        console.logAddress(_msgSender());
-        console.log("Trying to transfer assets", assets);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
-        console.log("BD");
-
         _burn(lender, shares);
-        console.log("BE");
-
         return assets;
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
     function rollover(address lender, address deadTrancheAddr, uint256 rewards) external onlyPool {
-        console.log("AA");
         TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
-        console.log("AB");
-
         require(deadTranche.asset() == asset(), "Incompatible asset types");
-        console.log("AC");
-
-        console.log("AE");
-
-        console.log("AF");
-
-        console.log("Exected new tranche abc");
-        console.logAddress(address(this));
-
         // transfer in capital from prev tranche
-        console.log("totalAssets before redeemAndSendRollover");
-        console.log(totalAssets());
-        console.log(TrancheVault(asset()).balanceOf(address(this)));
-
         uint256 assetsRolled = deadTranche.redeemAndSendRollover(lender, rewards);
-        console.log("AG");
-
-        console.log("assets rolled", assetsRolled);
-        console.log("totalAssets after redeemAndSendRollover");
-        console.log(totalAssets());
-        console.log(TrancheVault(asset()).balanceOf(address(this)));
-
-        console.log(IERC20Upgradeable(asset()).allowance(address(this), address(this)));
         IERC20Upgradeable(asset()).approve(address(this), 2 ** 256 - 1);
-        console.log(IERC20Upgradeable(asset()).allowance(address(this), address(this)));
-
         uint256 shares = previewDeposit(assetsRolled);
         _deposit(address(this), lender, assetsRolled, shares);
-
-        console.log("AH");
     }
 
     /*////////////////////////////////////////////////

@@ -11,8 +11,6 @@ import "../fee_sharing/IFeeSharing.sol";
 import "../factory/PoolFactory.sol";
 import "./ILendingPool.sol";
 
-import "hardhat/console.sol";
-
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using MathUpgradeable for uint;
@@ -707,9 +705,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
         uint256 toReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
-        console.log("Toreward", toReward);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
-        console.log("hasRwarded", hasRewarded);
         return toReward - hasRewarded;
             
     }
@@ -831,10 +827,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
                 TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
                 uint256 rewards = settings.rewards ? lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
                 // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
-                console.log("Rewards", rewards);
-                console.log("BalanceOf deadLendingPoolAddr");
-                console.log(TrancheVault(stableCoinContractAddress).balanceOf(deadLendingPoolAddr));
-                console.log(TrancheVault(stableCoinContractAddress).balanceOf(address(this)));
                 // transfer rewards from dead lender to dead tranche
                 SafeERC20Upgradeable.safeTransferFrom(
                     IERC20Upgradeable(stableCoinContractAddress),
