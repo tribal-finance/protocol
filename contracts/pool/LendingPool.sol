@@ -11,8 +11,6 @@ import "../fee_sharing/IFeeSharing.sol";
 import "../factory/PoolFactory.sol";
 import "./ILendingPool.sol";
 
-import "hardhat/console.sol";
-
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using MathUpgradeable for uint;
@@ -706,10 +704,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        uint256 toReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
+        uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
-        return toReward - hasRewarded;
-            
+        return willReward - hasRewarded;
     }
 
     /** @notice Returns APR for the lender taking into account all the deposited USDC + platform tokens
@@ -731,6 +728,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             trancheAPRsWads[trancheId] +
             boostedAssets *
             trancheBoostedAPRsWads[trancheId]) / r.stakedAssets;
+
         return weightedAverage;
     }
 
@@ -787,11 +785,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             SafeERC20Upgradeable.safeApprove(
                 IERC20Upgradeable(stableCoinContractAddress), // asume tranches.asset() == stablecoin address
                 futureLenders[i],
-                2 ** 256 - 1
+                2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
             );
         }
-        // todo: approve spender to transferFrom future tranche vault tokens
-        // approve spender to transferFrom future lendingppool tokens to support tribal token lock
     }
 
     /**
@@ -820,19 +816,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
                 continue;
             }
 
-            // ask deadpool to move platform token into this new contract
-            IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
-            uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
-            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
-
             for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
                 TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
-                uint256 rewards = settings.rewards ? lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
-                console.log("soldidiy rewards");
-                console.logAddress(lender);
-                console.log("tId()", trancheId);
-                console.log("recall", lenderRewardsByTrancheRedeemable(lender, trancheId) );
-                console.log(rewards);
+                uint256 rewards = settings.rewards ? LendingPool(deadLendingPoolAddr).lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
                 // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
                 // transfer rewards from dead lender to dead tranche
                 SafeERC20Upgradeable.safeTransferFrom(
@@ -844,6 +830,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
                 vault.rollover(lender, deadTrancheAddrs[trancheId], rewards);
             }
+
+            // ask deadpool to move platform token into this new contract
+            IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
+            uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
+            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
         }
     }
 
