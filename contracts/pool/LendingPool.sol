@@ -791,7 +791,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     /**
-     * @dev This function needs to be batched due to it getting processed over all the lenders. The most optimal way to run this function should be computed off-chain
+     * @dev This function rolls funds from prior deployments into currently active deployments
      * @param deadLendingPoolAddr The address of the lender whose funds are transfering over to the new lender
      * @param deadTrancheAddrs The address of the tranches whose funds are mapping 1:1 with the next traches
      * @param lenderStartIndex The first lender to start migrating over
@@ -803,6 +803,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint256 lenderStartIndex,
         uint256 lenderEndIndex
     ) external onlyOwnerOrAdmin {
+        require(trancheVaultAddresses.length == deadTrancheAddrs.length, "tranche array mismatch");
         require(
             keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
             "rollover incampatible due to version mismatch"

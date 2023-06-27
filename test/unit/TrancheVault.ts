@@ -108,7 +108,7 @@ describe("TrancheVault contract", function () {
             expect(await tranches[1].transferEnabled()).equals(false);
         });
 
-        describe.only("Modifiers", function () {
+        describe("Modifiers", function () {
 
             it("Should revert when non-owner or non-pool tries to deposit", async function () {
                 await expect(tranches[0].connect(borrower).deposit(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("AA:L");
@@ -134,22 +134,6 @@ describe("TrancheVault contract", function () {
                 await tranches[0].enableTransfers();
                 await expect(tranches[0].connect(lenders[0]).transfer(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Transfers are not implemented");
             });
-        });
-    });
-
-
-
-    describe.skip("Admin methods", function () {
-        it("Should enable and disable deposits correctly", async function () {
-            // Call enableDeposits and disableDeposits functions and assert depositEnabled state
-        });
-
-        it("Should enable and disable withdrawals correctly", async function () {
-            // Call enableWithdrawals and disableWithdrawals functions and assert withdrawEnabled state
-        });
-
-        it("Should enable and disable transfers correctly", async function () {
-            // Call enableTransfers and disableTransfers functions and assert transferEnabled state
         });
     });
 
