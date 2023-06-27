@@ -406,9 +406,15 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /** @notice Checks whether the pool was funded successfully or not.
      *  this function is expected to be called by *owner* once the funding period ends
+     * @param deadLendingPoolAddr The address of the lender whose funds are transfering over to the new lender
+     * @param deadTrancheAddrs The address of the tranches whose funds are mapping 1:1 with the next traches
      */
-    function adminTransitionToFundedState() external onlyOwnerOrAdmin atStage(Stages.OPEN) {
+    function adminTransitionToFundedState(        
+        address deadLendingPoolAddr,
+        address[] memory deadTrancheAddrs
+    ) external onlyOwnerOrAdmin atStage(Stages.OPEN) {
         if (collectedAssets >= minFundingCapacity) {
+            this.executeRollover(deadLendingPoolAddr, deadTrancheAddrs, 0, s_lenders.length());
             _transitionToFundedStage();
         } else {
             _transitionToFundingFailedStage();
@@ -418,11 +424,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function adminTransitionToDefaultedState() external onlyOwnerOrAdmin atStage(Stages.BORROWED) {
         require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023"); // "LendingPool: maturityDate not reached"
         _transitionToDefaultedStage();
-    }
-
-    function __todoRemoveMeChangeFundedAt(uint64 newFundedAt) external onlyOwnerOrAdmin {
-        fundedAt = newFundedAt;
-        emit PoolFunded(fundedAt, collectedAssets);
     }
 
     function _transitionToFundedStage() internal {
@@ -802,7 +803,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address[] memory deadTrancheAddrs,
         uint256 lenderStartIndex,
         uint256 lenderEndIndex
-    ) external onlyOwnerOrAdmin {
+    ) external onlyOwnerOrAdmin atStage(Stages.OPEN) {
         require(trancheVaultAddresses.length == deadTrancheAddrs.length, "tranche array mismatch");
         require(
             keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
