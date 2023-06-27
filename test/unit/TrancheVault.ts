@@ -44,20 +44,25 @@ describe("TrancheVault contract", function () {
         let { lendingPool, firstTrancheVault } = await loadFixture(
             duoPoolFixture
         );
-
         trancheVault = firstTrancheVault
-
     });
 
     describe("State Variable Initialization", function () {
 
         let tranches: TrancheVault[];
         let lendingPool: LendingPool;
+        let deployer: Signer;
+        let borrower: Signer;
+        let lenders: Signer[];
 
         beforeEach(async () => {
-            const { lendingPool: _lendingPool } = await loadFixture(duoPoolFixture);
+            const { lendingPool: _lendingPool, lenders: _lenders, deployer: _deployer, borrower: _borrower } = await loadFixture(duoPoolFixture);
 
             lendingPool = _lendingPool;
+            deployer = _deployer;
+            borrower = _borrower;
+            lenders = _lenders;
+
             const trancheCount = await lendingPool.tranchesCount();
 
             tranches = []
@@ -102,29 +107,37 @@ describe("TrancheVault contract", function () {
             expect(await tranches[0].transferEnabled()).equals(false);
             expect(await tranches[1].transferEnabled()).equals(false);
         });
+
+        describe.only("Modifiers", function () {
+
+            it("Should revert when non-owner or non-pool tries to deposit", async function () {
+                await expect(tranches[0].connect(borrower).deposit(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("AA:L");
+            });
+
+            it("Should revert when non-owner or non-pool tries to withdraw", async function () {
+                await expect(tranches[0].connect(borrower).withdraw(0, ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("AA:L");
+            });
+
+            it("Should revert when deposit is disabled", async function () {
+                await tranches[0].disableDeposits();
+                await expect(tranches[0].connect(lenders[0]).deposit(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Vault: deposit disabled");
+            });
+
+            it("Should revert when withdraw is disabled", async function () {
+                await tranches[0].disableWithdrawals();
+                await expect(tranches[0].connect(lenders[0]).withdraw(0, ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Vault: withdraw disabled");
+            });
+
+            it("Should revert when transfer is disabled/enabled", async function () {
+                await tranches[0].disableTransfers();
+                await expect(tranches[0].connect(lenders[0]).transfer(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Vault: transfer disabled");
+                await tranches[0].enableTransfers();
+                await expect(tranches[0].connect(lenders[0]).transfer(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Transfers are not implemented");
+            });
+        });
     });
 
-    describe.skip("Modifiers", function () {
-        it("Should revert when non-owner or non-pool tries to deposit", async function () {
-            // Call deposit function from non-owner and non-pool address and assert revert
-        });
 
-        it("Should revert when non-owner or non-pool tries to withdraw", async function () {
-            // Call withdraw function from non-owner and non-pool address and assert revert
-        });
-
-        it("Should revert when deposit is disabled", async function () {
-            // Disable deposit and then call deposit function and assert revert
-        });
-
-        it("Should revert when withdraw is disabled", async function () {
-            // Disable withdraw and then call withdraw function and assert revert
-        });
-
-        it("Should revert when transfer is disabled", async function () {
-            // Disable transfer and then call transfer function and assert revert
-        });
-    });
 
     describe.skip("Admin methods", function () {
         it("Should enable and disable deposits correctly", async function () {
