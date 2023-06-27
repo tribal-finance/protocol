@@ -351,21 +351,6 @@ describe("Full cycle sequential test", function () {
       await lendingPool.connect(lender2).lenderRedeemRewards([USDC(100)]);
     });
 
-    it.skip("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
-      expect(await usdc.balanceOf(lendingPool.address)).to.equal(0);
-    });
-
-    // skipping for now because we want to test if lender1 can withdraw rolled over funds from next gen protocol
-    it.skip("👛 8000 usdc principal withdrawal for lender 1", async () => {
-      await firstTrancheVault
-        .connect(lender1)
-        .withdraw(
-          USDC(8000),
-          await lender1.getAddress(),
-          await lender1.getAddress()
-        );
-    });
-
     it("👜 2000 usdc principal withdrawal for lender 2", async () => {
       await firstTrancheVault
         .connect(lender2)
@@ -456,18 +441,33 @@ describe("Full cycle sequential test", function () {
 
       it("perform rollover", async () => {
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
-        console.log("[pre-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
-        console.log("[pre-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
-        console.log("[pre-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
-        console.log("[pre-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
+        
+        const initialBalances = await Promise.all([
+            await asset.balanceOf(lendingPool.address),
+            await asset.balanceOf(firstTrancheVault.address),
+            await asset.balanceOf(nextLendingPool.address),
+            await asset.balanceOf(nextTrancheVault.address)
+        ])
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 0);
-        console.log("[post-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
-        console.log("[post-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
-        console.log("[post-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
-        console.log("[post-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
+        const finalBalances = await Promise.all([
+            await asset.balanceOf(lendingPool.address),
+            await asset.balanceOf(firstTrancheVault.address),
+            await asset.balanceOf(nextLendingPool.address),
+            await asset.balanceOf(nextTrancheVault.address)
+        ])
+
+        const deltaBalances = [
+            initialBalances[0].sub(finalBalances[0]),
+            initialBalances[1].sub(finalBalances[1]),
+            initialBalances[2].sub(finalBalances[2]),
+            initialBalances[3].sub(finalBalances[3]),
+        ]
+
+        expect(deltaBalances[0]).equals(initialBalances[0])
+        expect(deltaBalances[1]).equals(initialBalances[1])
+        expect(deltaBalances[2]).equals(0)
+        expect(deltaBalances[3]).equals(-initialBalances[1].add(initialBalances[0]))
       })
-
     })
-
   });
 });
