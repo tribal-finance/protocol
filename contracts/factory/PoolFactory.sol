@@ -68,9 +68,12 @@ contract PoolFactory is AuthorityAware {
 
     /// @dev removes all the pool records from storage
     function clearPoolRecords() external onlyOwnerOrAdmin {
-        while (poolRegistry.length != 0) {
-            poolRegistry.pop();
-        }
+        delete poolRegistry;
+    }
+
+    /// @dev gets the length of the pool of records 
+    function poolRecordsLength() external view returns (uint) {
+        return poolRegistry.length;
     }
 
     /** @dev Deploys a clone of implementation as a new pool.
@@ -179,19 +182,5 @@ contract PoolFactory is AuthorityAware {
         poolRegistry.push(record);
 
         emit PoolDeployed(_msgSender(), record);
-    }
-
-    function _checkFundingSplitWads(
-        LendingPool.LendingPoolParams calldata params,
-        uint[] calldata fundingSplitWads
-    ) internal pure {
-        require(fundingSplitWads.length == params.tranchesCount, "fundingSplitWads length");
-
-        uint sum;
-        for (uint i; i < params.tranchesCount; ++i) {
-            sum += fundingSplitWads[i];
-        }
-
-        require(sum / WAD == 1, "splits sum");
     }
 }
