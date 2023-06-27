@@ -4,9 +4,11 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
-import { PoolFactory, TrancheVault } from "../../typechain-types";
+import { LendingPool, PoolFactory, TrancheVault } from "../../typechain-types";
 import { Signer, Contract } from "ethers";
 import {
+    DEFAULT_LENDING_POOL_PARAMS,
+    DEFAULT_MULTITRANCHE_FUNDING_SPLIT,
     deployDuotranchePool,
     deployFactoryAndImplementations,
     deployUnitranchePool,
@@ -47,43 +49,58 @@ describe("TrancheVault contract", function () {
 
     });
 
-    describe.skip("State variables", function () {
+    describe("State Variable Initialization", function () {
+
+        let tranches: TrancheVault[];
+        let lendingPool: LendingPool;
+
+        beforeEach(async () => {
+            const { lendingPool: _lendingPool } = await loadFixture(duoPoolFixture);
+
+            lendingPool = _lendingPool;
+            const trancheCount = await lendingPool.tranchesCount();
+
+            tranches = []
+
+            for (let i = 0; i < trancheCount; i++) {
+                tranches.push(await ethers.getContractAt("TrancheVault", await lendingPool.trancheVaultAddresses(i)));
+            }
+        })
+
         it("Should correctly get id", async function () {
-            // assert id
+            expect(await tranches[0].id()).equals(0);
+            expect(await tranches[1].id()).equals(1);
         });
 
         it("Should correctly get poolAddress", async function () {
-            // assert poolAddress
+            expect(await tranches[0].poolAddress()).equals(lendingPool.address);
+            expect(await tranches[1].poolAddress()).equals(lendingPool.address);
         });
 
         it("Should correctly get minFundingCapacity", async function () {
-            // assert minFundingCapacity
+            expect(await tranches[0].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0]).div(ethers.utils.parseEther("1")));
+            expect(await tranches[1].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1]).div(ethers.utils.parseEther("1")));
         });
 
         it("Should correctly get maxFundingCapacity", async function () {
-            // assert maxFundingCapacity
+            expect(await tranches[0].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0]).div(ethers.utils.parseEther("1")));
+            expect(await tranches[1].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1]).div(ethers.utils.parseEther("1")));
+
         });
 
         it("Should correctly get withdrawEnabled", async function () {
-            // assert withdrawEnabled
+            expect(await tranches[0].withdrawEnabled()).equals(false);
+            expect(await tranches[1].withdrawEnabled()).equals(false);
         });
 
         it("Should correctly get depositEnabled", async function () {
-            // assert depositEnabled
+            expect(await tranches[0].depositEnabled()).equals(false);
+            expect(await tranches[1].depositEnabled()).equals(false);
         });
 
         it("Should correctly get transferEnabled", async function () {
-            // assert transferEnabled
-        });
-    });
-
-    describe.skip("Initialization", function () {
-        it("Should initialize correctly", async function () {
-            // Call initialize function with correct arguments and assert
-        });
-
-        it("Should fail to initialize with incorrect arguments", async function () {
-            // Call initialize function with incorrect arguments and assert failure
+            expect(await tranches[0].transferEnabled()).equals(false);
+            expect(await tranches[1].transferEnabled()).equals(false);
         });
     });
 

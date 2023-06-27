@@ -26,7 +26,7 @@ import {
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 
-describe.only("Full cycle sequential test", function () {
+describe("Full cycle sequential test", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
