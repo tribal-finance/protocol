@@ -26,7 +26,7 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 
-describe("Rollovers (2 Lender)", function () {
+describe("Rollovers (2 Lender / 2 Tranche)", function () {
   context("For unitranche pool", async function () {
     async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
