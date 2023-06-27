@@ -769,6 +769,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         address[4] memory futureLenders = poolFactory.nextLenders();
         for (uint256 i = 0; i < futureLenders.length; i++) {
+            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], 0);
             // approve transfer of platform tokens
             SafeERC20Upgradeable.safeApprove(
                 IERC20Upgradeable(platformTokenContractAddress),
@@ -776,6 +777,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
                 lockedPlatformTokens
             );
 
+            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(stableCoinContractAddress), futureLenders[i], 0);
             // approve transfer of the stablecoin contract
             SafeERC20Upgradeable.safeApprove(
                 IERC20Upgradeable(stableCoinContractAddress), // asume tranches.asset() == stablecoin address
@@ -814,7 +816,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
             for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
                 TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
-                uint256 rewards = settings.rewards ? LendingPool(deadLendingPoolAddr).lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
+                uint256 rewards = settings.rewards
+                    ? LendingPool(deadLendingPoolAddr).lenderRewardsByTrancheRedeemable(lender, trancheId)
+                    : 0;
                 // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
                 // transfer rewards from dead lender to dead tranche
                 SafeERC20Upgradeable.safeTransferFrom(
