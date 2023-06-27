@@ -964,6 +964,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         return s_lenders.at(i);
     }
 
+    function lenderCount() public view returns(uint256) {
+        return s_lenders.length();
+    }
+
     /** @notice how much penalty the borrower owes because of the delinquency fact */
     function borrowerPenaltyAmount() public view returns (uint) {
         if (poolBalance() >= poolBalanceThreshold()) {

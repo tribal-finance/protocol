@@ -395,6 +395,8 @@ describe("Rollovers (2 Lender)", function () {
       });
   
       it("receives adminOpenPool() from deployer", async () => {
+        const lenderCount = await lendingPool.lenderCount();
+        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, lenderCount.sub(1))).to.be.revertedWith("LP004");
         await nextLendingPool.connect(deployer).adminOpenPool();
       });
   
