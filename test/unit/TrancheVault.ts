@@ -41,7 +41,7 @@ describe("TrancheVault contract", function () {
         owner = accounts[0];
         nonOwner = accounts[1];
 
-        let { lendingPool, firstTrancheVault } = await loadFixture(
+        let { lendingPool, firstTrancheVault, secondTrancheVault } = await loadFixture(
             duoPoolFixture
         );
         trancheVault = firstTrancheVault

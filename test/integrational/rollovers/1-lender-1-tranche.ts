@@ -70,18 +70,6 @@ describe("Rollovers (1 Lender)", function () {
       };
     }
 
-    /**
-     * pool settings:
-     * - lending term: 182.5 days ( 1/2 year )
-     * - lender annual yield: 10%
-     * - lender adjusted yield: 5%
-     * - borrower annual interest rate: 15%
-     * - borrower adjusted interest rate: 7.5%
-     * - funds collected: $10,000
-     * - lender 1 deposit: $8,000
-     * - lender 2 deposit: $2,000
-     */
-
     let usdc: ITestUSDC,
       tribalToken: TribalToken,
       lendingPool: LendingPool,
@@ -262,10 +250,6 @@ describe("Rollovers (1 Lender)", function () {
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
     });
 
-    it.skip("👛 125 USDC interest withdrawal for lender 1", async () => {
-      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(125)]);
-    });
-
     it("⏳ 30 days pass by", async () => {
       // wait 30 days
       await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
@@ -335,16 +319,6 @@ describe("Rollovers (1 Lender)", function () {
 
     it("transitions to FLC_WITHDRAWN stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
-    });
-
-    it.skip("👛 400 USDC interest withdrawal for lender 1", async () => {
-      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
-    });
-
-    it.skip("👛 10000 TRIBL tokens unlock for lender 1", async () => {
-      await lendingPool
-        .connect(lender1)
-        .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
     });
 
     it("👜 100 USDC interest withdraw from lender 2", async () => {

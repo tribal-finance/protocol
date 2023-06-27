@@ -28,8 +28,9 @@ import STAGES from "../../helpers/stages";
 
 describe("Rollovers (2 Lender)", function () {
   context("For unitranche pool", async function () {
-    async function uniPoolFixture() {
+    async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
+
       const [deployer, lender1, lender2, lender3, borrower, foundation] =
         signers;
       const lenders = [lender1, lender2, lender3];
@@ -46,7 +47,6 @@ describe("Rollovers (2 Lender)", function () {
         lenders,
         foundation.address
       );
-
       const afterDeploy = async (contracts: DeployedContractsType) => {
         return contracts;
       };
@@ -67,20 +67,8 @@ describe("Rollovers (2 Lender)", function () {
         usdc,
         ...(await _getDeployedContracts(poolFactory)),
         tribalToken,
-      };
+      }
     }
-
-    /**
-     * pool settings:
-     * - lending term: 182.5 days ( 1/2 year )
-     * - lender annual yield: 10%
-     * - lender adjusted yield: 5%
-     * - borrower annual interest rate: 15%
-     * - borrower adjusted interest rate: 7.5%
-     * - funds collected: $10,000
-     * - lender 1 deposit: $8,000
-     * - lender 2 deposit: $2,000
-     */
 
     let usdc: ITestUSDC,
       tribalToken: TribalToken,
@@ -93,7 +81,7 @@ describe("Rollovers (2 Lender)", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await loadFixture(duoPoolFixture);
       usdc = data.usdc;
       tribalToken = data.tribalToken;
       lendingPool = data.lendingPool;
@@ -127,15 +115,15 @@ describe("Rollovers (2 Lender)", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
 
-    
+
     it("8000 USDC deposit from lender 1 & 2", async () => {
       await usdc
-      .connect(lender1)
-      .approve(firstTrancheVault.address, USDC(8000));
+        .connect(lender1)
+        .approve(firstTrancheVault.address, USDC(8000));
 
       await firstTrancheVault
-      .connect(lender1)
-      .deposit(USDC(8000), await lender1.getAddress());
+        .connect(lender1)
+        .deposit(USDC(8000), await lender1.getAddress());
     });
 
     it("gives 8000 tranche vault tokens to lender 1", async () => {
@@ -352,7 +340,7 @@ describe("Rollovers (2 Lender)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
-        
+
 
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
@@ -384,49 +372,49 @@ describe("Rollovers (2 Lender)", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
         expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(2000));
       });
-  
+
       it("2000 USDC flc deposit from the borrower", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(2000));
         await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
       });
-  
+
       it("transitions to the FLC_DEPOSITED stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
       });
-  
+
       it("receives adminOpenPool() from deployer", async () => {
         const lenderCount = await lendingPool.lenderCount();
         await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, lenderCount.sub(1))).to.be.revertedWith("LP004");
         await nextLendingPool.connect(deployer).adminOpenPool();
       });
-  
+
       it("transitions to OPEN stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
       });
-  
+
 
       it("perform rollover", async () => {
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
-        
+
         const initialBalances = await Promise.all([
-            await asset.balanceOf(lendingPool.address),
-            await asset.balanceOf(firstTrancheVault.address),
-            await asset.balanceOf(nextLendingPool.address),
-            await asset.balanceOf(nextTrancheVault.address)
+          await asset.balanceOf(lendingPool.address),
+          await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(nextLendingPool.address),
+          await asset.balanceOf(nextTrancheVault.address)
         ])
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 1);
         const finalBalances = await Promise.all([
-            await asset.balanceOf(lendingPool.address),
-            await asset.balanceOf(firstTrancheVault.address),
-            await asset.balanceOf(nextLendingPool.address),
-            await asset.balanceOf(nextTrancheVault.address)
+          await asset.balanceOf(lendingPool.address),
+          await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(nextLendingPool.address),
+          await asset.balanceOf(nextTrancheVault.address)
         ])
 
         const deltaBalances = [
-            initialBalances[0].sub(finalBalances[0]),
-            initialBalances[1].sub(finalBalances[1]),
-            initialBalances[2].sub(finalBalances[2]),
-            initialBalances[3].sub(finalBalances[3]),
+          initialBalances[0].sub(finalBalances[0]),
+          initialBalances[1].sub(finalBalances[1]),
+          initialBalances[2].sub(finalBalances[2]),
+          initialBalances[3].sub(finalBalances[3]),
         ]
 
         expect(deltaBalances[0]).equals(initialBalances[0])
