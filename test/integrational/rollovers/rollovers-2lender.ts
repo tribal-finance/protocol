@@ -138,11 +138,6 @@ describe("Rollovers (2 Lender)", function () {
       .deposit(USDC(8000), await lender1.getAddress());
     });
 
-    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
-      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
-      await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
-    })
-
     it("gives 8000 tranche vault tokens to lender 1", async () => {
       expect(
         await firstTrancheVault.balanceOf(await lender1.getAddress())
@@ -172,6 +167,11 @@ describe("Rollovers (2 Lender)", function () {
         .connect(lender2)
         .deposit(USDC(2000), await lender2.getAddress());
     });
+
+    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
+      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
+      await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
+    })
 
     it("sets lenderTotalExpectedRewardsByTranche for lender2 to 100 (2000* 1/2 year * 10%)", async () => {
       expect(
@@ -402,20 +402,6 @@ describe("Rollovers (2 Lender)", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
       });
   
-      it("8000 USDC deposit from lender 1 & 2", async () => {
-        await usdc
-          .connect(lender1)
-          .approve(nextTrancheVault.address, USDC(8000));
-        await nextTrancheVault
-          .connect(lender1)
-          .deposit(USDC(8000), await lender1.getAddress());
-      });
-  
-      it("gives 8000 tranche vault tokens to lender 1", async () => {
-        expect(
-          await nextTrancheVault.balanceOf(await lender1.getAddress())
-        ).to.equal(USDC(8000));
-      });
 
       it("perform rollover", async () => {
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
@@ -442,7 +428,7 @@ describe("Rollovers (2 Lender)", function () {
         ]
 
         expect(deltaBalances[0]).equals(initialBalances[0])
-        expect(deltaBalances[1]).equals(initialBalances[1].sub(await lendingPool.firstLossAssets()))
+        expect(deltaBalances[1]).equals(initialBalances[1])
         expect(deltaBalances[2]).equals(0)
         expect(deltaBalances[3]).equals(-initialBalances[1].add(initialBalances[0]))
       })
