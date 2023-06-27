@@ -338,7 +338,7 @@ describe("Rollovers (2 Lender)", function () {
     });
 
 
-    describe("test out rolling over into next protocol", async () => {
+    describe("test out rolling over into next pool", async () => {
 
       let nextLendingPool: LendingPool;
       let nextTrancheVault: TrancheVault;
