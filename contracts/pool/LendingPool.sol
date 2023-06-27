@@ -761,7 +761,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
         uint256 lockedPlatformTokens;
         for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
-            uint256 amount = s_totalStakedAssetsByTranche[trancheId];
+            uint256 amount = s_trancheRewardables[trancheId][lender].stakedAssets;
             TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
             lockedPlatformTokens += s_trancheRewardables[trancheId][lender].lockedPlatformTokens;
             vault.approveRollover(lender, amount);
@@ -807,8 +807,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         ); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
         // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
 
+        LendingPool deadpool = LendingPool(deadLendingPoolAddr);
         for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
-            address lender = s_lenders.at(i);
+            address lender = deadpool.lendersAt(i);
             RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(lender);
             if (!settings.enabled) {
                 continue;
@@ -817,7 +818,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
                 TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
                 uint256 rewards = settings.rewards
-                    ? LendingPool(deadLendingPoolAddr).lenderRewardsByTrancheRedeemable(lender, trancheId)
+                    ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId)
                     : 0;
                 // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
                 // transfer rewards from dead lender to dead tranche
@@ -957,6 +958,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
             return 0;
         }
         return positiveBalance - allLendersInterestByDate();
+    }
+
+    function lendersAt(uint i) public view returns(address) {
+        return s_lenders.at(i);
     }
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */

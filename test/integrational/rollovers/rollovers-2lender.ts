@@ -128,10 +128,11 @@ describe("Rollovers (2 Lender)", function () {
     });
 
     
-    it("👛 8000 USDC deposit from lender 1", async () => {
+    it("8000 USDC deposit from lender 1 & 2", async () => {
       await usdc
       .connect(lender1)
       .approve(firstTrancheVault.address, USDC(8000));
+
       await firstTrancheVault
       .connect(lender1)
       .deposit(USDC(8000), await lender1.getAddress());
@@ -146,6 +147,7 @@ describe("Rollovers (2 Lender)", function () {
       expect(
         await firstTrancheVault.balanceOf(await lender1.getAddress())
       ).to.equal(USDC(8000));
+
     });
 
     it("increases collectedAssets() to 8000", async () => {
@@ -161,10 +163,11 @@ describe("Rollovers (2 Lender)", function () {
       ).to.equal(USDC(400));
     });
 
-    it("👜 2000 USDC deposit from lender 2", async () => {
+    it("2000 USDC deposit from lender 2", async () => {
       await usdc
         .connect(lender2)
         .approve(firstTrancheVault.address, USDC(2000));
+
       await firstTrancheVault
         .connect(lender2)
         .deposit(USDC(2000), await lender2.getAddress());
@@ -187,7 +190,7 @@ describe("Rollovers (2 Lender)", function () {
       expect(await lendingPool.collectedAssets()).to.equal(USDC(10000));
     });
 
-    it("👛 10000 TRIBAL tokens locked by lender1", async () => {
+    it("10000 TRIBAL tokens locked by lender1", async () => {
       await tribalToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
@@ -348,6 +351,7 @@ describe("Rollovers (2 Lender)", function () {
 
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
+        defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
         
 
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
@@ -398,7 +402,7 @@ describe("Rollovers (2 Lender)", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
       });
   
-      it("8000 USDC deposit from lender 1", async () => {
+      it("8000 USDC deposit from lender 1 & 2", async () => {
         await usdc
           .connect(lender1)
           .approve(nextTrancheVault.address, USDC(8000));
@@ -438,7 +442,7 @@ describe("Rollovers (2 Lender)", function () {
         ]
 
         expect(deltaBalances[0]).equals(initialBalances[0])
-        expect(deltaBalances[1]).equals(initialBalances[1])
+        expect(deltaBalances[1]).equals(initialBalances[1].sub(await lendingPool.firstLossAssets()))
         expect(deltaBalances[2]).equals(0)
         expect(deltaBalances[3]).equals(-initialBalances[1].add(initialBalances[0]))
       })
