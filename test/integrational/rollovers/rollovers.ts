@@ -4,8 +4,8 @@ import { Signer } from "ethers";
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
-import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
-import { DEFAULT_LENDING_POOL_PARAMS } from "../../lib/pool_deployments";
+import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
+import { DEFAULT_LENDING_POOL_PARAMS } from "../../../lib/pool_deployments";
 
 import {
   ITestUSDC,
@@ -13,8 +13,8 @@ import {
   PoolFactory,
   TrancheVault,
   TribalToken,
-} from "../../typechain-types";
-import { USDC, WAD } from "../helpers/conversion";
+} from "../../../typechain-types";
+import { USDC, WAD } from "../../helpers/conversion";
 import {
   deployDuotranchePool,
   DeployedContractsType,
@@ -22,9 +22,9 @@ import {
   deployUnitranchePool,
   _getDeployedContracts,
   deployTribalToken,
-} from "../../lib/pool_deployments";
-import testSetup from "../helpers/usdc";
-import STAGES from "../helpers/stages";
+} from "../../../lib/pool_deployments";
+import testSetup from "../../helpers/usdc";
+import STAGES from "../../helpers/stages";
 
 describe("Full cycle sequential test", function () {
   context("For unitranche pool", async function () {
@@ -454,12 +454,7 @@ describe("Full cycle sequential test", function () {
         ).to.equal(USDC(8000));
       });
 
-      it("not exactly sure how we ought to call this rollover in practice due to it's linear nature", async () => {
-        // we can call this badboy at any lender transitioning stage given we mitigate the following and supply some new params
-
-        // TODO: discuss realistic mins/maxes for lenderCounts. If we just run the loop inside some core lendingpool function whose responsibility is to perform state change, we could DoS ourselves in an immutable way.... should be mitigated and addresses.
-        // If lenderCounts are low, this is a non-issue but will come up in audit so need to discuss anyways
-
+      it("perform rollover", async () => {
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
         console.log("[pre-rollover] rewards in old lender", await asset.balanceOf(lendingPool.address));
         console.log("[pre-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
@@ -470,8 +465,6 @@ describe("Full cycle sequential test", function () {
         console.log("[post-rollover] rewards in old tranche", await asset.balanceOf(firstTrancheVault.address));
         console.log("[post-rollover] rewards in new lender", await asset.balanceOf(nextLendingPool.address));
         console.log("[post-rollover] rewards in new tranche", await asset.balanceOf(nextTrancheVault.address));
-
-        // rollovers look like great success in this scenario
       })
 
     })
