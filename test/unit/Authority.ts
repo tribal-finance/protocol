@@ -14,8 +14,7 @@ describe("Authority", function () {
   let admin2: Signer;
 
   beforeEach(async function () {
-    [owner, borrower1, borrower2, lender1, lender2, admin1, admin2] =
-      await ethers.getSigners();
+    [owner, borrower1, borrower2, lender1, lender2, admin1, admin2] =await ethers.getSigners();
     const AuthorityFactory = await ethers.getContractFactory("Authority");
     authority = await AuthorityFactory.deploy();
     await authority.deployed();
@@ -57,10 +56,27 @@ describe("Authority", function () {
       expect(await authority.isWhitelistedBorrower(await borrower1.getAddress())).equals(true)
       await authority.connect(admin1).addBorrower(await borrower1.getAddress())
       expect((await authority.allBorrowers()).length).equals(1)
+    })
+
+
+    describe("onlyOwner", async () => {
+      it("Prevents senders who are not the owner", async () => {
+        expect(await borrower1.getAddress()).to.not.hexEqual(await borrower2.getAddress());
+        await expect(
+          authority.connect(borrower1).addBorrower(await borrower2.getAddress())
+        ).to.be.revertedWith("Authority: caller is not the owner or admin");
+      })
+
+      it("Allows senders who are the owner", async () => {
+        expect(await borrower1.getAddress()).to.not.hexEqual(await owner.getAddress());
+        await expect(
+          authority.connect(owner).addBorrower(await borrower1.getAddress())
+        ).to.not.be.reverted;
+      })
 
     })
-    describe("onlyOwnerOrAdmin", async () => {
 
+    describe("onlyOwnerOrAdmin", async () => {
       it("Prevents senders who are not in admin set", async () => {
         const adminSet = await authority.allAdmins();
         expect(await borrower2.getAddress()).to.not.hexEqual(adminSet[0])
@@ -303,4 +319,9 @@ describe("Authority", function () {
       expect(actual).to.have.members(expected);
     });
   });
+
+  describe("addLenderAdmin", function () {
+    
 });
+});
+
