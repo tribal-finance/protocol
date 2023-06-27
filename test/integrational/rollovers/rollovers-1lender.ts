@@ -26,7 +26,7 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 
-describe("Full cycle sequential test", function () {
+describe("Rollovers (1 Lender)", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -138,7 +138,7 @@ describe("Full cycle sequential test", function () {
     });
 
     it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
-      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
+        await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
     })
 
     it("gives 8000 tranche vault tokens to lender 1", async () => {
