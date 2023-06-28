@@ -156,9 +156,19 @@ library PoolCalculations {
     }
 
     function lenderTotalAprWad(
-        uint[] memory lenderEffectiveAprs, 
-        uint[] memory stakedAssets
-    ) public pure returns (uint) {
+        LendingPool lendingPool,
+        address lenderAddress
+    ) public view returns (uint) {
+
+        uint256 tranchesCount = lendingPool.tranchesCount();
+
+        uint[] memory lenderEffectiveAprs = new uint[](tranchesCount);
+        uint[] memory stakedAssets = new uint[](tranchesCount);
+        for (uint8 i; i < tranchesCount; ++i) {
+            lenderEffectiveAprs[i] = lendingPool.lenderEffectiveAprByTrancheWad(lenderAddress, i);
+            stakedAssets[i] = lendingPool.lenderStakedTokensByTranche(lenderAddress, i);
+        }
+
         uint weightedApysWad = 0;
         uint totalAssets = 0;
         for (uint8 i; i < lenderEffectiveAprs.length; ++i) {

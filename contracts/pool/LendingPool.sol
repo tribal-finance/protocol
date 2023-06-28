@@ -604,14 +604,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /// @notice weighted APR accross all the lenders
     function lenderTotalAprWad(address lenderAddress) public view returns (uint) {
-        uint[] memory lenderEffectiveAprs = new uint[](tranchesCount);
-        uint[] memory stakedAssets = new uint[](tranchesCount);
-        for (uint8 i; i < tranchesCount; ++i) {
-            Rewardable storage rewardable = s_trancheRewardables[i][lenderAddress];
-            lenderEffectiveAprs[i] = lenderEffectiveAprByTrancheWad(lenderAddress, i);
-            stakedAssets[i] = rewardable.stakedAssets;
-        }
-        return PoolCalculations.lenderTotalAprWad(lenderEffectiveAprs, stakedAssets);
+        return PoolCalculations.lenderTotalAprWad(this, lenderAddress);
     }
 
     /// @notice  Returns amount of stablecoins deposited across all the pool tranches by a lender
@@ -692,6 +685,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderPlatformTokensByTrancheLocked(address lenderAddress, uint8 trancheId) public view returns (uint) {
         return s_trancheRewardables[trancheId][lenderAddress].lockedPlatformTokens;
+    }
+
+    /** @notice Returns amount of staked tokens committed by the lender
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderStakedTokensByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        return s_trancheRewardables[trancheId][lenderAddress].stakedAssets;
     }
 
     /** @notice Returns amount of platform tokens that lender can lock in order to boost their APR
