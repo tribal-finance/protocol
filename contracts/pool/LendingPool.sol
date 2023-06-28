@@ -5,7 +5,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
 import "./LendingPoolState.sol";
+import "./PoolCalculations.sol";
+
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
 
@@ -856,50 +859,26 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  if pool balance fallse below this threshold, the pool is considered delinquent and the borrower starts to face penalties.
      */
     function poolBalanceThreshold() public view returns (uint) {
-        uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
-        uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
-        if (interestGoDownAmount > firstLossAssets) {
-            return 0;
-        }
-        return firstLossAssets - interestGoDownAmount;
+        return PoolCalculations.poolBalanceThreshold(borrowedAssets, borrowerTotalInterestRateWad, repaymentRecurrenceDays, gracePeriodDays, firstLossAssets);
     }
 
     /** @notice Pool balance
      * First loss capital minus whatever rewards are generated for the lenders by date.
      */
     function poolBalance() public view returns (uint) {
-        uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
-        if (allLendersInterestByDate() > positiveBalance) {
-            return 0;
-        }
-        return positiveBalance - allLendersInterestByDate();
+        return PoolCalculations.poolBalance(firstLossAssets, borrowerInterestRepaid, allLendersInterestByDate());
     }
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */
     function borrowerPenaltyAmount() public view returns (uint) {
-        if (poolBalance() >= poolBalanceThreshold()) {
-            return 0;
-        }
-
-        uint dailyLendersInterestAmount = (collectedAssets * allLendersEffectiveAprWad()) / WAD / 365;
-        uint balanceDifference = poolBalanceThreshold() - poolBalance();
-        uint daysDelinquent = balanceDifference / dailyLendersInterestAmount;
-
-        if (daysDelinquent == 0) {
-            return 0;
-        }
-
-        uint penaltyCoefficientWad = _wadPow(WAD + penaltyRateWad, daysDelinquent);
-
-        uint penalty = (balanceDifference * penaltyCoefficientWad) / WAD - balanceDifference;
-        return penalty;
+        return PoolCalculations.borrowerPenaltyAmount(poolBalance(), poolBalanceThreshold(), collectedAssets, allLendersEffectiveAprWad(), penaltyRateWad);
     }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid
      */
     function borrowerExpectedInterest() public view returns (uint) {
-        return (collectedAssets * borrowerAdjustedInterestRateWad()) / WAD;
+        return PoolCalculations.borrowerExpectedInterest(collectedAssets, borrowerAdjustedInterestRateWad());
     }
 
     /** @dev outstanding borrower interest = expectedBorrowerInterest - borrowerInterestAlreadyPaid

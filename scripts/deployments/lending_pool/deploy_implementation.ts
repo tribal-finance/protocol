@@ -5,7 +5,15 @@ console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
-  const LendingPool = await ethers.getContractFactory("LendingPool");
+  const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
+  const poolCalculations = await PoolCalculations.deploy();
+  await poolCalculations.deployed();
+
+  const LendingPool = await ethers.getContractFactory("LendingPool", {
+    libraries: {
+      PoolCalculations: poolCalculations.address
+    }
+  });
   const lp = await LendingPool.deploy();
 
   console.log(`LendingPool implementation deployed to ${lp.address}`);
