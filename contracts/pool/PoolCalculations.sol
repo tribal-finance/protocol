@@ -2,10 +2,10 @@
 pragma solidity ^0.8.18;
 
 library PoolCalculations {
-    uint constant WAD = 10**18;
+    uint constant WAD = 10 ** 18;
     uint constant YEAR = 365 days;
 
-     function _wadPow(uint _xWad, uint _n) internal pure returns (uint) {
+    function _wadPow(uint _xWad, uint _n) internal pure returns (uint) {
         uint xWad = _xWad;
         uint n = _n;
         uint result = n % 2 != 0 ? xWad : WAD;
@@ -21,7 +21,13 @@ library PoolCalculations {
         return result;
     }
 
-    function poolBalanceThreshold(uint borrowedAssets, uint borrowerTotalInterestRateWad, uint repaymentRecurrenceDays, uint gracePeriodDays, uint firstLossAssets) public pure returns (uint) {
+    function poolBalanceThreshold(
+        uint borrowedAssets,
+        uint borrowerTotalInterestRateWad,
+        uint repaymentRecurrenceDays,
+        uint gracePeriodDays,
+        uint firstLossAssets
+    ) public pure returns (uint) {
         uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
         uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
         if (interestGoDownAmount > firstLossAssets) {
@@ -30,7 +36,11 @@ library PoolCalculations {
         return firstLossAssets - interestGoDownAmount;
     }
 
-    function poolBalance(uint firstLossAssets, uint borrowerInterestRepaid, uint allLendersInterestByDate) public pure returns (uint) {
+    function poolBalance(
+        uint firstLossAssets,
+        uint borrowerInterestRepaid,
+        uint allLendersInterestByDate
+    ) public pure returns (uint) {
         uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
         if (allLendersInterestByDate > positiveBalance) {
             return 0;
@@ -38,7 +48,13 @@ library PoolCalculations {
         return positiveBalance - allLendersInterestByDate;
     }
 
-    function borrowerPenaltyAmount(uint poolBalance, uint poolBalanceThreshold, uint collectedAssets, uint allLendersEffectiveAprWad, uint penaltyRateWad) public pure returns (uint) {
+    function borrowerPenaltyAmount(
+        uint poolBalance,
+        uint poolBalanceThreshold,
+        uint collectedAssets,
+        uint allLendersEffectiveAprWad,
+        uint penaltyRateWad
+    ) public pure returns (uint) {
         if (poolBalance >= poolBalanceThreshold) {
             return 0;
         }
@@ -57,7 +73,101 @@ library PoolCalculations {
         return penalty;
     }
 
-    function borrowerExpectedInterest(uint collectedAssets, uint borrowerAdjustedInterestRateWad) public pure returns (uint) {
+    function borrowerExpectedInterest(
+        uint collectedAssets,
+        uint borrowerAdjustedInterestRateWad
+    ) public pure returns (uint) {
         return (collectedAssets * borrowerAdjustedInterestRateWad) / WAD;
+    }
+
+    function borrowerOutstandingInterest(
+        uint borrowerInterestRepaid,
+        uint borrowerExpectedInterest
+    ) public pure returns (uint) {
+        if (borrowerInterestRepaid > borrowerExpectedInterest) {
+            return 0;
+        }
+        return borrowerExpectedInterest - borrowerInterestRepaid;
+    }
+
+    function borrowerExcessSpread(
+        uint borrowerInterestRepaid,
+        uint allLendersInterest,
+        uint borrowerExpectedInterest,
+        uint protocolFeeWad
+    ) public pure returns (uint) {
+        if (borrowerOutstandingInterest(borrowerInterestRepaid, borrowerExpectedInterest) > 0) {
+            return 0;
+        }
+        uint fees = (borrowerExpectedInterest * protocolFeeWad) / WAD;
+        return borrowerInterestRepaid - allLendersInterest - fees;
+    }
+
+    function borrowerAdjustedInterestRateWad(
+        uint borrowerTotalInterestRateWad,
+        uint lendingTermSeconds
+    ) public pure returns (uint adj) {
+        return (borrowerTotalInterestRateWad * lendingTermSeconds) / YEAR;
+    }
+
+    function lenderEffectiveAprByTrancheWad(
+        uint stakedAssets,
+        uint lockedPlatformTokens,
+        uint trancheBoostRatio,
+        uint trancheAPRWad,
+        uint trancheBoostedAPRWad
+    ) public pure returns (uint) {
+        if (stakedAssets == 0) {
+            return 0;
+        }
+        uint boostedAssets = lockedPlatformTokens / trancheBoostRatio;
+        if (boostedAssets > stakedAssets) {
+            boostedAssets = stakedAssets;
+        }
+        uint unBoostedAssets = stakedAssets - boostedAssets;
+        uint weightedAverage = (unBoostedAssets * trancheAPRWad + boostedAssets * trancheBoostedAPRWad) / stakedAssets;
+        return weightedAverage;
+    }
+
+    function lenderRewardsByTrancheGeneratedByDate(
+        uint lenderDepositedAssets, 
+        uint lenderEffectiveApr, 
+        uint fundedAt, 
+        uint lendingTermSeconds
+    ) public view returns (uint) {
+        if (fundedAt > block.timestamp) {
+            return 0;
+        }
+        uint secondsElapsed = block.timestamp - fundedAt;
+        if (secondsElapsed > lendingTermSeconds) {
+            secondsElapsed = lendingTermSeconds;
+        }
+        return (lenderDepositedAssets * lenderEffectiveApr * secondsElapsed) / (YEAR * WAD);
+    }
+
+       function lenderTotalExpectedRewardsByTranche(
+        uint lenderDepositedAssets, 
+        uint lenderEffectiveApr, 
+        uint lendingTermSeconds
+    ) public pure returns (uint) {
+        return (lenderDepositedAssets * lenderEffectiveApr * lendingTermSeconds) / (YEAR * WAD);
+    }
+
+    function lenderTotalAprWad(
+        uint[] memory lenderEffectiveAprs, 
+        uint[] memory stakedAssets
+    ) public pure returns (uint) {
+        uint weightedApysWad = 0;
+        uint totalAssets = 0;
+        for (uint8 i; i < lenderEffectiveAprs.length; ++i) {
+            totalAssets += stakedAssets[i];
+            weightedApysWad += (lenderEffectiveAprs[i] * stakedAssets[i]);
+        }
+
+        if (totalAssets == 0) {
+            return 0;
+        }
+
+        return weightedApysWad / totalAssets;
     }
 }
