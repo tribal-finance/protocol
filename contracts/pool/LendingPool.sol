@@ -137,14 +137,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /// @dev lenderAddress => RollOverSetting
     mapping(address => RollOverSetting) private s_rollOverSettings;
 
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
-    // TODO: Gaps and Upgradeable don't seem to always be used correctly throughout the codebase
-    // Why should such a concrete, opinionated, and immutable contract be using this?
+    Stages public currentStage;
 
     /*///////////////////////////////////
        MODIFIERS
@@ -174,7 +167,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function _atStage(Stages _stage) internal view {
-        require(currentStage() == _stage, "LP004"); // "LendingPool: not at correct stage"
+        require(currentStage == _stage, "LP004"); // "LendingPool: not at correct stage"
     }
 
     modifier atStages2(Stages _stage1, Stages _stage2) {
@@ -183,7 +176,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function _atStages2(Stages _stage1, Stages _stage2) internal view {
-        require(currentStage() == _stage1 || currentStage() == _stage2, "LP004"); // "LendingPool: not at correct stage"
+        require(currentStage == _stage1 || currentStage == _stage2, "LP004"); // "LendingPool: not at correct stage"
     }
 
     modifier atStages3(
@@ -197,7 +190,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _atStages3(Stages _stage1, Stages _stage2, Stages _stage3) internal view {
         require(
-            currentStage() == _stage1 || currentStage() == _stage2 || currentStage() == _stage3,
+            currentStage == _stage1 || currentStage == _stage2 || currentStage == _stage3,
             "LP004" // "LendingPool: not at correct stage"
         );
     }
@@ -312,50 +305,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         _unpause();
     }
 
-    /*///////////////////////////////////
-       STATE MANAGEMENT
-    ///////////////////////////////////*/
-
-    /// @notice This function returns the current stage of the pool
-    function currentStage() public view returns (Stages stage) {
-        if (defaultedAt != 0) {
-            return Stages.DEFAULTED;
-        }
-        if (flcWithdrawntAt != 0) {
-            return Stages.FLC_WITHDRAWN;
-        }
-        if (repaidAt != 0) {
-            return Stages.REPAID;
-        }
-        if (borrowedAt != 0) {
-            return Stages.BORROWED;
-        }
-        if (fundingFailedAt != 0) {
-            return Stages.FUNDING_FAILED;
-        }
-        if (fundedAt != 0) {
-            return Stages.FUNDED;
-        }
-        if (openedAt != 0) {
-            return Stages.OPEN;
-        }
-        if (flcDepositedAt != 0) {
-            return Stages.FLC_DEPOSITED;
-        }
-
-        return Stages.INITIAL;
-    }
-
-    // TODO: Fix: this is a gas inefficient / bug prone state machine
-    // State machine patterns frequent single enum ref as source of truth
-    // The above state machines allows for multiple states to exist at the same time which is potentially scary
-
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
     function adminOpenPool() external onlyWhitelisted atStage(Stages.FLC_DEPOSITED) {
         openedAt = uint64(block.timestamp);
+        currentStage = Stages.OPEN;
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
             trancheVaultContracts()[i].enableDeposits();
@@ -383,6 +339,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _transitionToFundedStage() internal {
         fundedAt = uint64(block.timestamp);
+        currentStage = Stages.FUNDED;
 
         for (uint i; i < trancheVaultContracts().length; i++) {
             TrancheVault tv = trancheVaultContracts()[i];
@@ -396,6 +353,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _transitionToFundingFailedStage() internal {
         fundingFailedAt = uint64(block.timestamp);
+        currentStage = Stages.FUNDING_FAILED;
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
             trancheVaultContracts()[i].disableDeposits();
@@ -406,29 +364,34 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _transitionToFlcDepositedStage(uint flcAssets) internal {
         flcDepositedAt = uint64(block.timestamp);
+        currentStage = Stages.FLC_DEPOSITED;
         emit BorrowerDepositFirstLossCapital(borrowerAddress, flcAssets);
     }
 
     function _transitionToBorrowedStage(uint amountToBorrow) internal {
         borrowedAt = uint64(block.timestamp);
         borrowedAssets = amountToBorrow;
+        currentStage = Stages.BORROWED;
 
         emit BorrowerBorrow(borrowerAddress, amountToBorrow);
     }
 
     function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
         repaidAt = uint64(block.timestamp);
+        currentStage = Stages.REPAID;
         emit BorrowerRepayPrincipal(borrowerAddress, repaidPrincipal);
         emit PoolRepaid(repaidAt);
     }
 
     function _transitionToFlcWithdrawnStage(uint flcAssets) internal {
         flcWithdrawntAt = uint64(block.timestamp);
+        currentStage = Stages.FLC_WITHDRAWN;
         emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
     }
 
     function _transitionToDefaultedStage() internal {
         defaultedAt = uint64(block.timestamp);
+        currentStage = Stages.DEFAULTED;
 
         uint availableAssets = _stableCoinContract().balanceOf(address(this));
 
@@ -952,7 +915,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     ) external authTrancheVault(trancheId) {
         require(!s_rollOverSettings[depositorAddress].principal, "LP301"); // "LendingPool: principal locked for rollover"
 
-        if (currentStage() == Stages.REPAID || currentStage() == Stages.FLC_WITHDRAWN) {
+        if (currentStage == Stages.REPAID || currentStage == Stages.FLC_WITHDRAWN) {
             emit LenderWithdraw(depositorAddress, trancheId, amount);
         } else {
             Rewardable storage rewardable = s_trancheRewardables[trancheId][depositorAddress];
