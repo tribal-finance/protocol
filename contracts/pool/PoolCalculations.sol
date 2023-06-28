@@ -199,11 +199,13 @@ library PoolCalculations {
 
 
     function allLendersInterestByDate(LendingPool lendingPool) public view returns (uint) {
-        if (lendingPool.fundedAt() == 0 || block.timestamp <= lendingPool.fundedAt()) {
+        uint256 fundedAt = lendingPool.fundedAt();
+        uint256 lendingTermSeconds = lendingPool.lendingTermSeconds();
+        if (fundedAt == 0 || block.timestamp <= fundedAt) {
             return 0;
         }
-        uint time = block.timestamp < lendingPool.fundedAt() + lendingPool.lendingTermSeconds() ? block.timestamp : lendingPool.fundedAt() + lendingPool.lendingTermSeconds();
-        uint elapsedTime = time - lendingPool.fundedAt();
-        return (lendingPool.allLendersInterest() * elapsedTime) / lendingPool.lendingTermSeconds();
+        uint time = block.timestamp < fundedAt + lendingTermSeconds ? block.timestamp : fundedAt + lendingTermSeconds;
+        uint elapsedTime = time - fundedAt;
+        return (lendingPool.allLendersInterest() * elapsedTime) / lendingTermSeconds;
     }
 }
