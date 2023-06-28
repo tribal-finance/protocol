@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import "./LendingPool.sol";
+import "../vaults/TrancheVault.sol";
 
 library PoolCalculations {
     uint constant WAD = 10 ** 18;
@@ -23,13 +24,13 @@ library PoolCalculations {
         return result;
     }
 
-    function poolBalanceThreshold(
-        uint borrowedAssets,
-        uint borrowerTotalInterestRateWad,
-        uint repaymentRecurrenceDays,
-        uint gracePeriodDays,
-        uint firstLossAssets
-    ) public pure returns (uint) {
+    function poolBalanceThreshold(LendingPool lendingPool) public view returns (uint) {
+        uint borrowedAssets = lendingPool.borrowedAssets();
+        uint borrowerTotalInterestRateWad = lendingPool.borrowerTotalInterestRateWad();
+        uint repaymentRecurrenceDays = lendingPool.repaymentRecurrenceDays();
+        uint gracePeriodDays = lendingPool.gracePeriodDays();
+        uint firstLossAssets = lendingPool.firstLossAssets();
+
         uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
         uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
         if (interestGoDownAmount > firstLossAssets) {
@@ -50,13 +51,13 @@ library PoolCalculations {
         return positiveBalance - allLendersInterestByDate;
     }
 
-    function borrowerPenaltyAmount(
-        uint poolBalance,
-        uint poolBalanceThreshold,
-        uint collectedAssets,
-        uint allLendersEffectiveAprWad,
-        uint penaltyRateWad
-    ) public pure returns (uint) {
+    function borrowerPenaltyAmount(LendingPool lendingPool) public view returns (uint) {
+        uint poolBalance = lendingPool.poolBalance();
+        uint poolBalanceThreshold = lendingPool.poolBalanceThreshold();
+        uint collectedAssets = lendingPool.collectedAssets();
+        uint allLendersEffectiveAprWad = lendingPool.allLendersEffectiveAprWad();
+        uint penaltyRateWad = lendingPool.penaltyRateWad();
+
         if (poolBalance >= poolBalanceThreshold) {
             return 0;
         }
@@ -207,5 +208,97 @@ library PoolCalculations {
         uint time = block.timestamp < fundedAt + lendingTermSeconds ? block.timestamp : fundedAt + lendingTermSeconds;
         uint elapsedTime = time - fundedAt;
         return (lendingPool.allLendersInterest() * elapsedTime) / lendingTermSeconds;
+    }
+
+    function trancheVaultContracts(LendingPool lendingPool) public view returns (TrancheVault[] memory contracts) {
+        uint256 trancheCount = lendingPool.tranchesCount();
+        contracts = new TrancheVault[](trancheCount);
+
+        for (uint i; i < contracts.length; ++i) {
+            contracts[i] = TrancheVault(lendingPool.trancheVaultAddresses(i));
+        }
+    }
+
+    function validateInitParams(
+        LendingPool.LendingPoolParams calldata params,
+        address[] calldata _trancheVaultAddresses,
+        address _feeSharingContractAddress,
+        address _authorityAddress
+    ) public pure {
+        require(params.stableCoinContractAddress != address(0), "LP005"); // "LendingPool: stableCoinContractAddress empty"
+
+        require(params.minFundingCapacity > 0, "LP006"); // "LendingPool: minFundingCapacity == 0"
+        require(params.maxFundingCapacity > 0, "LP007"); // "LendingPool: maxFundingCapacity == 0"
+        require(
+            params.maxFundingCapacity >= params.minFundingCapacity,
+            "LP008" // "LendingPool: maxFundingCapacity < minFundingCapacity"
+        );
+
+        require(params.fundingPeriodSeconds > 0, "LP009"); // "LendingPool: fundingPeriodSeconds == 0"
+        require(params.lendingTermSeconds > 0, "LP010"); // "LendingPool: lendingTermSeconds == 0"
+        require(params.borrowerAddress != address(0), "LP011"); // "LendingPool: borrowerAddress empty"
+        require(params.borrowerTotalInterestRateWad > 0, "LP012"); // "LendingPool: borrower interest rate = 0%"
+        require(params.protocolFeeWad > 0, "LP013"); // "LendingPool: protocolFee == 0%"
+        require(params.penaltyRateWad > 0, "LP014"); // "LendingPool: penaltyRate == 0"
+
+        require(params.tranchesCount > 0, "LP015"); // "LendingPool: tranchesCount == 0"
+        require(_trancheVaultAddresses.length == params.tranchesCount, "LP016"); // "LendingPool: trancheAddresses length"
+        require(params.trancheAPRsWads.length == params.tranchesCount, "LP017"); // "LP001");// "LendingPool: tranche APRs length"
+        require(
+            params.trancheBoostedAPRsWads.length == params.tranchesCount,
+            "LP018" // "LendingPool: tranche Boosted APRs length"
+        );
+        require(
+            params.trancheBoostedAPRsWads.length == params.tranchesCount,
+            "LP019" // "LendingPool: tranche Coverage APRs length"
+        );
+
+        for (uint i; i < params.tranchesCount; ++i) {
+            require(params.trancheAPRsWads[i] > 0, "tranche APRs == 0");
+            require(
+                params.trancheBoostedAPRsWads[i] >= params.trancheAPRsWads[i],
+                "LP020" // "LendingPool: tranche boosted APRs < tranche APRs"
+            );
+        }
+
+        require(_feeSharingContractAddress != address(0), "LP021"); // "LendingPool: feeSharingAddress empty"
+        require(_authorityAddress != address(0), "LP022"); // "LendingPool: authorityAddress empty"
+    }
+
+    function setInitializer(
+        LendingPool.LendingPoolParams calldata params,
+        string storage name,
+        string storage token,
+        uint[] storage trancheAPRsWads,
+        uint[] storage trancheBoostedAPRsWads,
+        uint[] storage trancheBoostRatios,
+        uint[] storage trancheCoveragesWads
+    ) public {
+        bytes memory nameBytes = bytes(params.name);
+        bytes memory tokenBytes = bytes(params.token);
+
+        for (uint i = 0; i < nameBytes.length; i++) {
+            bytes(name)[i] = nameBytes[i];
+        }
+
+        for (uint i = 0; i < tokenBytes.length; i++) {
+            bytes(token)[i] = tokenBytes[i];
+        }
+
+        for (uint i = 0; i < params.trancheAPRsWads.length; i++) {
+            trancheAPRsWads[i] = params.trancheAPRsWads[i];
+        }
+
+        for (uint i = 0; i < params.trancheBoostedAPRsWads.length; i++) {
+            trancheBoostedAPRsWads[i] = params.trancheBoostedAPRsWads[i];
+        }
+
+        for (uint i = 0; i < params.trancheBoostRatios.length; i++) {
+            trancheBoostRatios[i] = params.trancheBoostRatios[i];
+        }
+
+        for (uint i = 0; i < params.trancheCoveragesWads.length; i++) {
+            trancheCoveragesWads[i] = params.trancheCoveragesWads[i];
+        }
     }
 }
