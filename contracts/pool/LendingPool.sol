@@ -668,15 +668,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @param trancheId tranche id
      */
     function lenderEffectiveAprByTrancheWad(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
-        return
-            PoolCalculations.lenderEffectiveAprByTrancheWad(
-                r.stakedAssets,
-                r.lockedPlatformTokens,
-                trancheBoostRatios[trancheId],
-                trancheAPRsWads[trancheId],
-                trancheBoostedAPRsWads[trancheId]
-            );
+        return  PoolCalculations.lenderEffectiveAprByTrancheWad(this, lenderAddress, trancheId);
     }
 
     /** @notice Returns amount of platform tokens locked by the lender

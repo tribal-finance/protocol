@@ -113,12 +113,16 @@ library PoolCalculations {
     }
 
     function lenderEffectiveAprByTrancheWad(
-        uint stakedAssets,
-        uint lockedPlatformTokens,
-        uint trancheBoostRatio,
-        uint trancheAPRWad,
-        uint trancheBoostedAPRWad
-    ) public pure returns (uint) {
+        LendingPool lendingPool,
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
+        uint stakedAssets = lendingPool.lenderStakedTokensByTranche(lenderAddress, trancheId);
+        uint lockedPlatformTokens = lendingPool.lenderPlatformTokensByTrancheLocked(lenderAddress, trancheId);
+        uint trancheBoostRatio = lendingPool.trancheBoostRatios(trancheId);
+        uint trancheAPRWad = lendingPool.trancheAPRsWads(trancheId);
+        uint trancheBoostedAPRWad = lendingPool.trancheBoostedAPRsWads(trancheId);
+
         if (stakedAssets == 0) {
             return 0;
         }
@@ -132,9 +136,9 @@ library PoolCalculations {
     }
 
     function lenderRewardsByTrancheGeneratedByDate(
-        uint lenderDepositedAssets, 
-        uint lenderEffectiveApr, 
-        uint fundedAt, 
+        uint lenderDepositedAssets,
+        uint lenderEffectiveApr,
+        uint fundedAt,
         uint lendingTermSeconds
     ) public view returns (uint) {
         if (fundedAt > block.timestamp) {
@@ -147,19 +151,15 @@ library PoolCalculations {
         return (lenderDepositedAssets * lenderEffectiveApr * secondsElapsed) / (YEAR * WAD);
     }
 
-       function lenderTotalExpectedRewardsByTranche(
-        uint lenderDepositedAssets, 
-        uint lenderEffectiveApr, 
+    function lenderTotalExpectedRewardsByTranche(
+        uint lenderDepositedAssets,
+        uint lenderEffectiveApr,
         uint lendingTermSeconds
     ) public pure returns (uint) {
         return (lenderDepositedAssets * lenderEffectiveApr * lendingTermSeconds) / (YEAR * WAD);
     }
 
-    function lenderTotalAprWad(
-        LendingPool lendingPool,
-        address lenderAddress
-    ) public view returns (uint) {
-
+    function lenderTotalAprWad(LendingPool lendingPool, address lenderAddress) public view returns (uint) {
         uint256 tranchesCount = lendingPool.tranchesCount();
 
         uint[] memory lenderEffectiveAprs = new uint[](tranchesCount);
@@ -183,18 +183,15 @@ library PoolCalculations {
         return weightedApysWad / totalAssets;
     }
 
-
-    function allLendersEffectiveAprWad(
-        LendingPool lendingPool,
-        uint256 tranchesCount
-    ) public view returns (uint) {
+    function allLendersEffectiveAprWad(LendingPool lendingPool, uint256 tranchesCount) public view returns (uint) {
         uint weightedSum = 0;
         uint totalStakedAssets = 0;
         for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
             uint stakedAssets = lendingPool.s_totalStakedAssetsByTranche(trancheId);
             totalStakedAssets += stakedAssets;
 
-            uint boostedAssets = lendingPool.s_totalLockedPlatformTokensByTranche(trancheId) / lendingPool.trancheBoostRatios(trancheId);
+            uint boostedAssets = lendingPool.s_totalLockedPlatformTokensByTranche(trancheId) /
+                lendingPool.trancheBoostRatios(trancheId);
             if (boostedAssets > stakedAssets) {
                 boostedAssets = stakedAssets;
             }
@@ -206,7 +203,6 @@ library PoolCalculations {
 
         return weightedSum / totalStakedAssets;
     }
-
 
     function allLendersInterestByDate(LendingPool lendingPool) public view returns (uint) {
         uint256 fundedAt = lendingPool.fundedAt();
