@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import "./LendingPool.sol";
+
 library PoolCalculations {
     uint constant WAD = 10 ** 18;
     uint constant YEAR = 365 days;
@@ -169,6 +171,30 @@ library PoolCalculations {
         }
 
         return weightedApysWad / totalAssets;
+    }
+
+
+    function allLendersEffectiveAprWad(
+        LendingPool lendingPool,
+        uint256 tranchesCount
+    ) public view returns (uint) {
+        uint weightedSum = 0;
+        uint totalStakedAssets = 0;
+        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+            uint stakedAssets = lendingPool.s_totalStakedAssetsByTranche(trancheId);
+            totalStakedAssets += stakedAssets;
+
+            uint boostedAssets = lendingPool.s_totalLockedPlatformTokensByTranche(trancheId) / lendingPool.trancheBoostRatios(trancheId);
+            if (boostedAssets > stakedAssets) {
+                boostedAssets = stakedAssets;
+            }
+            uint unBoostedAssets = stakedAssets - boostedAssets;
+
+            weightedSum += unBoostedAssets * lendingPool.trancheAPRsWads(trancheId);
+            weightedSum += boostedAssets * lendingPool.trancheBoostedAPRsWads(trancheId);
+        }
+
+        return weightedSum / totalStakedAssets;
     }
 
 }

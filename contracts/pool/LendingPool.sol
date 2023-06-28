@@ -129,10 +129,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     mapping(uint8 => mapping(address => Rewardable)) internal s_trancheRewardables;
 
     /// @dev trancheId => stakedassets
-    mapping(uint8 => uint256) internal s_totalStakedAssetsByTranche;
+    mapping(uint8 => uint256) public s_totalStakedAssetsByTranche;
 
     /// @dev trancheId => lockedTokens
-    mapping(uint8 => uint256) internal s_totalLockedPlatformTokensByTranche;
+    mapping(uint8 => uint256) public s_totalLockedPlatformTokensByTranche;
 
     /// @dev lenderAddress => RollOverSetting
     mapping(address => RollOverSetting) private s_rollOverSettings;
@@ -604,23 +604,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /// @notice average APR of all lenders across all tranches, boosted or not
     function allLendersEffectiveAprWad() public view returns (uint) {
-        uint weightedSum = 0;
-        uint totalStakedAssets = 0;
-        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-            uint stakedAssets = s_totalStakedAssetsByTranche[trancheId];
-            totalStakedAssets += stakedAssets;
-
-            uint boostedAssets = s_totalLockedPlatformTokensByTranche[trancheId] / trancheBoostRatios[trancheId];
-            if (boostedAssets > stakedAssets) {
-                boostedAssets = stakedAssets;
-            }
-            uint unBoostedAssets = stakedAssets - boostedAssets;
-
-            weightedSum += unBoostedAssets * trancheAPRsWads[trancheId];
-            weightedSum += boostedAssets * trancheBoostedAPRsWads[trancheId];
-        }
-
-        return weightedSum / totalStakedAssets;
+        return PoolCalculations.allLendersEffectiveAprWad(this, tranchesCount);
     }
 
     /// @notice weighted APR accross all the lenders
