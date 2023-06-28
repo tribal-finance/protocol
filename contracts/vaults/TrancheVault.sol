@@ -162,11 +162,6 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         _;
     }
 
-    modifier onlyOwnerOrPoolorRollover() {
-        // check if sender if a prior trench
-        _;
-    }
-
     modifier whenWithdrawEnabled() {
         require(withdrawEnabled(), "Vault: withdraw disabled");
         _;
