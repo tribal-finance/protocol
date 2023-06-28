@@ -594,12 +594,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function allLendersInterestByDate() public view returns (uint) {
-        if (fundedAt == 0 || block.timestamp <= fundedAt) {
-            return 0;
-        }
-        uint time = block.timestamp < fundedAt + lendingTermSeconds ? block.timestamp : fundedAt + lendingTermSeconds;
-        uint elapsedTime = time - fundedAt;
-        return (allLendersInterest() * elapsedTime) / lendingTermSeconds;
+        return PoolCalculations.allLendersInterestByDate(this);
     }
 
     /// @notice average APR of all lenders across all tranches, boosted or not

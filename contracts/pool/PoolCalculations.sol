@@ -197,4 +197,13 @@ library PoolCalculations {
         return weightedSum / totalStakedAssets;
     }
 
+
+    function allLendersInterestByDate(LendingPool lendingPool) public view returns (uint) {
+        if (lendingPool.fundedAt() == 0 || block.timestamp <= lendingPool.fundedAt()) {
+            return 0;
+        }
+        uint time = block.timestamp < lendingPool.fundedAt() + lendingPool.lendingTermSeconds() ? block.timestamp : lendingPool.fundedAt() + lendingPool.lendingTermSeconds();
+        uint elapsedTime = time - lendingPool.fundedAt();
+        return (lendingPool.allLendersInterest() * elapsedTime) / lendingPool.lendingTermSeconds();
+    }
 }
