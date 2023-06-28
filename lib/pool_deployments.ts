@@ -165,7 +165,7 @@ export async function deployFactoryAndImplementations(
 
   const LendingPool = await ethers.getContractFactory("LendingPool", {
     libraries: {
-      PoolCalculations: poolCalculations.address
+      PoolCalculations: poolCalculations.address,
     }
   });
   const poolImplementation = await LendingPool.connect(deployer).deploy();
@@ -265,10 +265,7 @@ export async function deployDuotranchePool(
     ...poolInitParamsOverrides,
   };
 
-  const tx = await poolFactory.deployPool(lendingPoolParams, [
-    WAD(0.8),
-    WAD(0.2),
-  ]);
+  const tx = await poolFactory.deployPool(lendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
 
   await tx.wait();
   const deployedContracts = await _getDeployedContracts(poolFactory);

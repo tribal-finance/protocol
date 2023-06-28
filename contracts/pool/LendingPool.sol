@@ -11,6 +11,8 @@ import "./PoolCalculations.sol";
 
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
+import "../factory/PoolFactory.sol";
+import "./ILendingPool.sol";
 
 contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -141,6 +143,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[50] private __gap;
+    // TODO: Gaps and Upgradeable don't seem to always be used correctly throughout the codebase
+    // Why should such a concrete, opinionated, and immutable contract be using this?
 
     /*///////////////////////////////////
        MODIFIERS
@@ -384,6 +388,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         return Stages.INITIAL;
     }
 
+    // TODO: Fix: this is a gas inefficient / bug prone state machine
+    // State machine patterns frequent single enum ref as source of truth
+    // The above state machines allows for multiple states to exist at the same time which is potentially scary
+
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
@@ -413,11 +421,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function adminTransitionToDefaultedState() external onlyOwnerOrAdmin atStage(Stages.BORROWED) {
         require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023"); // "LendingPool: maturityDate not reached"
         _transitionToDefaultedStage();
-    }
-
-    function __todoRemoveMeChangeFundedAt(uint64 newFundedAt) external onlyOwnerOrAdmin {
-        fundedAt = newFundedAt;
-        emit PoolFunded(fundedAt, collectedAssets);
     }
 
     function _transitionToFundedStage() internal {
@@ -683,9 +686,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        return
-            lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId) -
-            lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
+        uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        return willReward - hasRewarded;
     }
 
     /** @notice Returns APR for the lender taking into account all the deposited USDC + platform tokens
@@ -725,14 +728,95 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     /*///////////////////////////////////
        Rollover settings
     ///////////////////////////////////*/
-    /** @notice marks the intent of the lender to roll over their capital to the upcoming pool
+    /** @notice marks the intent of the lender to roll over their capital to the upcoming pool (called by older pool)
      *  if you opt to roll over you will not be able to withdraw stablecoins / platform tokens from the pool
      *  @param principal whether the principal should be rolled over
      *  @param rewards whether the rewards should be rolled over
      *  @param platformTokens whether the platform tokens should be rolled over
      */
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
-        s_rollOverSettings[_msgSender()] = RollOverSetting(true, principal, rewards, platformTokens);
+        address lender = _msgSender();
+        s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
+
+        PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
+        uint256 lockedPlatformTokens;
+        for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
+            uint256 amount = s_trancheRewardables[trancheId][lender].stakedAssets;
+            TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
+            lockedPlatformTokens += s_trancheRewardables[trancheId][lender].lockedPlatformTokens;
+            vault.approveRollover(lender, amount);
+        }
+
+        address[4] memory futureLenders = poolFactory.nextLenders();
+        for (uint256 i = 0; i < futureLenders.length; i++) {
+            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], 0);
+            // approve transfer of platform tokens
+            SafeERC20Upgradeable.safeApprove(
+                IERC20Upgradeable(platformTokenContractAddress),
+                futureLenders[i],
+                lockedPlatformTokens
+            );
+
+            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(stableCoinContractAddress), futureLenders[i], 0);
+            // approve transfer of the stablecoin contract
+            SafeERC20Upgradeable.safeApprove(
+                IERC20Upgradeable(stableCoinContractAddress), // asume tranches.asset() == stablecoin address
+                futureLenders[i],
+                2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
+            );
+        }
+    }
+
+    /**
+     * @dev This function rolls funds from prior deployments into currently active deployments
+     * @param deadLendingPoolAddr The address of the lender whose funds are transfering over to the new lender
+     * @param deadTrancheAddrs The address of the tranches whose funds are mapping 1:1 with the next traches
+     * @param lenderStartIndex The first lender to start migrating over
+     * @param lenderEndIndex The last lender to migrate
+     */
+    function executeRollover(
+        address deadLendingPoolAddr,
+        address[] memory deadTrancheAddrs,
+        uint256 lenderStartIndex,
+        uint256 lenderEndIndex
+    ) external onlyOwnerOrAdmin atStage(Stages.OPEN) {
+        require(trancheVaultAddresses.length == deadTrancheAddrs.length, "tranche array mismatch");
+        require(
+            keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
+            "rollover incampatible due to version mismatch"
+        ); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
+        // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
+
+        LendingPool deadpool = LendingPool(deadLendingPoolAddr);
+        for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
+            address lender = deadpool.lendersAt(i);
+            RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(lender);
+            if (!settings.enabled) {
+                continue;
+            }
+
+            for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
+                TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
+                uint256 rewards = settings.rewards
+                    ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId)
+                    : 0;
+                // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
+                // transfer rewards from dead lender to dead tranche
+                SafeERC20Upgradeable.safeTransferFrom(
+                    IERC20Upgradeable(stableCoinContractAddress),
+                    deadLendingPoolAddr,
+                    deadTrancheAddrs[trancheId],
+                    rewards
+                );
+
+                vault.rollover(lender, deadTrancheAddrs[trancheId], rewards);
+            }
+
+            // ask deadpool to move platform token into this new contract
+            IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
+            uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
+            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
+        }
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
@@ -852,6 +936,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function poolBalance() public view returns (uint) {
         return PoolCalculations.poolBalance(firstLossAssets, borrowerInterestRepaid, allLendersInterestByDate());
+    }
+
+    function lendersAt(uint i) public view returns(address) {
+        return s_lenders.at(i);
+    }
+
+    function lenderCount() public view returns(uint256) {
+        return s_lenders.length();
     }
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */
