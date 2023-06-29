@@ -40,10 +40,12 @@ library PoolCalculations {
     }
 
     function poolBalance(
-        uint firstLossAssets,
-        uint borrowerInterestRepaid,
-        uint allLendersInterestByDate
-    ) public pure returns (uint) {
+        LendingPool lendingPool
+    ) public view returns (uint) {
+        uint firstLossAssets = lendingPool.firstLossAssets();
+        uint borrowerInterestRepaid = lendingPool.borrowerInterestRepaid();
+        uint allLendersInterestByDate = lendingPool.allLendersInterestByDate();
+
         uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
         if (allLendersInterestByDate > positiveBalance) {
             return 0;
@@ -94,11 +96,13 @@ library PoolCalculations {
     }
 
     function borrowerExcessSpread(
-        uint borrowerInterestRepaid,
-        uint allLendersInterest,
-        uint borrowerExpectedInterest,
-        uint protocolFeeWad
-    ) public pure returns (uint) {
+        LendingPool lendingPool
+    ) public view returns (uint) {
+        uint borrowerInterestRepaid = lendingPool.borrowerInterestRepaid();
+        uint allLendersInterest = lendingPool.allLendersInterest();
+        uint borrowerExpectedInterest = lendingPool.borrowerExpectedInterest();
+        uint protocolFeeWad = lendingPool.protocolFeeWad();
+
         if (borrowerOutstandingInterest(borrowerInterestRepaid, borrowerExpectedInterest) > 0) {
             return 0;
         }
@@ -137,11 +141,15 @@ library PoolCalculations {
     }
 
     function lenderRewardsByTrancheGeneratedByDate(
-        uint lenderDepositedAssets,
-        uint lenderEffectiveApr,
-        uint fundedAt,
-        uint lendingTermSeconds
+        LendingPool lendingPool,
+        address lenderAddress, 
+        uint8 trancheId
     ) public view returns (uint) {
+        uint lenderDepositedAssets = lendingPool.lenderDepositedAssetsByTranche(lenderAddress, trancheId);
+        uint lenderEffectiveApr = lendingPool.lenderEffectiveAprByTrancheWad(lenderAddress, trancheId);
+        uint fundedAt = lendingPool.fundedAt();
+        uint lendingTermSeconds = lendingPool.lendingTermSeconds();
+
         if (fundedAt > block.timestamp) {
             return 0;
         }

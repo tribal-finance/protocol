@@ -567,12 +567,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
         return
-            PoolCalculations.lenderRewardsByTrancheGeneratedByDate(
-                lenderDepositedAssetsByTranche(lenderAddress, trancheId),
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId),
-                fundedAt,
-                lendingTermSeconds
-            );
+            PoolCalculations.lenderRewardsByTrancheGeneratedByDate(this, lenderAddress, trancheId);
     }
 
     /** @notice Returns amount of stablecoin rewards that has been withdrawn by the lender.
@@ -828,7 +823,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      * First loss capital minus whatever rewards are generated for the lenders by date.
      */
     function poolBalance() public view returns (uint) {
-        return PoolCalculations.poolBalance(firstLossAssets, borrowerInterestRepaid, allLendersInterestByDate());
+        return PoolCalculations.poolBalance(this);
     }
 
     function lendersAt(uint i) public view returns (address) {
@@ -862,13 +857,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  Once the pool ends, can be withdrawn by the borrower alongside the first loss capital
      */
     function borrowerExcessSpread() public view returns (uint) {
-        return
-            PoolCalculations.borrowerExcessSpread(
-                borrowerInterestRepaid,
-                allLendersInterest(),
-                borrowerExpectedInterest(),
-                protocolFeeWad
-            );
+        return PoolCalculations.borrowerExcessSpread(this);
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days

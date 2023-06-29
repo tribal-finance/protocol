@@ -7,7 +7,6 @@ import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-docgen";
-import "hardhat-contract-sizer"
 import "hardhat-gas-reporter"
 import "@nomicfoundation/hardhat-chai-matchers"
 import "@nomiclabs/hardhat-waffle"
