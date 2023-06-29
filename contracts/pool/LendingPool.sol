@@ -652,41 +652,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint256 lenderStartIndex,
         uint256 lenderEndIndex
     ) external onlyOwnerOrAdmin atStage(Stages.OPEN) {
-        require(trancheVaultAddresses.length == deadTrancheAddrs.length, "tranche array mismatch");
-        require(
-            keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
-            "rollover incampatible due to version mismatch"
-        ); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
-        // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
-
-        LendingPool deadpool = LendingPool(deadLendingPoolAddr);
-        for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
-            address lender = deadpool.lendersAt(i);
-            RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(lender);
-            if (!settings.enabled) {
-                continue;
-            }
-
-            for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
-                TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
-                uint256 rewards = settings.rewards ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
-                // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
-                // transfer rewards from dead lender to dead tranche
-                SafeERC20Upgradeable.safeTransferFrom(
-                    IERC20Upgradeable(stableCoinContractAddress),
-                    deadLendingPoolAddr,
-                    deadTrancheAddrs[trancheId],
-                    rewards
-                );
-
-                vault.rollover(lender, deadTrancheAddrs[trancheId], rewards);
-            }
-
-            // ask deadpool to move platform token into this new contract
-            IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
-            uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
-            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
-        }
+        PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs, lenderStartIndex, lenderEndIndex);
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
