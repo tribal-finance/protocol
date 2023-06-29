@@ -7,8 +7,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgrad
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
 import "../authority/AuthorityAware.sol";
-import "../pool/ILendingPool.sol";
+import "../pool/LendingPool.sol";
+import "../factory/PoolFactory.sol";
 
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
@@ -16,6 +18,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     /*////////////////////////////////////////////////
       State
     ////////////////////////////////////////////////*/
+
+    mapping(address => mapping(address => uint256)) approvedRollovers;
 
     /* id */
     uint8 private s_id;
@@ -251,6 +255,38 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
+    /**@dev used to approve the process of the rollover to deployments that do not yet exist (executed with older tranche before creation of next tranche) */
+    function approveRollover(address lender, uint256 assets) external onlyOwnerOrPool {
+        LendingPool pool = LendingPool(poolAddress());
+        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
+
+        address[8] memory futureTranches = factory.nextTranches();
+        for (uint256 i = 0; i < futureTranches.length; i++) {
+            //super.approve(futureTranches[i], convertToShares(amount));
+            approvedRollovers[lender][futureTranches[i]] = assets;
+        }
+    }
+
+    function executeRolloverAndBurn(address lender, uint256 rewards) external returns (uint256) {
+        TrancheVault newTranche = TrancheVault(_msgSender());
+        uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
+        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
+        uint256 shares = convertToAssets(assets - rewards);
+        _burn(lender, shares);
+        return assets;
+    }
+
+    /**@dev used to process the rollover (executed with newer tranche on deploy) */
+    function rollover(address lender, address deadTrancheAddr, uint256 rewards) external onlyPool {
+        TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
+        require(deadTranche.asset() == asset(), "Incompatible asset types");
+        // transfer in capital from prev tranche
+        uint256 assetsRolled = deadTranche.executeRolloverAndBurn(lender, rewards);
+        IERC20Upgradeable(asset()).approve(address(this), assetsRolled);
+        uint256 shares = previewDeposit(assetsRolled);
+        _deposit(address(this), lender, assetsRolled, shares);
+    }
+
     /*////////////////////////////////////////////////
         ERC-4626 Overrides
     ////////////////////////////////////////////////*/
@@ -372,7 +408,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         // slither-disable-next-line reentrancy-no-eth
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
-        ILendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
+        LendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -393,7 +429,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
         _burn(owner, shares);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), receiver, assets);
-        ILendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
+        LendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }

@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
 import "../pool/LendingPool.sol";
 import "../vaults/TrancheVault.sol";
 import "../authority/AuthorityAware.sol";
@@ -36,11 +37,16 @@ contract PoolFactory is AuthorityAware {
 
     address public feeSharingContractAddress;
 
+    /// @dev we need to track a nonce as salt for each implementation
+    mapping(address => uint256) public nonces;
+
+
     function initialize(address _authority) public initializer {
         __Ownable_init();
         __AuthorityAware__init(_authority);
     }
 
+    /// @notice it should be expressed that updating implemetation will make nonces at prior implementation stale
     /// @dev sets implementation for future pool deployments
     function setPoolImplementation(address implementation) external onlyOwnerOrAdmin {
         poolImplementationAddress = implementation;
@@ -77,9 +83,9 @@ contract PoolFactory is AuthorityAware {
         LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads
     ) external onlyOwner returns (address) {
-        address poolAddress = clonePool();
+        address poolAddress = _clonePool();
 
-        address[] memory trancheVaultAddresses = deployTrancheVaults(
+        address[] memory trancheVaultAddresses = _deployTrancheVaults(
             params,
             fundingSplitWads,
             poolAddress,
@@ -91,22 +97,49 @@ contract PoolFactory is AuthorityAware {
         return poolAddress;
     }
 
-    function clonePool() public onlyOwner returns (address poolAddress) {
-        poolAddress = Clones.clone(poolImplementationAddress);
+    function _clonePool() internal onlyOwner returns (address poolAddress) {
+        address impl = poolImplementationAddress;
+        poolAddress = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
         emit PoolCloned(poolAddress, poolImplementationAddress);
     }
 
-    function deployTrancheVaults(
+    function nextLender() public view returns(address) {
+        return nextAddress(poolImplementationAddress);
+    }
+
+    function nextLenders() public view returns(address[4] memory lenders) {
+        address impl = poolImplementationAddress;
+        for(uint256 i = 0; i < lenders.length; i++) {
+            lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
+        }
+    }
+
+    function nextTranches() public view returns(address[8] memory lenders) {
+        address impl = trancheVaultImplementationAddress;
+        for(uint256 i = 0; i < lenders.length; i++) {
+            lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
+        }
+    }
+
+    function nextAddress(address impl) public view returns(address) {
+        return Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + 1));
+    }
+
+
+    function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads,
         address poolAddress,
         address ownerAddress
-    ) public onlyOwner returns (address[] memory trancheVaultAddresses) {
+    ) internal onlyOwner returns (address[] memory trancheVaultAddresses) {
+        require(params.tranchesCount > 0, "Error TrancheCount must be gt 0");
         trancheVaultAddresses = new address[](params.tranchesCount);
 
         for (uint8 i; i < params.tranchesCount; ++i) {
-            trancheVaultAddresses[i] = Clones.clone(trancheVaultImplementationAddress);
-            emit TrancheVaultCloned(trancheVaultAddresses[i], trancheVaultImplementationAddress);
+            address impl = trancheVaultImplementationAddress;
+            trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
+
+            emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
 
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
