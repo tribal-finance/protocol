@@ -5,9 +5,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-import "./LendingPoolState.sol";
 import "./PoolCalculations.sol";
+import "./PoolTransfers.sol";
 
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
@@ -27,6 +28,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     uint internal constant DAY = 24 * 60 * 60;
     uint internal constant YEAR = 365 * DAY;
 
+    // DO NOT TOUCH WITHOUT LIBRARY CONSIDERATIONS
     struct Rewardable {
         uint stakedAssets;
         uint lockedPlatformTokens;
@@ -126,7 +128,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     EnumerableSet.AddressSet internal s_lenders;
 
     /// @dev trancheId => (lenderAddress => RewardableRecord)
-    mapping(uint8 => mapping(address => Rewardable)) internal s_trancheRewardables;
+    mapping(uint8 => mapping(address => Rewardable)) public s_trancheRewardables;
 
     /// @dev trancheId => stakedassets
     mapping(uint8 => uint256) public s_totalStakedAssetsByTranche;
@@ -634,34 +636,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
         address lender = _msgSender();
         s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
-
-        PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
-        uint256 lockedPlatformTokens;
-        for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
-            uint256 amount = s_trancheRewardables[trancheId][lender].stakedAssets;
-            TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
-            lockedPlatformTokens += s_trancheRewardables[trancheId][lender].lockedPlatformTokens;
-            vault.approveRollover(lender, amount);
-        }
-
-        address[4] memory futureLenders = poolFactory.nextLenders();
-        for (uint256 i = 0; i < futureLenders.length; i++) {
-            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], 0);
-            // approve transfer of platform tokens
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(platformTokenContractAddress),
-                futureLenders[i],
-                lockedPlatformTokens
-            );
-
-            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(stableCoinContractAddress), futureLenders[i], 0);
-            // approve transfer of the stablecoin contract
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(stableCoinContractAddress), // asume tranches.asset() == stablecoin address
-                futureLenders[i],
-                2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
-            );
-        }
+        PoolTransfers.lenderEnableRollOver(this, principal, rewards, platformTokens, lender);
     }
 
     /**

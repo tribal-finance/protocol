@@ -9,11 +9,17 @@ async function main() {
   const poolCalculations = await PoolCalculations.deploy();
   await poolCalculations.deployed();
 
+  const PoolTransfers = await ethers.getContractFactory("PoolTransfers");
+  const poolTransfers = await PoolTransfers.deploy();
+  await poolTransfers.deployed();
+
   const LendingPool = await ethers.getContractFactory("LendingPool", {
     libraries: {
       PoolCalculations: poolCalculations.address,
+      PoolTransfers: poolTransfers.address
     }
   });
+  
   const lp = await LendingPool.deploy();
 
   console.log(`LendingPool implementation deployed to ${lp.address}`);
