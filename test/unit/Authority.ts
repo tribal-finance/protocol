@@ -319,9 +319,5 @@ describe("Authority", function () {
       expect(actual).to.have.members(expected);
     });
   });
-
-  describe("addLenderAdmin", function () {
-    
-});
 });
 
