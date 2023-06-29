@@ -40,6 +40,7 @@ contract PoolFactory is AuthorityAware {
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
 
+
     function initialize(address _authority) public initializer {
         __Ownable_init();
         __AuthorityAware__init(_authority);
@@ -123,6 +124,7 @@ contract PoolFactory is AuthorityAware {
     function nextAddress(address impl) public view returns(address) {
         return Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + 1));
     }
+
 
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
