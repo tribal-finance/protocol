@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "../pool/LendingPool.sol";
-import "../vaults/TrancheVault.sol";
 import "../authority/AuthorityAware.sol";
+import "../pool/LendingPool.sol";
 
 contract PoolFactory is AuthorityAware {
-    using MathUpgradeable for uint;
+    using Math for uint;
 
     struct PoolRecord {
         string name;
@@ -168,7 +165,7 @@ contract PoolFactory is AuthorityAware {
             address(authority),
             address(this)
         );
-        OwnableUpgradeable(poolAddress).transferOwnership(_msgSender());
+        Ownable(poolAddress).transferOwnership(_msgSender());
 
         PoolRecord memory record = PoolRecord(
             params.name,

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "./LendingPool.sol";
 
 import "../factory/PoolFactory.sol";
@@ -27,26 +29,26 @@ library PoolTransfers {
 
         address[4] memory futureLenders = poolFactory.nextLenders();
         for (uint256 i = 0; i < futureLenders.length; i++) {
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(lendingPool.platformTokenContractAddress()),
+            SafeERC20.safeApprove(
+                IERC20(lendingPool.platformTokenContractAddress()),
                 futureLenders[i],
                 0
             );
             // approve transfer of platform tokens
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(lendingPool.platformTokenContractAddress()),
+            SafeERC20.safeApprove(
+                IERC20(lendingPool.platformTokenContractAddress()),
                 futureLenders[i],
                 lockedPlatformTokens
             );
 
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(lendingPool.stableCoinContractAddress()),
+            SafeERC20.safeApprove(
+                IERC20(lendingPool.stableCoinContractAddress()),
                 futureLenders[i],
                 0
             );
             // approve transfer of the stablecoin contract
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(lendingPool.stableCoinContractAddress()), // asume tranches.asset() == stablecoin address
+            SafeERC20.safeApprove(
+                IERC20(lendingPool.stableCoinContractAddress()), // asume tranches.asset() == stablecoin address
                 futureLenders[i],
                 2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
             );
@@ -80,8 +82,8 @@ library PoolTransfers {
                 uint256 rewards = settings.rewards ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
                 // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
                 // transfer rewards from dead lender to dead tranche
-                SafeERC20Upgradeable.safeTransferFrom(
-                    IERC20Upgradeable(lendingPool.stableCoinContractAddress()),
+                SafeERC20.safeTransferFrom(
+                    IERC20(lendingPool.stableCoinContractAddress()),
                     deadLendingPoolAddr,
                     deadTrancheAddrs[trancheId],
                     rewards
@@ -91,9 +93,9 @@ library PoolTransfers {
             }
 
             // ask deadpool to move platform token into this new contract
-            IERC20Upgradeable platoken = IERC20Upgradeable(lendingPool.platformTokenContractAddress());
+            IERC20 platoken = IERC20(lendingPool.platformTokenContractAddress());
             uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
-            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
+            SafeERC20.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
         }
     }
 }
