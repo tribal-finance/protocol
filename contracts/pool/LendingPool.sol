@@ -287,8 +287,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         feeSharingContractAddress = _feeSharingContractAddress;
         poolFactoryAddress = _poolFactoryAddress;
 
+        __Ownable_init();
+        __Pausable_init();
         __AuthorityAware__init(_authorityAddress);
-
+        
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
     }
 
