@@ -1,23 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "./PoolCalculations.sol";
 import "./PoolTransfers.sol";
-
-import "../vaults/TrancheVault.sol";
-import "../fee_sharing/IFeeSharing.sol";
-import "../factory/PoolFactory.sol";
 import "./ILendingPool.sol";
 
-contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpgradeable {
+import "../fee_sharing/IFeeSharing.sol";
+import "../authority/AuthorityAware.sol";
+import "../vaults/TrancheVault.sol";
+
+
+contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
-    using MathUpgradeable for uint;
+    using Math for uint;
 
     /*///////////////////////////////////
        CONSTANTS
@@ -286,8 +287,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         feeSharingContractAddress = _feeSharingContractAddress;
         poolFactoryAddress = _poolFactoryAddress;
 
-        __Ownable_init();
-        __Pausable_init();
         __AuthorityAware__init(_authorityAddress);
 
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
@@ -403,7 +402,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
             uint trancheDefaultRatioWad = (assetsToSend * WAD) / tv.totalAssets();
             if (assetsToSend > 0) {
-                SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), address(tv), assetsToSend);
+                SafeERC20.safeTransfer(_stableCoinContract(), address(tv), assetsToSend);
             }
 
             tv.setDefaultRatioWad(trancheDefaultRatioWad);
@@ -434,8 +433,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         r.lockedPlatformTokens += platformTokens;
         s_totalLockedPlatformTokensByTranche[trancheId] += platformTokens;
 
-        SafeERC20Upgradeable.safeTransferFrom(
-            IERC20Upgradeable(platformTokenContractAddress),
+        SafeERC20.safeTransferFrom(
+            IERC20(platformTokenContractAddress),
             _msgSender(),
             address(this),
             platformTokens
@@ -461,8 +460,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         require(r.lockedPlatformTokens >= platformTokens, "LP104"); // LendingPool: not enough locked tokens"
         r.lockedPlatformTokens -= platformTokens;
 
-        SafeERC20Upgradeable.safeTransfer(
-            IERC20Upgradeable(platformTokenContractAddress),
+        SafeERC20.safeTransfer(
+            IERC20(platformTokenContractAddress),
             _msgSender(),
             platformTokens
         );
@@ -486,9 +485,9 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         require(toWithdraw <= maxWithdraw, "LP106"); // "LendingPool: amount to withdraw is too big"
         s_trancheRewardables[trancheId][_msgSender()].redeemedRewards += toWithdraw;
 
-        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), _msgSender(), toWithdraw);
+        SafeERC20.safeTransfer(_stableCoinContract(), _msgSender(), toWithdraw);
 
-        // if (IERC20Upgradeable(stableCoinContractAddress()).balanceOf(address(this)) < poolBalanceThreshold()) {
+        // if (IERC20(stableCoinContractAddress()).balanceOf(address(this)) < poolBalanceThreshold()) {
         //     _transitionToDelinquentStage();
         // }
 
@@ -677,13 +676,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function borrowerDepositFirstLossCapital() external onlyPoolBorrower atStage(Stages.INITIAL) {
         _transitionToFlcDepositedStage(firstLossAssets);
-        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), msg.sender, address(this), firstLossAssets);
+        SafeERC20.safeTransferFrom(_stableCoinContract(), msg.sender, address(this), firstLossAssets);
     }
 
     /** @notice Borrows collected funds from the pool */
     function borrow() external onlyPoolBorrower atStage(Stages.FUNDED) {
         _transitionToBorrowedStage(collectedAssets);
-        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), borrowerAddress, collectedAssets);
+        SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, collectedAssets);
     }
 
     /** @notice Make an interest payment.
@@ -709,14 +708,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
 
         if (assetsToSendToFeeSharing > 0) {
-            SafeERC20Upgradeable.safeTransfer(
+            SafeERC20.safeTransfer(
                 _stableCoinContract(),
                 feeSharingContractAddress,
                 assetsToSendToFeeSharing
             );
         }
 
-        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
+        SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
 
         if (penalty > 0) {
             emit BorrowerPayPenalty(_msgSender(), penalty);
@@ -735,10 +734,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         _transitionToPrincipalRepaidStage(borrowedAssets);
 
-        SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), borrowedAssets);
+        SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), borrowedAssets);
         for (uint i; i < tranchesCount; ++i) {
             TrancheVault tv = trancheVaultContracts()[i];
-            SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), address(tv), tv.totalAssets());
+            SafeERC20.safeTransfer(_stableCoinContract(), address(tv), tv.totalAssets());
             tv.enableWithdrawals();
         }
     }
@@ -749,7 +748,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function borrowerWithdrawFirstLossCapitalAndExcessSpread() external onlyPoolBorrower atStage(Stages.REPAID) {
         uint assetsToSend = firstLossAssets + borrowerExcessSpread();
         _transitionToFlcWithdrawnStage(assetsToSend);
-        SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
+        SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
     }
 
     /* VIEWS */
@@ -882,7 +881,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         );
     }
 
-    function _stableCoinContract() internal view returns (IERC20Upgradeable) {
-        return IERC20Upgradeable(stableCoinContractAddress);
+    function _stableCoinContract() internal view returns (IERC20) {
+        return IERC20(stableCoinContractAddress);
     }
 }

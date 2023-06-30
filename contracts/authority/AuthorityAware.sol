@@ -2,13 +2,15 @@
 pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./IAuthority.sol";
 
 abstract contract AuthorityAware is OwnableUpgradeable {
-    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     IAuthority public authority;
+
+    bytes32[50] private __gaps;
 
     modifier onlyOwnerOrAdmin() {
         _onlyOwnerOrAdmin();
