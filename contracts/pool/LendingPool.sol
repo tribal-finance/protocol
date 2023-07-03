@@ -5,7 +5,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "./LendingPoolState.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+import "./PoolCalculations.sol";
+import "./PoolTransfers.sol";
+
 import "../vaults/TrancheVault.sol";
 import "../fee_sharing/IFeeSharing.sol";
 import "../factory/PoolFactory.sol";
@@ -24,6 +28,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     uint internal constant DAY = 24 * 60 * 60;
     uint internal constant YEAR = 365 * DAY;
 
+    // DO NOT TOUCH WITHOUT LIBRARY CONSIDERATIONS
     struct Rewardable {
         uint stakedAssets;
         uint lockedPlatformTokens;
@@ -123,25 +128,18 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     EnumerableSet.AddressSet internal s_lenders;
 
     /// @dev trancheId => (lenderAddress => RewardableRecord)
-    mapping(uint8 => mapping(address => Rewardable)) internal s_trancheRewardables;
+    mapping(uint8 => mapping(address => Rewardable)) public s_trancheRewardables;
 
     /// @dev trancheId => stakedassets
-    mapping(uint8 => uint256) internal s_totalStakedAssetsByTranche;
+    mapping(uint8 => uint256) public s_totalStakedAssetsByTranche;
 
     /// @dev trancheId => lockedTokens
-    mapping(uint8 => uint256) internal s_totalLockedPlatformTokensByTranche;
+    mapping(uint8 => uint256) public s_totalLockedPlatformTokensByTranche;
 
     /// @dev lenderAddress => RollOverSetting
     mapping(address => RollOverSetting) private s_rollOverSettings;
 
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[50] private __gap;
-    // TODO: Gaps and Upgradeable don't seem to always be used correctly throughout the codebase
-    // Why should such a concrete, opinionated, and immutable contract be using this?
+    Stages public currentStage;
 
     /*///////////////////////////////////
        MODIFIERS
@@ -171,7 +169,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function _atStage(Stages _stage) internal view {
-        require(currentStage() == _stage, "LP004"); // "LendingPool: not at correct stage"
+        require(currentStage == _stage, "LP004"); // "LendingPool: not at correct stage"
     }
 
     modifier atStages2(Stages _stage1, Stages _stage2) {
@@ -180,7 +178,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function _atStages2(Stages _stage1, Stages _stage2) internal view {
-        require(currentStage() == _stage1 || currentStage() == _stage2, "LP004"); // "LendingPool: not at correct stage"
+        require(currentStage == _stage1 || currentStage == _stage2, "LP004"); // "LendingPool: not at correct stage"
     }
 
     modifier atStages3(
@@ -194,7 +192,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _atStages3(Stages _stage1, Stages _stage2, Stages _stage3) internal view {
         require(
-            currentStage() == _stage1 || currentStage() == _stage2 || currentStage() == _stage3,
+            currentStage == _stage1 || currentStage == _stage2 || currentStage == _stage3,
             "LP004" // "LendingPool: not at correct stage"
         );
     }
@@ -255,8 +253,13 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         address _authorityAddress,
         address _poolFactoryAddress
     ) external initializer {
-        _validateInitParams(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
-
+        PoolCalculations.validateInitParams(
+            params,
+            _trancheVaultAddresses,
+            _feeSharingContractAddress,
+            _authorityAddress
+        );
+        
         name = params.name;
         token = params.token;
         stableCoinContractAddress = params.stableCoinContractAddress;
@@ -290,53 +293,6 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
     }
 
-    /// @dev validates initializer params
-    function _validateInitParams(
-        LendingPoolParams calldata params,
-        address[] calldata _trancheVaultAddresses,
-        address _feeSharingContractAddress,
-        address _authorityAddress
-    ) internal pure {
-        require(params.stableCoinContractAddress != address(0), "LP005"); // "LendingPool: stableCoinContractAddress empty"
-
-        require(params.minFundingCapacity > 0, "LP006"); // "LendingPool: minFundingCapacity == 0"
-        require(params.maxFundingCapacity > 0, "LP007"); // "LendingPool: maxFundingCapacity == 0"
-        require(
-            params.maxFundingCapacity >= params.minFundingCapacity,
-            "LP008" // "LendingPool: maxFundingCapacity < minFundingCapacity"
-        );
-
-        require(params.fundingPeriodSeconds > 0, "LP009"); // "LendingPool: fundingPeriodSeconds == 0"
-        require(params.lendingTermSeconds > 0, "LP010"); // "LendingPool: lendingTermSeconds == 0"
-        require(params.borrowerAddress != address(0), "LP011"); // "LendingPool: borrowerAddress empty"
-        require(params.borrowerTotalInterestRateWad > 0, "LP012"); // "LendingPool: borrower interest rate = 0%"
-        require(params.protocolFeeWad > 0, "LP013"); // "LendingPool: protocolFee == 0%"
-        require(params.penaltyRateWad > 0, "LP014"); // "LendingPool: penaltyRate == 0"
-
-        require(params.tranchesCount > 0, "LP015"); // "LendingPool: tranchesCount == 0"
-        require(_trancheVaultAddresses.length == params.tranchesCount, "LP016"); // "LendingPool: trancheAddresses length"
-        require(params.trancheAPRsWads.length == params.tranchesCount, "LP017"); // "LP001");// "LendingPool: tranche APRs length"
-        require(
-            params.trancheBoostedAPRsWads.length == params.tranchesCount,
-            "LP018" // "LendingPool: tranche Boosted APRs length"
-        );
-        require(
-            params.trancheBoostedAPRsWads.length == params.tranchesCount,
-            "LP019" // "LendingPool: tranche Coverage APRs length"
-        );
-
-        for (uint i; i < params.tranchesCount; ++i) {
-            require(params.trancheAPRsWads[i] > 0, "tranche APRs == 0");
-            require(
-                params.trancheBoostedAPRsWads[i] >= params.trancheAPRsWads[i],
-                "LP020" // "LendingPool: tranche boosted APRs < tranche APRs"
-            );
-        }
-
-        require(_feeSharingContractAddress != address(0), "LP021"); // "LendingPool: feeSharingAddress empty"
-        require(_authorityAddress != address(0), "LP022"); // "LendingPool: authorityAddress empty"
-    }
-
     /*///////////////////////////////////
        ADMIN FUNCTIONS
     ///////////////////////////////////*/
@@ -351,54 +307,17 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         _unpause();
     }
 
-    /*///////////////////////////////////
-       STATE MANAGEMENT
-    ///////////////////////////////////*/
-
-    /// @notice This function returns the current stage of the pool
-    function currentStage() public view returns (Stages stage) {
-        if (defaultedAt != 0) {
-            return Stages.DEFAULTED;
-        }
-        if (flcWithdrawntAt != 0) {
-            return Stages.FLC_WITHDRAWN;
-        }
-        if (repaidAt != 0) {
-            return Stages.REPAID;
-        }
-        if (borrowedAt != 0) {
-            return Stages.BORROWED;
-        }
-        if (fundingFailedAt != 0) {
-            return Stages.FUNDING_FAILED;
-        }
-        if (fundedAt != 0) {
-            return Stages.FUNDED;
-        }
-        if (openedAt != 0) {
-            return Stages.OPEN;
-        }
-        if (flcDepositedAt != 0) {
-            return Stages.FLC_DEPOSITED;
-        }
-
-        return Stages.INITIAL;
-    }
-
-    // TODO: Fix: this is a gas inefficient / bug prone state machine
-    // State machine patterns frequent single enum ref as source of truth
-    // The above state machines allows for multiple states to exist at the same time which is potentially scary
-
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
     function adminOpenPool() external onlyWhitelisted atStage(Stages.FLC_DEPOSITED) {
         openedAt = uint64(block.timestamp);
+        currentStage = Stages.OPEN;
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
-            _trancheVaultContracts()[i].enableDeposits();
-            _trancheVaultContracts()[i].enableWithdrawals();
+            trancheVaultContracts()[i].enableDeposits();
+            trancheVaultContracts()[i].enableWithdrawals();
         }
 
         emit PoolOpen(openedAt);
@@ -422,9 +341,10 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _transitionToFundedStage() internal {
         fundedAt = uint64(block.timestamp);
+        currentStage = Stages.FUNDED;
 
-        for (uint i; i < _trancheVaultContracts().length; i++) {
-            TrancheVault tv = _trancheVaultContracts()[i];
+        for (uint i; i < trancheVaultContracts().length; i++) {
+            TrancheVault tv = trancheVaultContracts()[i];
             tv.disableDeposits();
             tv.disableWithdrawals();
             tv.sendAssetsToPool(tv.totalAssets());
@@ -435,44 +355,50 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _transitionToFundingFailedStage() internal {
         fundingFailedAt = uint64(block.timestamp);
+        currentStage = Stages.FUNDING_FAILED;
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
-            _trancheVaultContracts()[i].disableDeposits();
-            _trancheVaultContracts()[i].enableWithdrawals();
+            trancheVaultContracts()[i].disableDeposits();
+            trancheVaultContracts()[i].enableWithdrawals();
         }
         emit PoolFundingFailed(fundingFailedAt);
     }
 
     function _transitionToFlcDepositedStage(uint flcAssets) internal {
         flcDepositedAt = uint64(block.timestamp);
+        currentStage = Stages.FLC_DEPOSITED;
         emit BorrowerDepositFirstLossCapital(borrowerAddress, flcAssets);
     }
 
     function _transitionToBorrowedStage(uint amountToBorrow) internal {
         borrowedAt = uint64(block.timestamp);
         borrowedAssets = amountToBorrow;
+        currentStage = Stages.BORROWED;
 
         emit BorrowerBorrow(borrowerAddress, amountToBorrow);
     }
 
     function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal {
         repaidAt = uint64(block.timestamp);
+        currentStage = Stages.REPAID;
         emit BorrowerRepayPrincipal(borrowerAddress, repaidPrincipal);
         emit PoolRepaid(repaidAt);
     }
 
     function _transitionToFlcWithdrawnStage(uint flcAssets) internal {
         flcWithdrawntAt = uint64(block.timestamp);
+        currentStage = Stages.FLC_WITHDRAWN;
         emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
     }
 
     function _transitionToDefaultedStage() internal {
         defaultedAt = uint64(block.timestamp);
+        currentStage = Stages.DEFAULTED;
 
         uint availableAssets = _stableCoinContract().balanceOf(address(this));
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
-            TrancheVault tv = _trancheVaultContracts()[i];
+            TrancheVault tv = trancheVaultContracts()[i];
             uint assetsToSend = (trancheCoveragesWads[i] * availableAssets) / WAD;
 
             uint trancheDefaultRatioWad = (assetsToSend * WAD) / tv.totalAssets();
@@ -591,50 +517,17 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     }
 
     function allLendersInterestByDate() public view returns (uint) {
-        if (fundedAt == 0 || block.timestamp <= fundedAt) {
-            return 0;
-        }
-        uint time = block.timestamp < fundedAt + lendingTermSeconds ? block.timestamp : fundedAt + lendingTermSeconds;
-        uint elapsedTime = time - fundedAt;
-        return (allLendersInterest() * elapsedTime) / lendingTermSeconds;
+        return PoolCalculations.allLendersInterestByDate(this);
     }
 
     /// @notice average APR of all lenders across all tranches, boosted or not
     function allLendersEffectiveAprWad() public view returns (uint) {
-        uint weightedSum = 0;
-        uint totalStakedAssets = 0;
-        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-            uint stakedAssets = s_totalStakedAssetsByTranche[trancheId];
-            totalStakedAssets += stakedAssets;
-
-            uint boostedAssets = s_totalLockedPlatformTokensByTranche[trancheId] / trancheBoostRatios[trancheId];
-            if (boostedAssets > stakedAssets) {
-                boostedAssets = stakedAssets;
-            }
-            uint unBoostedAssets = stakedAssets - boostedAssets;
-
-            weightedSum += unBoostedAssets * trancheAPRsWads[trancheId];
-            weightedSum += boostedAssets * trancheBoostedAPRsWads[trancheId];
-        }
-
-        return weightedSum / totalStakedAssets;
+        return PoolCalculations.allLendersEffectiveAprWad(this, tranchesCount);
     }
 
     /// @notice weighted APR accross all the lenders
     function lenderTotalAprWad(address lenderAddress) public view returns (uint) {
-        uint weightedApysWad = 0;
-        uint totalAssets = 0;
-        for (uint8 i; i < tranchesCount; ++i) {
-            Rewardable storage rewardable = s_trancheRewardables[i][lenderAddress];
-            totalAssets += rewardable.stakedAssets;
-            weightedApysWad += (lenderEffectiveAprByTrancheWad(lenderAddress, i) * rewardable.stakedAssets);
-        }
-
-        if (totalAssets == 0) {
-            return 0;
-        }
-
-        return weightedApysWad / totalAssets;
+        return PoolCalculations.lenderTotalAprWad(this, lenderAddress);
     }
 
     /// @notice  Returns amount of stablecoins deposited across all the pool tranches by a lender
@@ -662,9 +555,11 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderTotalExpectedRewardsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
         return
-            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-                lendingTermSeconds) / (YEAR * WAD);
+            PoolCalculations.lenderTotalExpectedRewardsByTranche(
+                lenderDepositedAssetsByTranche(lenderAddress, trancheId),
+                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId),
+                lendingTermSeconds
+            );
     }
 
     /** @notice Returns amount of stablecoin rewards generated for the lenders by current second.
@@ -673,17 +568,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        if (fundedAt > block.timestamp) {
-            return 0;
-        }
-        uint64 secondsElapsed = uint64(block.timestamp) - fundedAt;
-        if (secondsElapsed > lendingTermSeconds) {
-            secondsElapsed = lendingTermSeconds;
-        }
         return
-            (lenderDepositedAssetsByTranche(lenderAddress, trancheId) *
-                lenderEffectiveAprByTrancheWad(lenderAddress, trancheId) *
-                secondsElapsed) / (YEAR * WAD);
+            PoolCalculations.lenderRewardsByTrancheGeneratedByDate(this, lenderAddress, trancheId);
     }
 
     /** @notice Returns amount of stablecoin rewards that has been withdrawn by the lender.
@@ -709,22 +595,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  @param trancheId tranche id
      */
     function lenderEffectiveAprByTrancheWad(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
-        if (r.stakedAssets == 0) {
-            return 0;
-        }
-        uint boostedAssets = r.lockedPlatformTokens / trancheBoostRatios[trancheId];
-        /// @dev prevent more APRs than stakedAssets allow
-        if (boostedAssets > r.stakedAssets) {
-            boostedAssets = r.stakedAssets;
-        }
-        uint unBoostedAssets = r.stakedAssets - boostedAssets;
-        uint weightedAverage = (unBoostedAssets *
-            trancheAPRsWads[trancheId] +
-            boostedAssets *
-            trancheBoostedAPRsWads[trancheId]) / r.stakedAssets;
-
-        return weightedAverage;
+        return PoolCalculations.lenderEffectiveAprByTrancheWad(this, lenderAddress, trancheId);
     }
 
     /** @notice Returns amount of platform tokens locked by the lender
@@ -733,6 +604,14 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      */
     function lenderPlatformTokensByTrancheLocked(address lenderAddress, uint8 trancheId) public view returns (uint) {
         return s_trancheRewardables[trancheId][lenderAddress].lockedPlatformTokens;
+    }
+
+    /** @notice Returns amount of staked tokens committed by the lender
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderStakedTokensByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        return s_trancheRewardables[trancheId][lenderAddress].stakedAssets;
     }
 
     /** @notice Returns amount of platform tokens that lender can lock in order to boost their APR
@@ -757,34 +636,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
         address lender = _msgSender();
         s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
-
-        PoolFactory poolFactory = PoolFactory(poolFactoryAddress);
-        uint256 lockedPlatformTokens;
-        for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
-            uint256 amount = s_trancheRewardables[trancheId][lender].stakedAssets;
-            TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
-            lockedPlatformTokens += s_trancheRewardables[trancheId][lender].lockedPlatformTokens;
-            vault.approveRollover(lender, amount);
-        }
-
-        address[4] memory futureLenders = poolFactory.nextLenders();
-        for (uint256 i = 0; i < futureLenders.length; i++) {
-            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(platformTokenContractAddress), futureLenders[i], 0);
-            // approve transfer of platform tokens
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(platformTokenContractAddress),
-                futureLenders[i],
-                lockedPlatformTokens
-            );
-
-            SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(stableCoinContractAddress), futureLenders[i], 0);
-            // approve transfer of the stablecoin contract
-            SafeERC20Upgradeable.safeApprove(
-                IERC20Upgradeable(stableCoinContractAddress), // asume tranches.asset() == stablecoin address
-                futureLenders[i],
-                2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
-            );
-        }
+        PoolTransfers.lenderEnableRollOver(this, principal, rewards, platformTokens, lender);
     }
 
     /**
@@ -800,43 +652,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
         uint256 lenderStartIndex,
         uint256 lenderEndIndex
     ) external onlyOwnerOrAdmin atStage(Stages.OPEN) {
-        require(trancheVaultAddresses.length == deadTrancheAddrs.length, "tranche array mismatch");
-        require(
-            keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
-            "rollover incampatible due to version mismatch"
-        ); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
-        // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
-
-        LendingPool deadpool = LendingPool(deadLendingPoolAddr);
-        for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
-            address lender = deadpool.lendersAt(i);
-            RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(lender);
-            if (!settings.enabled) {
-                continue;
-            }
-
-            for (uint8 trancheId; trancheId < trancheVaultAddresses.length; trancheId++) {
-                TrancheVault vault = TrancheVault(trancheVaultAddresses[trancheId]);
-                uint256 rewards = settings.rewards
-                    ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId)
-                    : 0;
-                // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
-                // transfer rewards from dead lender to dead tranche
-                SafeERC20Upgradeable.safeTransferFrom(
-                    IERC20Upgradeable(stableCoinContractAddress),
-                    deadLendingPoolAddr,
-                    deadTrancheAddrs[trancheId],
-                    rewards
-                );
-
-                vault.rollover(lender, deadTrancheAddrs[trancheId], rewards);
-            }
-
-            // ask deadpool to move platform token into this new contract
-            IERC20Upgradeable platoken = IERC20Upgradeable(platformTokenContractAddress);
-            uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
-            SafeERC20Upgradeable.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
-        }
+        PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs, lenderStartIndex, lenderEndIndex);
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
@@ -921,7 +737,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
         SafeERC20Upgradeable.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), borrowedAssets);
         for (uint i; i < tranchesCount; ++i) {
-            TrancheVault tv = _trancheVaultContracts()[i];
+            TrancheVault tv = trancheVaultContracts()[i];
             SafeERC20Upgradeable.safeTransfer(_stableCoinContract(), address(tv), tv.totalAssets());
             tv.enableWithdrawals();
         }
@@ -941,23 +757,22 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
      *  if pool balance fallse below this threshold, the pool is considered delinquent and the borrower starts to face penalties.
      */
     function poolBalanceThreshold() public view returns (uint) {
-        uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
-        uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
-        if (interestGoDownAmount > firstLossAssets) {
-            return 0;
-        }
-        return firstLossAssets - interestGoDownAmount;
+        return PoolCalculations.poolBalanceThreshold(this);
     }
 
     /** @notice Pool balance
      * First loss capital minus whatever rewards are generated for the lenders by date.
      */
     function poolBalance() public view returns (uint) {
-        uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
-        if (allLendersInterestByDate() > positiveBalance) {
-            return 0;
-        }
-        return positiveBalance - allLendersInterestByDate();
+        return PoolCalculations.poolBalance(this);
+    }
+
+    function lendersAt(uint i) public view returns (address) {
+        return s_lenders.at(i);
+    }
+
+    function lenderCount() public view returns (uint256) {
+        return s_lenders.length();
     }
 
     function lendersAt(uint i) public view returns(address) {
@@ -970,57 +785,35 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */
     function borrowerPenaltyAmount() public view returns (uint) {
-        if (poolBalance() >= poolBalanceThreshold()) {
-            return 0;
-        }
-
-        uint dailyLendersInterestAmount = (collectedAssets * allLendersEffectiveAprWad()) / WAD / 365;
-        uint balanceDifference = poolBalanceThreshold() - poolBalance();
-        uint daysDelinquent = balanceDifference / dailyLendersInterestAmount;
-
-        if (daysDelinquent == 0) {
-            return 0;
-        }
-
-        uint penaltyCoefficientWad = _wadPow(WAD + penaltyRateWad, daysDelinquent);
-
-        uint penalty = (balanceDifference * penaltyCoefficientWad) / WAD - balanceDifference;
-        return penalty;
+        return PoolCalculations.borrowerPenaltyAmount(this);
     }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
      *  @return interest amount of assets to be repaid
      */
     function borrowerExpectedInterest() public view returns (uint) {
-        return (collectedAssets * borrowerAdjustedInterestRateWad()) / WAD;
+        return PoolCalculations.borrowerExpectedInterest(collectedAssets, borrowerAdjustedInterestRateWad());
     }
 
     /** @dev outstanding borrower interest = expectedBorrowerInterest - borrowerInterestAlreadyPaid
      *  @return interest amount of outstanding assets to be repaid
      */
     function borrowerOutstandingInterest() public view returns (uint) {
-        if (borrowerInterestRepaid > borrowerExpectedInterest()) {
-            return 0;
-        }
-        return borrowerExpectedInterest() - borrowerInterestRepaid;
+        return PoolCalculations.borrowerOutstandingInterest(borrowerInterestRepaid, borrowerExpectedInterest());
     }
 
     /** @notice excess spread = interest paid by borrower - interest paid to lenders - fees
      *  Once the pool ends, can be withdrawn by the borrower alongside the first loss capital
      */
     function borrowerExcessSpread() public view returns (uint) {
-        if (borrowerOutstandingInterest() > 0) {
-            return 0;
-        }
-        uint fees = (borrowerExpectedInterest() * protocolFeeWad) / WAD;
-        return borrowerInterestRepaid - allLendersInterest() - fees;
+        return PoolCalculations.borrowerExcessSpread(this);
     }
 
     /** @dev adjusted borrower interest rate = APR * duration / 365 days
      *  @return adj borrower interest rate adjusted by duration of the loan
      */
     function borrowerAdjustedInterestRateWad() public view returns (uint adj) {
-        adj = (borrowerTotalInterestRateWad * lendingTermSeconds) / YEAR;
+        return PoolCalculations.borrowerAdjustedInterestRateWad(borrowerTotalInterestRateWad, lendingTermSeconds);
     }
 
     /*///////////////////////////////////
@@ -1060,7 +853,7 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
     ) external authTrancheVault(trancheId) {
         require(!s_rollOverSettings[depositorAddress].principal, "LP301"); // "LendingPool: principal locked for rollover"
 
-        if (currentStage() == Stages.REPAID || currentStage() == Stages.FLC_WITHDRAWN) {
+        if (currentStage == Stages.REPAID || currentStage == Stages.FLC_WITHDRAWN) {
             emit LenderWithdraw(depositorAddress, trancheId, amount);
         } else {
             Rewardable storage rewardable = s_trancheRewardables[trancheId][depositorAddress];
@@ -1083,13 +876,8 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
        HELPERS
     ///////////////////////////////////*/
 
-    function _trancheVaultContracts() internal view returns (TrancheVault[] memory contracts) {
-        address[] memory addresses = trancheVaultAddresses;
-        contracts = new TrancheVault[](addresses.length);
-
-        for (uint i; i < addresses.length; ++i) {
-            contracts[i] = TrancheVault(addresses[i]);
-        }
+    function trancheVaultContracts() internal view returns (TrancheVault[] memory contracts) {
+        return PoolCalculations.trancheVaultContracts(this);
     }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
@@ -1104,23 +892,5 @@ contract LendingPool is ILendingPool, Initializable, AuthorityAware, PausableUpg
 
     function _stableCoinContract() internal view returns (IERC20Upgradeable) {
         return IERC20Upgradeable(stableCoinContractAddress);
-    }
-
-    /// @dev calculates WAD ** N using exponentiation by squaring algorithm.
-    /// it's O(log(N) instead of O(N) for naive repeated multiplication.
-    function _wadPow(uint _xWad, uint _n) internal pure returns (uint) {
-        uint xWad = _xWad;
-        uint n = _n;
-        uint result = n % 2 != 0 ? xWad : WAD;
-
-        for (n /= 2; n != 0; n /= 2) {
-            xWad = (xWad * xWad) / WAD;
-
-            if (n % 2 != 0) {
-                result = (result * xWad) / WAD;
-            }
-        }
-
-        return result;
     }
 }
