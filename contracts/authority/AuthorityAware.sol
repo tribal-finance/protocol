@@ -5,6 +5,10 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./IAuthority.sol";
 
+/**
+ * @title Authority Whitelist smart contract
+ * @notice this contract manages a whitelists for all the admins, borrowers and lenders
+ */
 abstract contract AuthorityAware is OwnableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -24,31 +28,7 @@ abstract contract AuthorityAware is OwnableUpgradeable {
         );
     }
 
-    modifier onlyAdmin() {
-        _onlyAdmin();
-        _;
-    }
-
-    function _onlyAdmin() internal view {
-        require(
-            authority.isAdmin(msg.sender),
-            "AA:A" // "AuthorityAware: caller is not an admin"
-        );
-    }
-
-    modifier onlyBorrower() {
-        _onlyBorrower();
-        _;
-    }
-
-    function _onlyBorrower() internal view {
-        require(
-            authority.isWhitelistedBorrower(msg.sender),
-            "AA:B" // "AuthorityAware: caller is not a whitelisted borrower"
-        );
-    }
-
-    modifier onlyLender() {
+    modifier onlyLender() { // only whitelisted lender
         require(
             authority.isWhitelistedLender(msg.sender),
             "AA:L" // "AuthorityAware: caller is not a whitelisted lender"
