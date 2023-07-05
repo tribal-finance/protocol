@@ -179,13 +179,13 @@ describe("Full cycle sequential test (Empty Token)", function () {
       expect(await lendingPool.collectedAssets()).to.equal(USDC(10000));
     });
 
-    it("👛 10000 TRIBAL tokens locked by lender1", async () => {
+    it("Fail to do a 10000 TRIBAL tokens locked by lender1", async () => {
       await tribalToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
-      await lendingPool
+      await expect(lendingPool
         .connect(lender1)
-        .lenderLockPlatformTokensByTranche(0, WAD(10000));
+        .lenderLockPlatformTokensByTranche(0, WAD(10000))).to.be.revertedWith("Lock: Token Locking Disabled");
     });
 
     it("sets lenderTotalExpectedRewardsByTranche for lender1 to 525 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
@@ -194,11 +194,11 @@ describe("Full cycle sequential test (Empty Token)", function () {
           await lender1.getAddress(),
           0
         )
-      ).to.equal(USDC(525));
+      ).to.equal(USDC(400));
     });
 
-    it("sets allLendersInterest() to 625 USDC", async () => {
-      expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+    it("sets allLendersInterest() to 500 USDC", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(500));
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", () => {
@@ -296,8 +296,8 @@ describe("Full cycle sequential test (Empty Token)", function () {
       expect(await lendingPool.borrowerOutstandingInterest()).to.equal(0);
     });
 
-    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(50));
+    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 500 (lenders interest) - 75(10% protocol fees))", async () => {
+      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(175));
     });
 
     it("⏳ 3 days pass by", async () => {
@@ -315,14 +315,14 @@ describe("Full cycle sequential test (Empty Token)", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
     });
 
-    it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
+    it("🏛️ borrower withdraws FLC + excess spread (2175 USDC)", async () => {
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool
         .connect(borrower)
         .borrowerWithdrawFirstLossCapitalAndExcessSpread();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
       expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-        USDC(2050)
+        USDC(2175)
       );
     });
 
@@ -330,14 +330,16 @@ describe("Full cycle sequential test (Empty Token)", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
     });
 
-    it("👛 400 USDC interest withdrawal for lender 1", async () => {
-      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
+    it("maxWithdraw USDC interest withdrawal for lender 1", async () => {
+      const maxWithdraw = await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0);
+
+      await lendingPool.connect(lender1).lenderRedeemRewards([maxWithdraw]);
     });
 
-    it("👛 10000 TRIBL tokens unlock for lender 1", async () => {
-      await lendingPool
+    it("Fail to do a 10000 TRIBL tokens unlock for lender 1", async () => {
+      await expect(lendingPool
         .connect(lender1)
-        .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
+        .lenderUnlockPlatformTokensByTranche(0, WAD(10000))).to.be.revertedWith("Unlock: Token Locking Disabled")
     });
 
     it("👜 100 USDC interest withdraw from lender 2", async () => {
