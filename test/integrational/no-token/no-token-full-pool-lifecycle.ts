@@ -26,11 +26,11 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 
-describe("Rollovers (2 Lender / 2 Tranche)", function () {
-  context("For unitranche pool", async function () {
-    async function duoPoolFixture() {
-      const { signers, usdc } = await testSetup();
 
+describe("Full cycle sequential test", function () {
+  context("For unitranche pool", async function () {
+    async function uniPoolFixture() {
+      const { signers, usdc } = await testSetup();
       const [deployer, lender1, lender2, lender3, borrower, foundation] =
         signers;
       const lenders = [lender1, lender2, lender3];
@@ -39,12 +39,14 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       const tribalToken = await TribalToken.deploy();
       await tribalToken.deployed();
 
+
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
         borrower,
         lenders,
         foundation.address
       );
+
       const afterDeploy = async (contracts: DeployedContractsType) => {
         return contracts;
       };
@@ -65,26 +67,36 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         usdc,
         ...(await _getDeployedContracts(poolFactory)),
         tribalToken,
-      }
+      };
     }
+
+    /**
+     * pool settings:
+     * - lending term: 182.5 days ( 1/2 year )
+     * - lender annual yield: 10%
+     * - lender adjusted yield: 5%
+     * - borrower annual interest rate: 15%
+     * - borrower adjusted interest rate: 7.5%
+     * - funds collected: $10,000
+     * - lender 1 deposit: $8,000
+     * - lender 2 deposit: $2,000
+     */
 
     let usdc: ITestUSDC,
       tribalToken: TribalToken,
       lendingPool: LendingPool,
       firstTrancheVault: TrancheVault,
-      poolFactory: PoolFactory,
       deployer: Signer,
       borrower: Signer,
       lender1: Signer,
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(duoPoolFixture);
+      const data = await loadFixture(uniPoolFixture);
       usdc = data.usdc;
       tribalToken = data.tribalToken;
       lendingPool = data.lendingPool;
       firstTrancheVault = data.firstTrancheVault;
-      poolFactory = data.poolFactory;
       deployer = data.deployer;
       borrower = data.borrower;
       lender1 = data.lenders[0];
@@ -113,12 +125,10 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
 
-
-    it("8000 USDC deposit from lender 1 & 2", async () => {
+    it("👛 8000 USDC deposit from lender 1", async () => {
       await usdc
         .connect(lender1)
         .approve(firstTrancheVault.address, USDC(8000));
-
       await firstTrancheVault
         .connect(lender1)
         .deposit(USDC(8000), await lender1.getAddress());
@@ -128,7 +138,6 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       expect(
         await firstTrancheVault.balanceOf(await lender1.getAddress())
       ).to.equal(USDC(8000));
-
     });
 
     it("increases collectedAssets() to 8000", async () => {
@@ -144,20 +153,14 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       ).to.equal(USDC(400));
     });
 
-    it("2000 USDC deposit from lender 2", async () => {
+    it("👜 2000 USDC deposit from lender 2", async () => {
       await usdc
         .connect(lender2)
         .approve(firstTrancheVault.address, USDC(2000));
-
       await firstTrancheVault
         .connect(lender2)
         .deposit(USDC(2000), await lender2.getAddress());
     });
-
-    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
-      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
-      await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
-    })
 
     it("sets lenderTotalExpectedRewardsByTranche for lender2 to 100 (2000* 1/2 year * 10%)", async () => {
       expect(
@@ -176,7 +179,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.collectedAssets()).to.equal(USDC(10000));
     });
 
-    it("10000 TRIBAL tokens locked by lender1", async () => {
+    it("👛 10000 TRIBAL tokens locked by lender1", async () => {
       await tribalToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
@@ -252,6 +255,10 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
     });
 
+    it("👛 125 USDC interest withdrawal for lender 1", async () => {
+      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(125)]);
+    });
+
     it("⏳ 30 days pass by", async () => {
       // wait 30 days
       await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
@@ -323,103 +330,42 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
     });
 
+    it("👛 400 USDC interest withdrawal for lender 1", async () => {
+      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
+    });
 
-    describe("test out rolling over into next pool", async () => {
+    it("👛 10000 TRIBL tokens unlock for lender 1", async () => {
+      await lendingPool
+        .connect(lender1)
+        .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
+    });
 
-      let nextLendingPool: LendingPool;
-      let nextTrancheVault: TrancheVault;
+    it("👜 100 USDC interest withdraw from lender 2", async () => {
+      await lendingPool.connect(lender2).lenderRedeemRewards([USDC(100)]);
+    });
 
-      it("prepare next generation of protocol to roll into", async () => {
-        const futureLenders = await poolFactory.nextLenders();
-        const futureTranches = await poolFactory.nextTranches();
+    it("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
+      expect(await usdc.balanceOf(lendingPool.address)).to.equal(0);
+    });
 
-        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+    it("👛 8000 usdc principal withdrawal for lender 1", async () => {
+      await firstTrancheVault
+        .connect(lender1)
+        .withdraw(
+          USDC(8000),
+          await lender1.getAddress(),
+          await lender1.getAddress()
+        );
+    });
 
-        defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
-        defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
-        defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
-
-
-        const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
-
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
-        await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
-
-        nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
-
-        console.log(futureLenders);
-        console.log(futureTranches);
-
-        console.log("nextPoolAddr", nextPoolAddr)
-
-        expect(nextPoolAddr).hexEqual(futureLenders[0]);
-
-        console.log("tranche count", await nextLendingPool.tranchesCount());
-
-        const nextTrancheAddr = await nextLendingPool.trancheVaultAddresses(0);
-
-        console.log("nextTrancheAddr", nextTrancheAddr);
-
-        expect(nextTrancheAddr).hexEqual(futureTranches[0]);
-
-        nextTrancheVault = await ethers.getContractAt("TrancheVault", nextTrancheAddr);
-
-      })
-
-      it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
-        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(2000));
-      });
-
-      it("2000 USDC flc deposit from the borrower", async () => {
-        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(2000));
-        await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
-      });
-
-      it("transitions to the FLC_DEPOSITED stage", async () => {
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
-      });
-
-      it("receives adminOpenPool() from deployer", async () => {
-        const lenderCount = await lendingPool.lenderCount();
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, lenderCount.sub(1))).to.be.revertedWith("LP004");
-        await nextLendingPool.connect(deployer).adminOpenPool();
-      });
-
-      it("transitions to OPEN stage", async () => {
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
-      });
-
-
-      it("perform rollover", async () => {
-        const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
-
-        const initialBalances = await Promise.all([
-          await asset.balanceOf(lendingPool.address),
-          await asset.balanceOf(firstTrancheVault.address),
-          await asset.balanceOf(nextLendingPool.address),
-          await asset.balanceOf(nextTrancheVault.address)
-        ])
-        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 1);
-        const finalBalances = await Promise.all([
-          await asset.balanceOf(lendingPool.address),
-          await asset.balanceOf(firstTrancheVault.address),
-          await asset.balanceOf(nextLendingPool.address),
-          await asset.balanceOf(nextTrancheVault.address)
-        ])
-
-        const deltaBalances = [
-          initialBalances[0].sub(finalBalances[0]),
-          initialBalances[1].sub(finalBalances[1]),
-          initialBalances[2].sub(finalBalances[2]),
-          initialBalances[3].sub(finalBalances[3]),
-        ]
-
-        expect(deltaBalances[0]).equals(initialBalances[0])
-        expect(deltaBalances[1]).equals(initialBalances[1])
-        expect(deltaBalances[2]).equals(0)
-        expect(deltaBalances[3]).equals(-initialBalances[1].add(initialBalances[0]))
-      })
-    })
+    it("👜 2000 usdc principal withdrawal for lender 2", async () => {
+      await firstTrancheVault
+        .connect(lender2)
+        .withdraw(
+          USDC(2000),
+          await lender2.getAddress(),
+          await lender2.getAddress()
+        );
+    });
   });
 });
