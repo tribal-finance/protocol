@@ -84,6 +84,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
      *  @param amount Amount of rewards to add
      */
     function addReward(uint256 amount) external {
+        require(totalSupply > 0, "No Stakers");
         SafeERC20Upgradeable.safeTransferFrom(rewardToken, msg.sender, address(this), amount);
         rewardIndex += (amount * WAD) / totalSupply;
     }
@@ -115,12 +116,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         UnstakeRequest storage r = unstakeRequests[msg.sender];
         require(r.timestampExecutable > 0, "No unstake request");
         require(block.timestamp >= r.timestampExecutable, "Cooldown period not passed");
-        _updateRewards(msg.sender);
 
-        stakedBalanceOf[msg.sender] -= r.amount;
-        totalSupply -= r.amount;
         uint toSend = r.amount;
-
         // Clear the existing unstake request
         r.amount = 0;
         r.timestampExecutable = 0;
@@ -136,7 +133,9 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         require(amount > 0, "Amount must be greater than 0");
         require(stakedBalanceOf[msg.sender] >= amount, "Insufficient staked balance");
         require(unstakeRequests[msg.sender].timestampExecutable == 0, "Unstake request already exists");
-
+        _updateRewards(msg.sender);
+        stakedBalanceOf[msg.sender] -= amount;
+        totalSupply -= amount;
         UnstakeRequest memory request = UnstakeRequest(amount, block.timestamp + cooldownPeriodSeconds);
         unstakeRequests[msg.sender] = request;
 
@@ -168,7 +167,10 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /*///////////////////////////////////
         HELPERS
     ///////////////////////////////////*/
+    // Calculate rewards earned by the user
     function _updateRewards(address account) private {
+        // Users do not get rewards on cooldown
+
         earned[account] += _calculateRewards(account);
         rewardIndexOf[account] = rewardIndex;
     }
