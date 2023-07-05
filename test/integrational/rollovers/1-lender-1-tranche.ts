@@ -3,9 +3,8 @@ import { ethers } from "hardhat";
 import { Signer } from "ethers";
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
-import { DEFAULT_LENDING_POOL_PARAMS } from "../../../lib/pool_deployments";
+import { DEFAULT_LENDING_POOL_PARAMS, deployUnitranchePool } from "../../../lib/pool_deployments";
 
 import {
   ITestUSDC,
@@ -16,10 +15,8 @@ import {
 } from "../../../typechain-types";
 import { USDC, WAD } from "../../helpers/conversion";
 import {
-  deployDuotranchePool,
   DeployedContractsType,
   deployFactoryAndImplementations,
-  deployUnitranchePool,
   _getDeployedContracts,
   deployTribalToken,
 } from "../../../lib/pool_deployments";
