@@ -15,7 +15,6 @@ import "../fee_sharing/IFeeSharing.sol";
 import "../authority/AuthorityAware.sol";
 import "../vaults/TrancheVault.sol";
 
-
 contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint;
@@ -260,7 +259,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
             _feeSharingContractAddress,
             _authorityAddress
         );
-        
+
         name = params.name;
         token = params.token;
         stableCoinContractAddress = params.stableCoinContractAddress;
@@ -290,7 +289,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         __Ownable_init();
         __Pausable_init();
         __AuthorityAware__init(_authorityAddress);
-        
+
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
     }
 
@@ -435,12 +434,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         r.lockedPlatformTokens += platformTokens;
         s_totalLockedPlatformTokensByTranche[trancheId] += platformTokens;
 
-        SafeERC20.safeTransferFrom(
-            IERC20(platformTokenContractAddress),
-            _msgSender(),
-            address(this),
-            platformTokens
-        );
+        SafeERC20.safeTransferFrom(IERC20(platformTokenContractAddress), _msgSender(), address(this), platformTokens);
 
         emit LenderLockPlatformTokens(_msgSender(), trancheId, platformTokens);
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
@@ -462,11 +456,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         require(r.lockedPlatformTokens >= platformTokens, "LP104"); // LendingPool: not enough locked tokens"
         r.lockedPlatformTokens -= platformTokens;
 
-        SafeERC20.safeTransfer(
-            IERC20(platformTokenContractAddress),
-            _msgSender(),
-            platformTokens
-        );
+        SafeERC20.safeTransfer(IERC20(platformTokenContractAddress), _msgSender(), platformTokens);
 
         emit LenderUnlockPlatformTokens(_msgSender(), trancheId, platformTokens);
     }
@@ -569,8 +559,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        return
-            PoolCalculations.lenderRewardsByTrancheGeneratedByDate(this, lenderAddress, trancheId);
+        return PoolCalculations.lenderRewardsByTrancheGeneratedByDate(this, lenderAddress, trancheId);
     }
 
     /** @notice Returns amount of stablecoin rewards that has been withdrawn by the lender.
@@ -710,11 +699,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
 
         if (assetsToSendToFeeSharing > 0) {
-            SafeERC20.safeTransfer(
-                _stableCoinContract(),
-                feeSharingContractAddress,
-                assetsToSendToFeeSharing
-            );
+            SafeERC20.safeTransfer(_stableCoinContract(), feeSharingContractAddress, assetsToSendToFeeSharing);
         }
 
         SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
