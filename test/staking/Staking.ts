@@ -6,7 +6,7 @@ import { deployAuthority } from "../../lib/pool_deployments";
 import testSetup, { USDC_ADDRESS_6 } from "../helpers/usdc";
 import { USDC } from "../helpers/conversion";
 
-describe("PoolFactory", function () {
+describe("Staking", function () {
   async function fixture() {
     const { signers, usdc } = await testSetup();
     const [deployer, lender1, lender2, lender3, borrower] = signers;
@@ -32,7 +32,7 @@ describe("PoolFactory", function () {
     };
   }
 
-  describe("big integrational test", async function () {
+  describe("Staking Lifecycle", async function () {
     it("behaves as described in https://github.com/Aboudoc/Discrete-Staking-Rewards/tree/main/images", async function () {
       const {
         lender1: alice,
@@ -137,7 +137,7 @@ describe("PoolFactory", function () {
       // and wait for cooldown period to pass
       await ethers.provider.send("evm_increaseTime", [61]);
       await ethers.provider.send("evm_mine", []);
-
+      
       // at t9. Bob withdraws his stake
       const bobTribeBalanceBefore = await tribalToken.balanceOf(bob.address);
       await staking.connect(bob).unstake();
@@ -176,16 +176,16 @@ describe("PoolFactory", function () {
       expect(unstakeRequest.timestamp).to.not.equal(0);
     });
 
-    it("should allow a user to request unstake tokens twice", async function () {
+    it("should not allow a user to request unstake tokens twice", async function () {
       const { lender1, tribalToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
       await tribalToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
-      await staking.connect(lender1).requestUnstake(amount);
+      await staking.connect(lender1).requestUnstake(amount.div(2));
 
       await expect(
-        staking.connect(lender1).requestUnstake(amount)
+        staking.connect(lender1).requestUnstake(amount.div(2))
       ).to.be.revertedWith("Unstake request already exists");
     });
 
@@ -201,6 +201,102 @@ describe("PoolFactory", function () {
       ).to.be.revertedWith("Insufficient staked balance");
     });
   });
+
+  describe('claimReward', function () {
+    it('should allow a user to claim rewards', async function () {
+      const { lender1, tribalToken, staking, usdc, deployer  } = await loadFixture(fixture);
+      const amount = ethers.utils.parseEther('100');
+
+      // stake tokens
+      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await staking.connect(lender1).stake(amount);
+
+      // add rewards
+      await usdc.connect(deployer).approve(staking.address, USDC(100));
+      await staking.connect(deployer).addReward(USDC(100));
+
+      // claim rewards
+      const balanceBefore = await usdc.balanceOf(lender1.address);
+      await staking.connect(lender1).claimReward();
+      const balanceAfter = await usdc.balanceOf(lender1.address);
+
+      // check that rewards were claimed
+      expect(balanceAfter.sub(balanceBefore)).to.equal(USDC(100));
+    });
+
+    it('should not allow a user to claim rewards twice', async function () {
+      const { lender1, tribalToken, staking, deployer, usdc } = await loadFixture(fixture);
+      const amount = ethers.utils.parseEther('100');
+
+      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await staking.connect(lender1).stake(amount);
+      const initialBalance = await usdc.balanceOf(lender1.address);
+
+      // add rewards
+       // add rewards
+      await usdc.connect(deployer).approve(staking.address, USDC(100));
+      await staking.connect(deployer).addReward(USDC(100));
+
+      // claim rewards and verify
+      const newBalance = initialBalance.add(USDC(100));
+      await staking.connect(lender1).claimReward();
+      expect(await usdc.balanceOf(lender1.address)).to.equal(newBalance);
+      // try to claim rewards again
+      const claim2 = await staking.connect(lender1).claimReward();
+      expect(await usdc.balanceOf(lender1.address)).to.equal(newBalance);
+    });
+
+    it('should not allow a user to claim rewards after they have requestedUnstake', async function () {
+      const { lender1, lender2, tribalToken, staking, deployer, usdc } = await loadFixture(fixture);
+      const amount = ethers.utils.parseEther('100');
+
+      const initialBalance1 = await usdc.balanceOf(lender1.address);
+      const initialBalance2 = await usdc.balanceOf(lender2.address);
+
+      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await staking.connect(lender1).stake(amount);
+      await staking.connect(lender1).requestUnstake(amount);
+
+      await tribalToken.connect(lender2).approve(staking.address, amount);
+      await staking.connect(lender2).stake(amount);
+
+      // addRewards
+      await usdc.connect(deployer).approve(staking.address, USDC(100));
+      await staking.connect(deployer).addReward(USDC(100));
+
+      // try to claim rewards for lender 1
+      await staking.connect(lender1).claimReward()
+      // try to claim rewards for lender 2
+      await staking.connect(lender2).claimReward();
+
+      // check that lender 1 did not receive rewards
+      expect(await usdc.balanceOf(lender1.address)).to.equal(initialBalance1);
+
+      // check that lender 2 received rewardss
+      expect(await usdc.balanceOf(lender2.address)).to.equal(initialBalance2.add(USDC(100)));
+
+    });
+
+
+    it('should not allow a user to claim rewards if they have not staked', async function () {
+      const { lender1, lender2, staking, usdc, deployer, tribalToken } = await loadFixture(fixture);
+      const initialBalance1 = await usdc.balanceOf(lender1.address);
+      const initialBalance2 = await usdc.balanceOf(lender2.address);
+      const amount = ethers.utils.parseEther('100');
+
+      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await staking.connect(lender1).stake(amount);
+
+      // try to claim rewards and verify return 0
+      await staking.connect(lender2).claimReward();
+
+      // check that lender 2 did not receive rewards
+      expect(await usdc.balanceOf(lender2.address)).to.equal(initialBalance2);  
+    });
+  });
+
+  
+
 
   describe("unstaking", function () {
     it("should allow a user to unstake tokens after unstake request and cooldown period", async function () {
@@ -229,10 +325,8 @@ describe("PoolFactory", function () {
     it("should not allow a user to unstake tokens when there is no unstake request", async function () {
       const { lender1, tribalToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
-
       await tribalToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
-
       await expect(staking.connect(lender1).unstake()).to.be.revertedWith(
         "No unstake request"
       );
@@ -250,5 +344,52 @@ describe("PoolFactory", function () {
         "Cooldown period not passed"
       );
     });
+
+    it('should not allow a user to get rewards during unstake cooldown period', async function () {
+      const { lender1, lender2, lender3, tribalToken, staking, deployer, usdc } = await loadFixture(fixture);
+      const amount = ethers.utils.parseEther('100');
+      const lender1InitialBalance = await usdc.balanceOf(lender1.address);
+      const lender2InitialBalance = await usdc.balanceOf(lender2.address);
+      const lender3InitialBalance = await usdc.balanceOf(lender3.address);
+
+      // lender 1 stake
+      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await staking.connect(lender1).stake(amount);
+
+      // lender 2 stake
+      await tribalToken.connect(lender2).approve(staking.address, amount);
+      await staking.connect(lender2).stake(amount);
+
+      // lender 3 stake
+      await tribalToken.connect(lender3).approve(staking.address, amount);
+      await staking.connect(lender3).stake(amount);
+
+      // lender 1 request unstake
+      await staking.connect(lender1).requestUnstake(amount);
+
+      // add rewards
+      await usdc.connect(deployer).approve(staking.address, USDC(100));
+      await staking.connect(deployer).addReward(USDC(100));
+
+      // lender 1 try to claim rewards and verify return 0
+      await staking.connect(lender1).claimReward();
+
+      // check that lender 1 did not receive rewards
+      expect(await usdc.balanceOf(lender1.address)).to.equal(lender1InitialBalance);
+
+      // lender 2 try to claim rewards and verify return 50
+      await staking.connect(lender2).claimReward();
+
+      // check that lender 2 received rewards
+      expect(await usdc.balanceOf(lender2.address)).to.equal(lender2InitialBalance.add(USDC(50)));
+
+      // lender 3 try to claim rewards and verify return 50
+      await staking.connect(lender3).claimReward();
+
+      // check that lender 3 received rewards
+      expect(await usdc.balanceOf(lender3.address)).to.equal(lender3InitialBalance.add(USDC(50)));
+      
+    });
   });
-});
+}); 
+
