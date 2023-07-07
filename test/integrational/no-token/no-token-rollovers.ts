@@ -180,9 +180,9 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
       await tribalToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
-      await lendingPool
+      await expect(lendingPool
         .connect(lender1)
-        .lenderLockPlatformTokensByTranche(0, WAD(10000));
+        .lenderLockPlatformTokensByTranche(0, WAD(10000))).to.be.revertedWith("Lock: Token Locking Disabled");
     });
 
     it("sets lenderTotalExpectedRewardsByTranche for lender1 to 525 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
@@ -191,11 +191,11 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
           await lender1.getAddress(),
           0
         )
-      ).to.equal(USDC(525));
+      ).to.equal(USDC(400));
     });
 
-    it("sets allLendersInterest() to 625 USDC", async () => {
-      expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+    it("sets allLendersInterest() to 500 USDC", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(500));
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", () => {
@@ -289,8 +289,8 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.borrowerOutstandingInterest()).to.equal(0);
     });
 
-    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(50));
+    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 400 (lenders interest) - 75(10% protocol fees))", async () => {
+      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(175));
     });
 
     it("⏳ 3 days pass by", async () => {
@@ -315,7 +315,7 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
         .borrowerWithdrawFirstLossCapitalAndExcessSpread();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
       expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-        USDC(2050)
+        USDC(2175)
       );
     });
 
