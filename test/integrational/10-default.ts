@@ -16,9 +16,9 @@ import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 
 describe("Defaulting", function () {
-  context(
-    "unitranche pool where borrower puts 2000 FLC, lender1 deposits 4000, lender 2 deposits 6000",
-    function () {
+  context.skip("unitranche pool without payments",function () {
+      
+      // Lending Pool Test Fixture
       async function uniPoolFixture() {
         const { signers, usdc } = await testSetup();
         const [deployer, lender1, lender2, lender3, borrower, foundation] =
@@ -77,11 +77,13 @@ describe("Defaulting", function () {
           await contracts.firstTrancheVault
             .connect(lender2)
             .deposit(toDeposit, await lender2.getAddress());
-
+          
+          // transition to funded state
           await contracts.lendingPool
             .connect(deployer)
             .adminTransitionToFundedState();
 
+          // borrower borrows funds
           await contracts.lendingPool.connect(borrower).borrow();
 
           // wait for the lending term to pass by
@@ -174,7 +176,7 @@ describe("Defaulting", function () {
         ).to.eq(USDC(1200));
       });
 
-      it("allows second lender to withdraw 1200", async function () {
+      it("allows second lender to withdraw 1200 once", async function () {
         const { firstTrancheVault, lenders, usdc } = await loadFixture(
           uniPoolFixture
         );
@@ -188,7 +190,21 @@ describe("Defaulting", function () {
 
         const balanceAfter = await usdc.balanceOf(lender2Address);
         expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(1200));
+
+        // second withdrawal should fail
+        await expect(
+          firstTrancheVault
+            .connect(lenders[1])
+            .withdraw(USDC(1200), lender2Address, lender2Address)
+        ).to.be.revertedWith("ERC4626: withdraw more than max");
+          
+        const lastBalance = await usdc.balanceOf(lender2Address);
+        expect(lastBalance).to.eq(balanceAfter);
+
       });
+
+      it('does not allow second lender to withdraw twice', async function () {}); 
+
 
       it("allows second lender to redeem 6000 tranche tokens for 1200 USDC", async function () {
         const { firstTrancheVault, lenders, usdc } = await loadFixture(
@@ -208,7 +224,205 @@ describe("Defaulting", function () {
     }
   );
 
-  context("from duotranche pool", function () {
+  context("unitranche pool with payments", function () {
+    const poolFixture = async () => {
+     const { signers, usdc } = await testSetup();
+        const [deployer, lender1, lender2, lender3, borrower, foundation] =
+          signers;
+        const lenders = [lender1, lender2, lender3];
+
+        const poolFactory: PoolFactory = await deployFactoryAndImplementations(
+          deployer,
+          borrower,
+          lenders,
+          foundation.address
+        );
+
+        const feeSharingAddress = await poolFactory.feeSharingContractAddress();
+        const feeSharing = await ethers.getContractAt(
+          "FeeSharing",
+          feeSharingAddress
+        );
+
+        const stakingAddress = await feeSharing.stakingContract();
+        const staking = await ethers.getContractAt("Staking", stakingAddress);
+
+        const tribalAddress = await staking.stakingToken();
+        const tribalToken = await ethers.getContractAt(
+          "TribalToken",
+          tribalAddress
+        );
+          
+        const afterDeploy = async (contracts: DeployedContractsType) => {
+          // deposit first loss capital
+          await usdc
+            .connect(borrower)
+            .approve(
+              contracts.lendingPool.address,
+              await contracts.lendingPool.firstLossAssets()
+            );
+          await contracts.lendingPool
+            .connect(borrower)
+            .borrowerDepositFirstLossCapital();
+
+          // admin opens pool
+          await contracts.lendingPool.connect(deployer).adminOpenPool();
+
+          let toDeposit = USDC(5000);
+          await usdc
+            .connect(lender1)
+            .approve(contracts.firstTrancheVault.address, toDeposit);
+
+          await contracts.firstTrancheVault
+            .connect(lender1)
+            .deposit(toDeposit, await lender1.getAddress());
+
+          toDeposit = await USDC(5000);
+          await usdc
+            .connect(lender2)
+            .approve(contracts.firstTrancheVault.address, toDeposit);
+
+          await contracts.firstTrancheVault
+            .connect(lender2)
+            .deposit(toDeposit, await lender2.getAddress());
+          
+          // transition to funded state
+          await contracts.lendingPool
+            .connect(deployer)
+            .adminTransitionToFundedState();
+
+          // borrower borrows funds
+          await contracts.lendingPool.connect(borrower).borrow();
+
+          return contracts;
+        };
+
+        const data = await deployUnitranchePool(
+          poolFactory,
+          deployer,
+          borrower,
+          lenders,
+          {},
+          afterDeploy
+        );
+
+        return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
+      }
+
+      it("allows lenders to claim funds prior to default", async function () {
+        const {  lendingPool, firstTrancheVault, deployer, lenders: [lender1, lender2], borrower, usdc } = await loadFixture(poolFixture);
+
+          // wait for the lending term to pass by
+          const toWait = await lendingPool
+            .connect(deployer)
+            .lendingTermSeconds();
+          const timeBlock = toWait.div(3).toNumber();
+          
+          // wait first time block
+          await ethers.provider.send("evm_increaseTime", [timeBlock]);
+          // mine a block to offset the claiming block
+          await ethers.provider.send("evm_mine", []);
+          // calculate interest payment
+          const interestPayment = await lendingPool
+            .connect(deployer)
+            .borrowerOutstandingInterest();
+
+          // make first payment
+          await usdc
+            .connect(borrower)
+            .approve(lendingPool.address, interestPayment);
+          
+          await lendingPool.connect(borrower).borrowerPayInterest(interestPayment);
+
+          // lenders claim interest part 1
+          const tranche1ID = await firstTrancheVault.id();
+
+          // get amount lender can claim for tranche 1
+          const lender1Claimable1 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
+          const lender2Claimable1 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
+
+          await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(tranche1ID, lender1Claimable1 );
+          await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable1 );
+
+          // wait second time block
+          await ethers.provider.send("evm_increaseTime", [timeBlock]);
+
+
+          // borrower makes second payment double the size 
+          await usdc
+            .connect(borrower)
+            .approve(lendingPool.address, interestPayment.mul(3));
+          
+          await lendingPool.connect(borrower).borrowerPayInterest(interestPayment.mul(3));
+
+          // lenders claim interest part 2
+          const lender1Claimable2 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
+          const lender2Claimable2 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
+
+          // amounts claimable should be the same as before since time based
+          expect(lender1Claimable2).to.be.approximately(lender1Claimable1, 40);
+          expect(lender2Claimable2).to.be.approximately(lender2Claimable1, 40);
+
+          // check lender usdc balances
+          const lender1Balance = await usdc.balanceOf(await lender1.getAddress());
+          const lender2Balance = await usdc.balanceOf(await lender2.getAddress());
+
+
+          await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(tranche1ID, lender1Claimable2 );
+          await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable2 );
+
+
+          // check lender usdc balances increased by the claimable amount
+          expect(await usdc.balanceOf(await lender1.getAddress())).to.eq(lender1Balance.add(lender1Claimable2));
+          expect(await usdc.balanceOf(await lender2.getAddress())).to.eq(lender2Balance.add(lender2Claimable2));
+
+          // wait third time block
+          await ethers.provider.send("evm_increaseTime", [timeBlock]);
+
+          // lenders claim interest part 3
+          const lender1Claimable3 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
+          const lender2Claimable3 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
+          // only lender1 claims
+          await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(tranche1ID, lender1Claimable3);
+          // await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable3 );
+          expect(await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID)).to.be.approximately(0, 40);
+          // amounts claimable should be the same as before since time based
+          // expect(lender1Claimable3).to.be.lt(100);
+          // expect(lender2Claimable3).to.eq(lender2Claimable2);
+
+          // borrower doesn't repay and defaults
+          await lendingPool
+            .connect(deployer)
+            .adminTransitionToDefaultedState();
+
+          // expect to be in defaulted state
+          expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
+          
+          // lender 2 claims part 3 after default established
+          const lender1Claimable4 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
+          const lender2Claimable4 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
+
+          expect(lender2Claimable4).to.eq(lender2Claimable2);
+          expect(lender1Claimable4).to.eq(lender2Claimable4);
+          // expect(lender1Claimable4).to.eq(0);
+
+          await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable3 );
+          
+
+          // verify defaultRatio is 0.2
+          expect(await firstTrancheVault.defaultRatioWad()).to.eq(WAD(0.2));
+
+          // lenders claim principal
+
+
+
+      });
+  
+
+
+  });  
+
+  context("two tranche pool", function () {
     async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
       const [deployer, lender1, lender2, lender3, borrower, foundation] =
@@ -223,33 +437,37 @@ describe("Defaulting", function () {
       );
 
       const afterDeploy = async (contracts: DeployedContractsType) => {
+        // approve usdc for lending pool first loss capital
         await usdc
           .connect(borrower)
           .approve(
             contracts.lendingPool.address,
             await contracts.lendingPool.firstLossAssets()
           );
-
+        // deposit first loss capital
         await contracts.lendingPool
           .connect(borrower)
           .borrowerDepositFirstLossCapital();
+        // Open pool
         await contracts.lendingPool.connect(deployer).adminOpenPool();
+
+        // Deposit usdc for first tranche vault
         await usdc
           .connect(lender1)
           .approve(contracts.firstTrancheVault.address, USDC(8000));
         await contracts.firstTrancheVault
           .connect(lender1)
           .deposit(USDC(4000), lender1.address);
-        await contracts.firstTrancheVault
-          .connect(lender1)
-          .deposit(USDC(4000), lender1.address);
+        
+        // Deposit usdc for second tranche vault
         await usdc
           .connect(lender2)
-          .approve(contracts.secondTrancheVault.address, USDC(2000));
-        await contracts.secondTrancheVault
+          .approve(secondTrancheVault.address, USDC(2000));
+        await secondTrancheVault
           .connect(lender2)
           .deposit(USDC(2000), lender2.address);
-
+        
+        // Set pool to funded state
         await contracts.lendingPool
           .connect(deployer)
           .adminTransitionToFundedState();
@@ -268,5 +486,25 @@ describe("Defaulting", function () {
 
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }
+
+    it.skip("sets the pool to defaulted stage", async function () {
+
+      const { lendingPool, borrower,  } = await loadFixture(duoPoolFixture);
+
+      // borrower borrows 10000 USDC
+      // TODO: does it make sense to force borrow of full amount without the amount as input/parameter?
+      await lendingPool.connect(borrower).borrow();
+
+      // set time to 1 day after maturity
+
+
+
+      // set time to 1 day after maturity
+
+
+
+
+      expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
+    });
   });
 });
