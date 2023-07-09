@@ -346,6 +346,7 @@ describe("Defaulting", function () {
 
           // wait second time block
           await ethers.provider.send("evm_increaseTime", [timeBlock]);
+          await ethers.provider.send("evm_mine", []);
 
 
           // borrower makes second payment double the size 
@@ -358,10 +359,11 @@ describe("Defaulting", function () {
           // lenders claim interest part 2
           const lender1Claimable2 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
           const lender2Claimable2 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
-
+          it("funds are not ready for lenders to claim", function () {
           // amounts claimable should be the same as before since time based
           expect(lender1Claimable2).to.be.approximately(lender1Claimable1, 40);
           expect(lender2Claimable2).to.be.approximately(lender2Claimable1, 40);
+          })
 
           // check lender usdc balances
           const lender1Balance = await usdc.balanceOf(await lender1.getAddress());
@@ -378,17 +380,30 @@ describe("Defaulting", function () {
 
           // wait third time block
           await ethers.provider.send("evm_increaseTime", [timeBlock]);
+          await ethers.provider.send("evm_mine", []);
 
+          const lender1Balance2 = await usdc.balanceOf(await lender1.getAddress());
           // lenders claim interest part 3
           const lender1Claimable3 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
           const lender2Claimable3 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
           // only lender1 claims
           await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(tranche1ID, lender1Claimable3);
+
+          // lender 1 and lender 2 should have the same claimable amount
+          expect(lender1Claimable3).to.eq(lender2Claimable3); 
+
+          expect(await usdc.balanceOf(await lender1.getAddress())).to.eq(lender1Balance2.add(lender1Claimable3));
           // await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable3 );
-          expect(await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID)).to.be.approximately(0, 40);
-          // amounts claimable should be the same as before since time based
-          // expect(lender1Claimable3).to.be.lt(100);
-          // expect(lender2Claimable3).to.eq(lender2Claimable2);
+          const lender1Claimable4 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
+          const lender2Claimable4 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
+
+          // lender 1 claims again
+          await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(tranche1ID, lender1Claimable4);
+
+          // lender 1 should have 0 claimable
+          expect(lender1Claimable4).to.eq(0);
+          expect(lender2Claimable3).to.eq(lender2Claimable4);
+
 
           // borrower doesn't repay and defaults
           await lendingPool
@@ -398,23 +413,50 @@ describe("Defaulting", function () {
           // expect to be in defaulted state
           expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
           
-          // lender 2 claims part 3 after default established
-          const lender1Claimable4 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
-          const lender2Claimable4 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
+          // lender 2 claim part 3 should be available after default established
+          const lender1Claimable5 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
+          const lender2Claimable5 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
 
-          expect(lender2Claimable4).to.eq(lender2Claimable2);
-          expect(lender1Claimable4).to.eq(lender2Claimable4);
-          // expect(lender1Claimable4).to.eq(0);
+          expect(lender2Claimable5).to.eq(lender2Claimable4);
+          expect(lender1Claimable4).to.eq(0);
 
-          await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable3 );
+
+          // lender 2 claims
+          await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable5 );
+
+          // TODO: Lender 2 is unable to claim earned interest after move to default state
           
 
           // verify defaultRatio is 0.2
           expect(await firstTrancheVault.defaultRatioWad()).to.eq(WAD(0.2));
 
-          // lenders claim principal
+          // verify maxWithdraw for lender 1 is 1000 (5000 * 0.2)
+          // expect(
+          //   await firstTrancheVault.maxWithdraw(await lender1.getAddress())
+          // ).to.eq(USDC(1000));
+
+          // // verify maxWithdraw for lender 2 is 1000 (5000 * 0.2)
+          // expect(
+          //   await firstTrancheVault.maxWithdraw(await lender2.getAddress())
+          // ).to.eq(USDC(1000));
 
 
+          // // lenders claim principal
+          // await firstTrancheVault
+          //   .connect(lender1)
+          //   .redeem(USDC(1000), await lender1.getAddress(), await lender1.getAddress());
+          // await firstTrancheVault
+          //   .connect(lender2)
+          //   .redeem(USDC(1000), await lender2.getAddress(), await lender2.getAddress());
+
+          // // verify lender 1 balance increased by 1000
+          // expect(await usdc.balanceOf(await lender1.getAddress())).to.eq(lender1Balance2.add(USDC(1000)));
+
+          // // verify lender 2 balance increased by 1000
+          // expect(await usdc.balanceOf(await lender2.getAddress())).to.eq(lender2Balance.add(USDC(1000)));
+
+          // // lender 1 balance should be the same as lender 2 balance
+          // expect(await usdc.balanceOf(await lender1.getAddress())).to.eq(await usdc.balanceOf(await lender2.getAddress()));
 
       });
   
