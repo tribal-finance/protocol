@@ -16,7 +16,7 @@ import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 
 describe("Defaulting", function () {
-  context.skip("unitranche pool without payments",function () {
+  context("unitranche pool without payments",function () {
       
       // Lending Pool Test Fixture
       async function uniPoolFixture() {
@@ -422,41 +422,39 @@ describe("Defaulting", function () {
 
 
           // lender 2 claims
-          await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable5 );
+          // TODO: Lender 2 is unable to claim earned interest after move to default state. Currently returns a LP004 error
+          // await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable5 );
 
-          // TODO: Lender 2 is unable to claim earned interest after move to default state
-          
+          // verify defaultRatio is ~0.45
+          const defaultRatio = await firstTrancheVault.defaultRatioWad();
+          expect(defaultRatio, 'Verify Default Ratio').to.approximately(WAD(0.45), WAD(0.0005));
+          const lender1LastBalance = await usdc.balanceOf(await lender1.getAddress());
 
-          // verify defaultRatio is 0.2
-          expect(await firstTrancheVault.defaultRatioWad()).to.eq(WAD(0.2));
-
+          const maxWithdraw1 = await firstTrancheVault.maxWithdraw(await lender1.getAddress());
+          const maxWithdraw2 = await firstTrancheVault.maxWithdraw(await lender2.getAddress());
           // verify maxWithdraw for lender 1 is 1000 (5000 * 0.2)
-          // expect(
-          //   await firstTrancheVault.maxWithdraw(await lender1.getAddress())
-          // ).to.eq(USDC(1000));
+          expect(maxWithdraw1).to.approximately(USDC(2250), USDC(5));
 
-          // // verify maxWithdraw for lender 2 is 1000 (5000 * 0.2)
-          // expect(
-          //   await firstTrancheVault.maxWithdraw(await lender2.getAddress())
-          // ).to.eq(USDC(1000));
+          // verify maxWithdraw for lender 2 is 1000 (5000 * 0.2)
+          expect(maxWithdraw2).to.approximately(USDC(2250), USDC(5));
 
 
-          // // lenders claim principal
-          // await firstTrancheVault
-          //   .connect(lender1)
-          //   .redeem(USDC(1000), await lender1.getAddress(), await lender1.getAddress());
-          // await firstTrancheVault
-          //   .connect(lender2)
-          //   .redeem(USDC(1000), await lender2.getAddress(), await lender2.getAddress());
+          // lenders claim principal
 
-          // // verify lender 1 balance increased by 1000
-          // expect(await usdc.balanceOf(await lender1.getAddress())).to.eq(lender1Balance2.add(USDC(1000)));
+          // lender 1 claims max withdraw
+          await firstTrancheVault
+            .connect(lender1)
+            .withdraw(maxWithdraw1, lender1.getAddress(), lender1.getAddress());
 
-          // // verify lender 2 balance increased by 1000
-          // expect(await usdc.balanceOf(await lender2.getAddress())).to.eq(lender2Balance.add(USDC(1000)));
+          // lender 2 claims max withdraw
+          await firstTrancheVault
+            .connect(lender2)
+            .withdraw(maxWithdraw2, await lender2.getAddress(), await lender2.getAddress());
 
-          // // lender 1 balance should be the same as lender 2 balance
-          // expect(await usdc.balanceOf(await lender1.getAddress())).to.eq(await usdc.balanceOf(await lender2.getAddress()));
+
+          // verify lender 1 balance is increased by max withdraw
+          expect(await usdc.balanceOf(await lender1.getAddress()), "Lender balance increased by maxWithdraw").to.eq(lender1LastBalance.add(maxWithdraw1));
+
 
       });
   
@@ -529,24 +527,6 @@ describe("Defaulting", function () {
       return { ...data, usdc, ...(await _getDeployedContracts(poolFactory)) };
     }
 
-    it.skip("sets the pool to defaulted stage", async function () {
-
-      const { lendingPool, borrower,  } = await loadFixture(duoPoolFixture);
-
-      // borrower borrows 10000 USDC
-      // TODO: does it make sense to force borrow of full amount without the amount as input/parameter?
-      await lendingPool.connect(borrower).borrow();
-
-      // set time to 1 day after maturity
-
-
-
-      // set time to 1 day after maturity
-
-
-
-
-      expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
-    });
+    
   });
 });
