@@ -50,8 +50,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         FUNDING_FAILED,
         FLC_DEPOSITED,
         BORROWED,
-        BORROWER_INTEREST_REPAID,
-        DELINQUENT,
         REPAID,
         DEFAULTED,
         FLC_WITHDRAWN
@@ -179,22 +177,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     function _atStages2(Stages _stage1, Stages _stage2) internal view {
         require(currentStage == _stage1 || currentStage == _stage2, "LP004"); // "LendingPool: not at correct stage"
-    }
-
-    modifier atStages3(
-        Stages _stage1,
-        Stages _stage2,
-        Stages _stage3
-    ) {
-        _atStages3(_stage1, _stage2, _stage3);
-        _;
-    }
-
-    function _atStages3(Stages _stage1, Stages _stage2, Stages _stage3) internal view {
-        require(
-            currentStage == _stage1 || currentStage == _stage2 || currentStage == _stage3,
-            "LP004" // "LendingPool: not at correct stage"
-        );
     }
 
     /*///////////////////////////////////
@@ -468,10 +450,14 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  @param trancheId tranche id
      *  @param toWithdraw amount of rewards to withdraw
      */
-    function lenderRedeemRewardsByTranche(
-        uint8 trancheId,
-        uint toWithdraw
-    ) public onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) {
+    function lenderRedeemRewardsByTranche(uint8 trancheId, uint toWithdraw) public onlyLender {
+        require(
+            currentStage == Stages.BORROWED ||
+                currentStage == Stages.REPAID ||
+                currentStage == Stages.FLC_WITHDRAWN ||
+                currentStage == Stages.DEFAULTED,
+            "LP104"
+        );
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
         if (toWithdraw == 0) {
             return;
@@ -493,9 +479,14 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     /** @notice Redeem currently available rewards for two tranches
      *  @param toWithdraws amount of rewards to withdraw accross all tranches
      */
-    function lenderRedeemRewards(
-        uint[] calldata toWithdraws
-    ) external onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) {
+    function lenderRedeemRewards(uint[] calldata toWithdraws) external onlyLender {
+        require(
+            currentStage == Stages.BORROWED ||
+                currentStage == Stages.REPAID ||
+                currentStage == Stages.FLC_WITHDRAWN ||
+                currentStage == Stages.DEFAULTED,
+            "LP104"
+        );
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); //"LendingPool: rewards are locked for rollover"
         require(toWithdraws.length == tranchesCount, "LP107"); //"LendingPool: wrong amount of tranches"
         for (uint8 i; i < toWithdraws.length; i++) {
@@ -681,11 +672,14 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     /** @notice Make an interest payment.
      *  If the pool is delinquent, the minimum payment is penalty + whatever interest that needs to be paid to bring the pool back to healthy state
+     *  Should always allow for the protocol to get fees on the total interest paid. Currently only takes fees on the interest owed to lenders to the current time.
+     *
      */
     function borrowerPayInterest(uint assets) external onlyPoolBorrower {
         uint penalty = borrowerPenaltyAmount();
         require(penalty < assets, "LP201"); // "LendingPool: penalty cannot be more than assets"
 
+        //
         if (penalty > 0) {
             uint balanceDifference = poolBalanceThreshold() - poolBalance();
             require(assets >= penalty + balanceDifference, "LP202"); // "LendingPool: penalty+interest will not bring pool to healthy state"
