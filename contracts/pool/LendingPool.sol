@@ -418,9 +418,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
       Error group: 1
     ///////////////////////////////////*/
 
-    /** @notice Lock tribal tokens in order to get APR boost
+    /** @notice Lock platform tokens in order to get APR boost
      *  @param trancheId tranche id
-     *  @param platformTokens amount of TRIBL tokens to lock
+     *  @param platformTokens amount of PLATFORM tokens to lock
      */
     function lenderLockPlatformTokensByTranche(
         uint8 trancheId,
@@ -442,9 +442,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         _emitLenderTrancheRewardsChange(_msgSender(), trancheId);
     }
 
-    /** @notice Unlock tribal tokens after the pool is repaid AND rewards are redeemed
+    /** @notice Unlock platform tokens after the pool is repaid AND rewards are redeemed
      *  @param trancheId tranche id
-     *  @param platformTokens amount of TRIBL tokens to unlock
+     *  @param platformTokens amount of PLATFORM tokens to unlock
      */
     function lenderUnlockPlatformTokensByTranche(
         uint8 trancheId,

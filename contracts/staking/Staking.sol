@@ -9,7 +9,7 @@ import "../authority/AuthorityAware.sol";
 import "./IStaking.sol";
 
 /** @title Staking smart contract
- *  @notice This contract allows users to stake TRIBL tokens and part of platform fee shares
+ *  @notice This contract allows users to stake PLATFORM tokens and part of platform fee shares
  *  The contract is heavily inspired by https://solidity-by-example.org/defi/discrete-staking-rewards/
  *  You can see the math explanation in this video: https://www.youtube.com/watch?v=mo6rHnDU8us&t=728s
  *  In addition to that, I want to mention that it is inspired by Synthetix staking contract
@@ -27,15 +27,15 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /*///////////////////////////////////
        STATE VARIABLES
     ///////////////////////////////////*/
-    /// @notice The ERC-20 token being staked (TRIBL)
+    /// @notice The ERC-20 token being staked (PLATFORM)
     ERC20Upgradeable public stakingToken;
     /// @notice the ERC-20 token used for rewards (USDC)
     ERC20Upgradeable public rewardToken;
     /// @notice cooldown period in seconds
     uint public cooldownPeriodSeconds;
-    /// @notice Total amount of TRIBL staked by each user
+    /// @notice Total amount of PLATFORM staked by each user
     mapping(address => uint) public stakedBalanceOf;
-    /// @notice Total amount of TRIBL staked by all users
+    /// @notice Total amount of PLATFORM staked by all users
     uint public totalSupply;
     /// @dev current reward index
     uint private rewardIndex;
@@ -60,7 +60,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     ///////////////////////////////////*/
     /** @notice Initialize the contract
      *  @param _authority Address of the Authority contract
-     *  @param _stakingToken Address of the TRIBL token
+     *  @param _stakingToken Address of the PLATFORM token
      *  @param _rewardToken Address of the USDC token
      *  @param _cooldownPeriodSeconds Cooldown period in seconds
      */
@@ -92,8 +92,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /*///////////////////////////////////
         STAKING FUNCTIONS
     ///////////////////////////////////*/
-    /** @notice Stake TRIBL tokens
-     *  @param amount Amount of TRIBL tokens to stake
+    /** @notice Stake PLATFORM tokens
+     *  @param amount Amount of PLATFORM tokens to stake
      */
     function stake(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");
@@ -109,7 +109,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         emit Staked(msg.sender, amount);
     }
 
-    /** @notice Unstake requested amount of TRIBL tokens
+    /** @notice Unstake requested amount of PLATFORM tokens
      *  You should call requestUnstake() and wait for the cooldown period to pass before calling this function
      */
     function unstake() external onlyWhitelisted {
@@ -126,8 +126,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         emit Unstaked(msg.sender, r.amount);
     }
 
-    /** @notice Request to unstake TRIBL tokens
-     *  @param amount Amount of TRIBL tokens to unstake
+    /** @notice Request to unstake PLATFORM tokens
+     *  @param amount Amount of PLATFORM tokens to unstake
      */
     function requestUnstake(uint256 amount) external onlyWhitelisted {
         require(amount > 0, "Amount must be greater than 0");

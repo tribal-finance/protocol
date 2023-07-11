@@ -27,9 +27,9 @@ async function main() {
     LENDING_POOL_ADDRESS
   );
 
-  const tribalTokenContract = await ethers.getContractAt(
-    "TribalToken",
-    process.env.TRIBAL_TOKEN_ADDRESS!
+  const platformTokenContract = await ethers.getContractAt(
+    "PlatformToken",
+    process.env.PLATFORM_TOKEN_ADDRESS!
   );
 
   const tranchesCount = await poolContract.tranchesCount();
@@ -96,7 +96,7 @@ async function main() {
 
   /* !!!!!!!!!!!! 2b. Boost deposit !!!!!!!!!!!!!!!!!!!!*/
   // const boostAmount = ethers.utils.parseUnits("20000", 18);
-  // tx = await tribalTokenContract
+  // tx = await platformTokenContract
   //   .connect(lender1)
   //   .approve(poolContract.address, boostAmount);
   // await tx.wait(3);

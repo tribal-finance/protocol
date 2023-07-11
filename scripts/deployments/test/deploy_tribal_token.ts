@@ -5,11 +5,11 @@ console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });
 
 async function main() {
-  const TribalToken = await ethers.getContractFactory("TribalToken");
-  const tribalToken = await TribalToken.deploy();
-  await tribalToken.deployed();
+  const PlatformToken = await ethers.getContractFactory("PlatformToken");
+  const platformToken = await PlatformToken.deploy();
+  await platformToken.deployed();
 
-  console.log("Tribal token deployed to: ", tribalToken.address);
+  console.log("Tribal token deployed to: ", platformToken.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
