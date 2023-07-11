@@ -4,8 +4,8 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract TribalToken is ERC20, Ownable {
-    constructor() ERC20("Tribal Token", "TRIBL") {}
+contract PlatformToken is ERC20, Ownable {
+    constructor() ERC20("Platform Token", "PLATFORM") {}
 
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);

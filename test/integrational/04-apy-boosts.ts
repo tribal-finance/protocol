@@ -37,10 +37,10 @@ describe("Boosting the APR", function () {
     const stakingAddress = await feeSharing.stakingContract();
     const staking = await ethers.getContractAt("Staking", stakingAddress);
 
-    const tribalAddress = await staking.stakingToken();
-    const tribalToken = await ethers.getContractAt(
-      "TribalToken",
-      tribalAddress
+    const platformTokenAddress = await staking.stakingToken();
+    const platformToken = await ethers.getContractAt(
+      "PlatformToken",
+      platformTokenAddress
     );
 
     const afterDeploy = async (contracts: DeployedContractsType) => {
@@ -69,24 +69,24 @@ describe("Boosting the APR", function () {
       deployer,
       borrower,
       lenders,
-      { platformTokenContractAddress: tribalToken.address },
+      { platformTokenContractAddress: platformToken.address },
       afterDeploy
     );
 
     return {
       ...data,
-      tribalToken,
+      platformToken,
       usdc,
       ...(await _getDeployedContracts(poolFactory)),
     };
   }
 
-  // 2 TRIBAL boost 1 USDC APR
+  // 2 PLATFORM boost 1 USDC APR
   // unboosted APR is 10%
   // booster APR is 15%
-  describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a partial boost (locks 1000 TRIBAL)", function () {
+  describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a partial boost (locks 1000 PLATFORM)", function () {
     it("is bumps APR to 12.5%", async () => {
-      const { usdc, tribalToken, lenders, lendingPool, firstTrancheVault } =
+      const { usdc, platformToken, lenders, lendingPool, firstTrancheVault } =
         await loadFixture(uniPoolFixture);
 
       const trancheAprBefore = await lendingPool.lenderEffectiveAprByTrancheWad(
@@ -98,7 +98,7 @@ describe("Boosting the APR", function () {
 
       const amountToLock = ethers.utils.parseEther("1000");
 
-      await tribalToken
+      await platformToken
         .connect(lenders[0])
         .approve(lendingPool.address, amountToLock);
 
@@ -116,9 +116,9 @@ describe("Boosting the APR", function () {
     });
   });
 
-  describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a full boost (locks 2000 TRIBAL)", function () {
+  describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a full boost (locks 2000 PLATFORM)", function () {
     it("is bumps APR to 15%", async () => {
-      const { usdc, tribalToken, lenders, lendingPool, firstTrancheVault } =
+      const { usdc, platformToken, lenders, lendingPool, firstTrancheVault } =
         await loadFixture(uniPoolFixture);
 
       const trancheAprBefore = await lendingPool.lenderEffectiveAprByTrancheWad(
@@ -128,7 +128,7 @@ describe("Boosting the APR", function () {
 
       const amountToLock = ethers.utils.parseEther("2000");
 
-      await tribalToken
+      await platformToken
         .connect(lenders[0])
         .approve(lendingPool.address, amountToLock);
 
@@ -146,14 +146,14 @@ describe("Boosting the APR", function () {
     });
   });
 
-  describe("Open unitranche pool with lender1 deposit of 1000 USDC gets overboost (locks 3000 TRIBAL)", function () {
+  describe("Open unitranche pool with lender1 deposit of 1000 USDC gets overboost (locks 3000 PLATFORM)", function () {
     it("will revert", async () => {
-      const { usdc, tribalToken, lenders, lendingPool, firstTrancheVault } =
+      const { usdc, platformToken, lenders, lendingPool, firstTrancheVault } =
         await loadFixture(uniPoolFixture);
 
       const amountToLock = ethers.utils.parseEther("3000");
 
-      await tribalToken
+      await platformToken
         .connect(lenders[0])
         .approve(lendingPool.address, amountToLock);
 
@@ -173,12 +173,12 @@ describe("Boosting the APR", function () {
   });
 
   it("Prevents invalid user from locking tokens for APR boost in a specific tranche.", async () => {
-    const { usdc, tribalToken, lenders, lendingPool } =
+    const { usdc, platformToken, lenders, lendingPool } =
         await loadFixture(uniPoolFixture);
 
       const amountToLock = ethers.utils.parseEther("2000");
 
-      await tribalToken
+      await platformToken
         .connect(lenders[0])
         .approve(lendingPool.address, amountToLock);
 

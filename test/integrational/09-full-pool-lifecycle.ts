@@ -10,7 +10,7 @@ import {
   LendingPool,
   PoolFactory,
   TrancheVault,
-  TribalToken,
+  PlatformToken,
 } from "../../typechain-types";
 import { USDC, WAD } from "../helpers/conversion";
 import {
@@ -19,7 +19,7 @@ import {
   deployFactoryAndImplementations,
   deployUnitranchePool,
   _getDeployedContracts,
-  deployTribalToken,
+  deployPlatformToken,
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
@@ -32,7 +32,7 @@ describe("Full cycle sequential test", function () {
         signers;
       const lenders = [lender1, lender2, lender3];
 
-      const tribalToken = await deployTribalToken(
+      const platformToken = await deployPlatformToken(
         deployer,
         lenders,
         foundation.address
@@ -55,7 +55,7 @@ describe("Full cycle sequential test", function () {
         borrower,
         lenders,
         {
-          platformTokenContractAddress: tribalToken.address,
+          platformTokenContractAddress: platformToken.address,
         },
         afterDeploy
       );
@@ -64,7 +64,7 @@ describe("Full cycle sequential test", function () {
         ...data,
         usdc,
         ...(await _getDeployedContracts(poolFactory)),
-        tribalToken,
+        platformToken,
       };
     }
 
@@ -81,7 +81,7 @@ describe("Full cycle sequential test", function () {
      */
 
     let usdc: ITestUSDC,
-      tribalToken: TribalToken,
+      platformToken: PlatformToken,
       lendingPool: LendingPool,
       firstTrancheVault: TrancheVault,
       deployer: Signer,
@@ -92,7 +92,7 @@ describe("Full cycle sequential test", function () {
     before(async () => {
       const data = await loadFixture(uniPoolFixture);
       usdc = data.usdc;
-      tribalToken = data.tribalToken;
+      platformToken = data.platformToken;
       lendingPool = data.lendingPool;
       firstTrancheVault = data.firstTrancheVault;
       deployer = data.deployer;
@@ -177,8 +177,8 @@ describe("Full cycle sequential test", function () {
       expect(await lendingPool.collectedAssets()).to.equal(USDC(10000));
     });
 
-    it("👛 10000 TRIBAL tokens locked by lender1", async () => {
-      await tribalToken
+    it("👛 10000 PLATFORM tokens locked by lender1", async () => {
+      await platformToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
       await lendingPool
@@ -332,7 +332,7 @@ describe("Full cycle sequential test", function () {
       await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
     });
 
-    it("👛 10000 TRIBL tokens unlock for lender 1", async () => {
+    it("👛 10000 PLATFORM tokens unlock for lender 1", async () => {
       await lendingPool
         .connect(lender1)
         .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
