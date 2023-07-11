@@ -12,7 +12,7 @@ import {
   LendingPool,
   PoolFactory,
   TrancheVault,
-  TribalToken,
+  PlatformToken,
 } from "../../../typechain-types";
 import { USDC, WAD } from "../../helpers/conversion";
 import {
@@ -21,7 +21,7 @@ import {
   deployFactoryAndImplementations,
   deployUnitranchePool,
   _getDeployedContracts,
-  deployTribalToken,
+  deployPlatformToken,
 } from "../../../lib/pool_deployments";
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
@@ -35,9 +35,9 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
         signers;
       const lenders = [lender1, lender2, lender3];
 
-      const TribalToken = await ethers.getContractFactory("EmptyToken");
-      const tribalToken = await TribalToken.deploy();
-      await tribalToken.deployed();
+      const PlatformToken = await ethers.getContractFactory("EmptyToken");
+      const platformToken = await PlatformToken.deploy();
+      await platformToken.deployed();
 
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
@@ -55,7 +55,7 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
         borrower,
         lenders,
         {
-          platformTokenContractAddress: tribalToken.address,
+          platformTokenContractAddress: platformToken.address,
         },
         afterDeploy
       );
@@ -64,12 +64,12 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
         ...data,
         usdc,
         ...(await _getDeployedContracts(poolFactory)),
-        tribalToken,
+        platformToken,
       }
     }
 
     let usdc: ITestUSDC,
-      tribalToken: TribalToken,
+      platformToken: PlatformToken,
       lendingPool: LendingPool,
       firstTrancheVault: TrancheVault,
       poolFactory: PoolFactory,
@@ -81,7 +81,7 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
     before(async () => {
       const data = await loadFixture(duoPoolFixture);
       usdc = data.usdc;
-      tribalToken = data.tribalToken;
+      platformToken = data.platformToken;
       lendingPool = data.lendingPool;
       firstTrancheVault = data.firstTrancheVault;
       poolFactory = data.poolFactory;
@@ -176,8 +176,8 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.collectedAssets()).to.equal(USDC(10000));
     });
 
-    it("10000 TRIBAL tokens locked by lender1", async () => {
-      await tribalToken
+    it("10000 PLATFORM tokens locked by lender1", async () => {
+      await platformToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
       await expect(lendingPool

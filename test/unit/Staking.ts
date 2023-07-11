@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployStaking, deployTribalToken } from "../../lib/pool_deployments";
+import { deployStaking, deployPlatformToken } from "../../lib/pool_deployments";
 import { deployAuthority } from "../../lib/pool_deployments";
 import testSetup, { USDC_ADDRESS_6 } from "../helpers/usdc";
 import { USDC } from "../helpers/conversion";
@@ -11,11 +11,11 @@ describe("Staking", function () {
     const { signers, usdc } = await testSetup();
     const [deployer, lender1, lender2, lender3, borrower] = signers;
     const lenders = [lender1, lender2, lender3];
-    const tribalToken = await deployTribalToken(deployer, lenders);
+    const platformToken = await deployPlatformToken(deployer, lenders);
     const authority = await deployAuthority(deployer, borrower, lenders);
     const staking = await deployStaking(
       authority.address,
-      tribalToken.address,
+      platformToken.address,
       usdc.address,
       60
     );
@@ -26,7 +26,7 @@ describe("Staking", function () {
       lender2,
       lender3,
       borrower,
-      tribalToken,
+      platformToken,
       usdc,
       staking,
     };
@@ -38,14 +38,14 @@ describe("Staking", function () {
         lender1: alice,
         lender2: bob,
         deployer,
-        tribalToken,
+        platformToken,
         usdc,
         staking,
       } = await loadFixture(fixture);
 
-      // at t0. Alice stakes 2000 TRIBAL
+      // at t0. Alice stakes 2000 PLATFORM
       const aliceStake = ethers.utils.parseEther("2000");
-      await tribalToken.connect(alice).approve(staking.address, aliceStake);
+      await platformToken.connect(alice).approve(staking.address, aliceStake);
       await staking.connect(alice).stake(aliceStake);
       expect(await staking.stakedBalanceOf(alice.address)).to.equal(aliceStake);
 
@@ -67,9 +67,9 @@ describe("Staking", function () {
         USDC(300)
       );
 
-      // at t3. Bob stakes 1000 TRIBAL
+      // at t3. Bob stakes 1000 PLATFORM
       const bobStake = ethers.utils.parseEther("1000");
-      await tribalToken.connect(bob).approve(staking.address, bobStake);
+      await platformToken.connect(bob).approve(staking.address, bobStake);
       await staking.connect(bob).stake(bobStake);
       expect(await staking.stakedBalanceOf(bob.address)).to.equal(bobStake);
       // at t3. Alice reward is 300 USDC
@@ -108,11 +108,11 @@ describe("Staking", function () {
       await ethers.provider.send("evm_mine", []);
 
       // at t6. Alice withdraws her stake
-      const aliceTribeBalanceBefore = await tribalToken.balanceOf(
+      const aliceTribeBalanceBefore = await platformToken.balanceOf(
         alice.address
       );
       await staking.connect(alice).unstake();
-      const aliceTribeBalanceAfter = await tribalToken.balanceOf(alice.address);
+      const aliceTribeBalanceAfter = await platformToken.balanceOf(alice.address);
       expect(aliceTribeBalanceAfter.sub(aliceTribeBalanceBefore)).to.equal(
         aliceStake
       );
@@ -139,9 +139,9 @@ describe("Staking", function () {
       await ethers.provider.send("evm_mine", []);
       
       // at t9. Bob withdraws his stake
-      const bobTribeBalanceBefore = await tribalToken.balanceOf(bob.address);
+      const bobTribeBalanceBefore = await platformToken.balanceOf(bob.address);
       await staking.connect(bob).unstake();
-      const bobTribeBalanceAfter = await tribalToken.balanceOf(bob.address);
+      const bobTribeBalanceAfter = await platformToken.balanceOf(bob.address);
       expect(bobTribeBalanceAfter.sub(bobTribeBalanceBefore)).to.equal(
         bobStake
       );
@@ -151,10 +151,10 @@ describe("Staking", function () {
 
   describe("stake", function () {
     it("should allow a user to stake tokens", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
 
       const stakedBalance = await staking.stakedBalanceOf(lender1.address);
@@ -164,10 +164,10 @@ describe("Staking", function () {
 
   describe("requestUnstake", function () {
     it("should allow a user to request unstake tokens", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       await staking.connect(lender1).requestUnstake(amount);
 
@@ -177,10 +177,10 @@ describe("Staking", function () {
     });
 
     it("should not allow a user to request unstake tokens twice", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       await staking.connect(lender1).requestUnstake(amount.div(2));
 
@@ -190,10 +190,10 @@ describe("Staking", function () {
     });
 
     it("should not allow a user to request unstake more tokens than their staked balance", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
 
       await expect(
@@ -204,11 +204,11 @@ describe("Staking", function () {
 
   describe('claimReward', function () {
     it('should allow a user to claim rewards', async function () {
-      const { lender1, tribalToken, staking, usdc, deployer  } = await loadFixture(fixture);
+      const { lender1, platformToken, staking, usdc, deployer  } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther('100');
 
       // stake tokens
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
 
       // add rewards
@@ -225,10 +225,10 @@ describe("Staking", function () {
     });
 
     it('should not allow a user to claim rewards twice', async function () {
-      const { lender1, tribalToken, staking, deployer, usdc } = await loadFixture(fixture);
+      const { lender1, platformToken, staking, deployer, usdc } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther('100');
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       const initialBalance = await usdc.balanceOf(lender1.address);
 
@@ -247,17 +247,17 @@ describe("Staking", function () {
     });
 
     it('should not allow a user to claim rewards after they have requestedUnstake', async function () {
-      const { lender1, lender2, tribalToken, staking, deployer, usdc } = await loadFixture(fixture);
+      const { lender1, lender2, platformToken, staking, deployer, usdc } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther('100');
 
       const initialBalance1 = await usdc.balanceOf(lender1.address);
       const initialBalance2 = await usdc.balanceOf(lender2.address);
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       await staking.connect(lender1).requestUnstake(amount);
 
-      await tribalToken.connect(lender2).approve(staking.address, amount);
+      await platformToken.connect(lender2).approve(staking.address, amount);
       await staking.connect(lender2).stake(amount);
 
       // addRewards
@@ -279,12 +279,12 @@ describe("Staking", function () {
 
 
     it('should not allow a user to claim rewards if they have not staked', async function () {
-      const { lender1, lender2, staking, usdc, deployer, tribalToken } = await loadFixture(fixture);
+      const { lender1, lender2, staking, usdc, deployer, platformToken } = await loadFixture(fixture);
       const initialBalance1 = await usdc.balanceOf(lender1.address);
       const initialBalance2 = await usdc.balanceOf(lender2.address);
       const amount = ethers.utils.parseEther('100');
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
 
       // try to claim rewards and verify return 0
@@ -300,10 +300,10 @@ describe("Staking", function () {
 
   describe("unstaking", function () {
     it("should allow a user to unstake tokens after unstake request and cooldown period", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       await staking.connect(lender1).requestUnstake(amount);
 
@@ -311,11 +311,11 @@ describe("Staking", function () {
       await ethers.provider.send("evm_increaseTime", [61]);
       await ethers.provider.send("evm_mine", []);
 
-      const balanceBefore = await tribalToken.balanceOf(lender1.address);
+      const balanceBefore = await platformToken.balanceOf(lender1.address);
 
       await staking.connect(lender1).unstake();
 
-      const balanceAfter = await tribalToken.balanceOf(lender1.address);
+      const balanceAfter = await platformToken.balanceOf(lender1.address);
       expect(balanceAfter.sub(balanceBefore)).to.equal(amount);
 
       const stakedBalance = await staking.stakedBalanceOf(lender1.address);
@@ -323,9 +323,9 @@ describe("Staking", function () {
     });
 
     it("should not allow a user to unstake tokens when there is no unstake request", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       await expect(staking.connect(lender1).unstake()).to.be.revertedWith(
         "No unstake request"
@@ -333,10 +333,10 @@ describe("Staking", function () {
     });
 
     it("should not allow a user to unstake tokens before cooldown period", async function () {
-      const { lender1, tribalToken, staking } = await loadFixture(fixture);
+      const { lender1, platformToken, staking } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther("100");
 
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
       await staking.connect(lender1).requestUnstake(amount);
 
@@ -346,22 +346,22 @@ describe("Staking", function () {
     });
 
     it('should not allow a user to get rewards during unstake cooldown period', async function () {
-      const { lender1, lender2, lender3, tribalToken, staking, deployer, usdc } = await loadFixture(fixture);
+      const { lender1, lender2, lender3, platformToken, staking, deployer, usdc } = await loadFixture(fixture);
       const amount = ethers.utils.parseEther('100');
       const lender1InitialBalance = await usdc.balanceOf(lender1.address);
       const lender2InitialBalance = await usdc.balanceOf(lender2.address);
       const lender3InitialBalance = await usdc.balanceOf(lender3.address);
 
       // lender 1 stake
-      await tribalToken.connect(lender1).approve(staking.address, amount);
+      await platformToken.connect(lender1).approve(staking.address, amount);
       await staking.connect(lender1).stake(amount);
 
       // lender 2 stake
-      await tribalToken.connect(lender2).approve(staking.address, amount);
+      await platformToken.connect(lender2).approve(staking.address, amount);
       await staking.connect(lender2).stake(amount);
 
       // lender 3 stake
-      await tribalToken.connect(lender3).approve(staking.address, amount);
+      await platformToken.connect(lender3).approve(staking.address, amount);
       await staking.connect(lender3).stake(amount);
 
       // lender 1 request unstake
