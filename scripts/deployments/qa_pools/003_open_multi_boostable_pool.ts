@@ -25,9 +25,9 @@ async function main() {
     process.env.USDC_ADDRESS!
   );
 
-  const TribalTokenContract = await ethers.getContractAt(
+  const PlatformTokenContract = await ethers.getContractAt(
     "ERC20Upgradeable",
-    process.env.TRIBAL_TOKEN_ADDRESS!
+    process.env.PLATFORM_TOKEN_ADDRESS!
   );
 
   const poolFactoryContract = await ethers.getContractAt(
@@ -64,7 +64,7 @@ async function main() {
       name: "DontChange-SeedTestQAPool-3",
       token: "TST",
       stableCoinContractAddress: USDCContract.address,
-      platformTokenContractAddress: TribalTokenContract.address,
+      platformTokenContractAddress: PlatformTokenContract.address,
       minFundingCapacity: USDC(200),
       maxFundingCapacity: USDC(300),
       fundingPeriodSeconds: 60 * 60 * 24 * 300,
@@ -135,19 +135,19 @@ async function main() {
   await tx.wait(WAIT_CONFIRMATIONS);
   console.log("deposited 50 USDC to senior tranhce as custom lender");
 
-  // 4. Lock 100 tribal tokens and boost senior tranche to 11%
-  tx = await TribalTokenContract.connect(customLender).approve(
+  // 4. Lock 100 platform tokens and boost senior tranche to 11%
+  tx = await PlatformTokenContract.connect(customLender).approve(
     lendingPool.address,
     ethers.utils.parseEther("100")
   );
   await tx.wait(AFTER_APPROVE_WAIT_CONFIRMATIONS);
-  console.log("approved TRIBAL spend for lender");
+  console.log("approved PLATFORM spend for lender");
 
   tx = await lendingPool
     .connect(customLender)
     .lenderLockPlatformTokensByTranche(0, ethers.utils.parseEther("100"));
   await tx.wait(3);
-  console.log("locked 100 TRIBAL tokens");
+  console.log("locked 100 PLATFORM tokens");
 
   // 5. deposit 20 usdc to second tranche as custom lender
   tx = await USDCContract.connect(customLender).approve(

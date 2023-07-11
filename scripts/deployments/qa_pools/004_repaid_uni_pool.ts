@@ -23,9 +23,9 @@ async function main() {
     process.env.USDC_ADDRESS!
   );
 
-  const TribalTokenContract = await ethers.getContractAt(
+  const PlatformTokenContract = await ethers.getContractAt(
     "ERC20Upgradeable",
-    process.env.TRIBAL_TOKEN_ADDRESS!
+    process.env.PLATFORM_TOKEN_ADDRESS!
   );
 
   const poolFactoryContract = await ethers.getContractAt(
@@ -62,7 +62,7 @@ async function main() {
       name: "DontChange-SeedTestQAPool-4",
       token: "TST",
       stableCoinContractAddress: USDCContract.address,
-      platformTokenContractAddress: TribalTokenContract.address,
+      platformTokenContractAddress: PlatformTokenContract.address,
       minFundingCapacity: USDC(70),
       maxFundingCapacity: USDC(300),
       fundingPeriodSeconds: 60 * 30,

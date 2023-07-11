@@ -41,10 +41,10 @@ describe("Defaulting", function () {
         const stakingAddress = await feeSharing.stakingContract();
         const staking = await ethers.getContractAt("Staking", stakingAddress);
 
-        const tribalAddress = await staking.stakingToken();
-        const tribalToken = await ethers.getContractAt(
-          "TribalToken",
-          tribalAddress
+        const platformTokenAddress = await staking.stakingToken();
+        const platformToken = await ethers.getContractAt(
+          "PlatformToken",
+          platformTokenAddress
         );
 
         const afterDeploy = async (contracts: DeployedContractsType) => {
@@ -247,10 +247,10 @@ describe("Defaulting", function () {
         const stakingAddress = await feeSharing.stakingContract();
         const staking = await ethers.getContractAt("Staking", stakingAddress);
 
-        const tribalAddress = await staking.stakingToken();
-        const tribalToken = await ethers.getContractAt(
-          "TribalToken",
-          tribalAddress
+        const platformTokenAddress = await staking.stakingToken();
+        const platformToken = await ethers.getContractAt(
+          "PlatformToken",
+          platformTokenAddress
         );
           
         const afterDeploy = async (contracts: DeployedContractsType) => {

@@ -18,7 +18,7 @@ import type {
   LendingPool,
   PoolFactory,
   TrancheVault,
-  TribalToken,
+  PlatformToken,
   Staking,
   Authority,
 } from "../typechain-types";
@@ -54,33 +54,33 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
 };
 export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.8), WAD(0.2)];
 
-export async function deployTribalToken(
+export async function deployPlatformToken(
   deployer: Signer,
   lenders: Array<Signer>,
   foundationAddress: string | null
-): Promise<TribalToken> {
-  const TribalToken = await ethers.getContractFactory("TribalToken");
-  const tribalToken = await TribalToken.connect(deployer).deploy();
-  await tribalToken.deployed();
+): Promise<PlatformToken> {
+  const PlatformToken = await ethers.getContractFactory("PlatformToken");
+  const platformToken = await PlatformToken.connect(deployer).deploy();
+  await platformToken.deployed();
 
-  await tribalToken
+  await platformToken
     .connect(deployer)
     .mint(await deployer.getAddress(), parseUnits("1000", 18));
 
   for (let lender of lenders) {
-    const tx = await tribalToken
+    const tx = await platformToken
       .connect(deployer)
       .mint(await lender.getAddress(), parseUnits("1000000", "ether"));
     await tx.wait();
   }
 
   if (foundationAddress) {
-    const tx = await tribalToken
+    const tx = await platformToken
       .connect(deployer)
       .mint(foundationAddress, parseUnits("1000000", "ether"));
   }
 
-  return tribalToken;
+  return platformToken;
 }
 
 export async function deployAuthority(
@@ -109,14 +109,14 @@ export async function deployAuthority(
 
 export async function deployStaking(
   authorityAddress: string,
-  tribalTokenAddress: string,
+  platformTokenAddress: string,
   usdcAddress: string,
   stakingPeriodSeconds: number
 ) {
   const Staking = await ethers.getContractFactory("Staking");
   const staking = await upgrades.deployProxy(Staking, [
     authorityAddress,
-    tribalTokenAddress,
+    platformTokenAddress,
     usdcAddress,
     60,
   ]);
@@ -131,7 +131,7 @@ export async function deployFactoryAndImplementations(
   lenders: Array<Signer>,
   foundationAddress: string
 ): Promise<PoolFactory> {
-  const tribalToken = await deployTribalToken(
+  const platformToken = await deployPlatformToken(
     deployer,
     lenders,
     foundationAddress
@@ -145,7 +145,7 @@ export async function deployFactoryAndImplementations(
 
   const staking = await deployStaking(
     authority.address,
-    tribalToken.address,
+    platformToken.address,
     USDC_ADDRESS_6,
     60
   );
@@ -295,7 +295,7 @@ export type DeployedContractsType = {
   secondTrancheVault: TrancheVault | null;
   feeSharing: FeeSharing;
   staking: Staking;
-  tribalToken: TribalToken;
+  platformToken: PlatformToken;
 };
 
 export async function _getDeployedContracts(
@@ -333,8 +333,8 @@ export async function _getDeployedContracts(
   const stakingAddress = await feeSharing.stakingContract();
   const staking = await ethers.getContractAt("Staking", stakingAddress);
 
-  const tribalAddress = await staking.stakingToken();
-  const tribalToken = await ethers.getContractAt("TribalToken", tribalAddress);
+  const platformTokenAddress = await staking.stakingToken();
+  const platformToken = await ethers.getContractAt("PlatformToken", platformTokenAddress);
 
   return {
     authority,
@@ -343,7 +343,7 @@ export async function _getDeployedContracts(
     secondTrancheVault,
     feeSharing,
     staking,
-    tribalToken,
+    platformToken,
   };
 }
 

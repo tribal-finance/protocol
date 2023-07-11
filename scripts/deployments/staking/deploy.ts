@@ -8,8 +8,8 @@ async function main() {
   if (!process.env.AUTHORITY_ADDRESS) {
     throw new Error("AUTHORITY_ADDRESS must be set");
   }
-  if (!process.env.TRIBAL_TOKEN_ADDRESS) {
-    throw new Error("TRIBAL_TOKEN_ADDRESS must be set");
+  if (!process.env.PLATFORM_TOKEN_ADDRESS) {
+    throw new Error("PLATFORM_TOKEN_ADDRESS must be set");
   }
   if (!process.env.USDC_ADDRESS) {
     throw new Error("USDC_ADDRESS must be set");
@@ -18,7 +18,7 @@ async function main() {
   const Staking = await ethers.getContractFactory("Staking");
   const staking = await upgrades.deployProxy(Staking, [
     process.env.AUTHORITY_ADDRESS,
-    process.env.TRIBAL_TOKEN_ADDRESS,
+    process.env.PLATFORM_TOKEN_ADDRESS,
     process.env.USDC_ADDRESS,
     60,
   ]);

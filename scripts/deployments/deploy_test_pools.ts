@@ -30,7 +30,7 @@ async function main() {
     [lender1, lender2],
     {
       stableCoinContractAddress: process.env.USDC_ADDRESS!,
-      platformTokenContractAddress: process.env.TRIBAL_TOKEN_ADDRESS!,
+      platformTokenContractAddress: process.env.PLATFORM_TOKEN_ADDRESS!,
       trancheBoostedAPRsWads: [WAD(0.11)],
       // fundingPeriodSeconds: 15 * 24 * 60 * 60,
     },
@@ -49,7 +49,7 @@ async function main() {
   //   [lender1, lender2],
   //   {
   //     stableCoinContractAddress: process.env.USDC_ADDRESS!,
-  //     platformTokenContractAddress: process.env.TRIBAL_TOKEN_ADDRESS!,
+  //     platformTokenContractAddress: process.env.PLATFORM_TOKEN_ADDRESS!,
   //     // fundingPeriodSeconds: 30 * 24 * 60 * 60,
   //   },
   //   async (contracts: DeployedContractsType) => {
