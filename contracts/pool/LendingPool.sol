@@ -391,41 +391,40 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
     }
 
-    // // WIP
-    // function _claimInterestForLender(address lender) internal {
-    //     uint totalRewards;
-    //     for (uint8 i; i < tranchesCount; i++) {
-    //         uint rewards = lenderRewardsByTrancheRedeemable(lender, i);
-    //         if (rewards > 0) {
-    //             totalRewards += rewards;
-    //             s_trancheRewardables[i][lender].redeemedRewards += rewards;
-    //             claimInterestB
-    //         }
-    //     }
+    function _claimTrancheInterestForLender(address lender, uint8 trancheId) internal {
+        uint rewards = lenderRewardsByTrancheRedeemable(lender, trancheId);
+        if (rewards > 0) {
+            s_trancheRewardables[trancheId][lender].redeemedRewards += rewards;
+            SafeERC20.safeTransfer(_stableCoinContract(), lender, rewards);
+            emit LenderWithdrawInterest(lender, trancheId, rewards);
+        }
+    }
 
-    //     if (totalRewards > 0) {
-    //         SafeERC20.safeTransfer(_stableCoinContract(), lender, totalRewards);
-    //         emit LenderWithdrawInterest(lender, 0, totalRewards);
-    //     }
-    // }
+    function _claimInterestForAllLenders() internal {
+        for (uint8 i; i < tranchesCount; i++) {
+            for (uint j; j < lenderCount(); j++) {
+                _claimTrancheInterestForLender(lendersAt(j), trancheVaultContracts()[i].id());
+            }
+        }
+    }
 
-    // function _claimInterestForAllLenders() internal {
-    //     for (uint8 i; i < lenderCount(); i++) {
-    //         _claimInterestForLender(s_lenders.at(i));
-    //     }
-    // }
-
+    /**
+     * @notice Transitions the pool to the defaulted state and pays out remaining assets to the tranche vaults
+     * @dev This function is expected to be called by *owner* after the maturity date has passed and principal has not been repaid
+     */
     function _transitionToDefaultedStage() internal {
         defaultedAt = uint64(block.timestamp);
         currentStage = Stages.DEFAULTED;
-
+        _claimInterestForAllLenders();
+        // TODO: update repaid interest to be the total interest paid to lenders
+        // TODO: should the protocol fees be paid in event of default
         uint availableAssets = _stableCoinContract().balanceOf(address(this));
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
             TrancheVault tv = trancheVaultContracts()[i];
             uint assetsToSend = (trancheCoveragesWads[i] * availableAssets) / WAD;
-
             uint trancheDefaultRatioWad = (assetsToSend * WAD) / tv.totalAssets();
+
             if (assetsToSend > 0) {
                 SafeERC20.safeTransfer(_stableCoinContract(), address(tv), assetsToSend);
             }
