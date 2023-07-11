@@ -118,23 +118,25 @@ describe("Defaulting", function () {
         expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
       });
 
-      it("sets default ratio on the first tranche to 0.2 (2000/10000)", async function () {
-        const { firstTrancheVault } = await loadFixture(uniPoolFixture);
-
-        expect(await firstTrancheVault.defaultRatioWad()).to.eq(WAD(0.2));
+      it("sets default ratio on the first tranche to 0.15 ((2000-500)/10000)", async function () {
+        const { firstTrancheVault, lendingPool, usdc } = await loadFixture(uniPoolFixture);
+        const totalTrancheInterest = await lendingPool.allLendersInterest();
+        const expectedDefaultRatio = USDC(2000).sub(totalTrancheInterest)
+        expect(expectedDefaultRatio).to.eq(USDC(1500));
+        expect(await firstTrancheVault.defaultRatioWad(), "Default Ratio").to.eq(WAD(0.15));
       });
 
-      it("sets maxWithdraw for first lender to 800 (4000 * 0.2)", async function () {
+      it("sets maxWithdraw for first lender to 600 (4000 * 0.15)", async function () {
         const { firstTrancheVault, lenders } = await loadFixture(
           uniPoolFixture
         );
 
         expect(
           await firstTrancheVault.maxWithdraw(lenders[0].getAddress())
-        ).to.eq(USDC(800));
+        ).to.eq(USDC(600));
       });
 
-      it("allows first lender to withdraw 800", async function () {
+      it("allows first lender to withdraw 600", async function () {
         const { firstTrancheVault, lenders, usdc } = await loadFixture(
           uniPoolFixture
         );
@@ -144,13 +146,13 @@ describe("Defaulting", function () {
 
         await firstTrancheVault
           .connect(lenders[0])
-          .withdraw(USDC(800), lender1Address, lender1Address);
+          .withdraw(USDC(600), lender1Address, lender1Address);
 
         const balanceAfter = await usdc.balanceOf(lender1Address);
-        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(800));
+        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
       });
 
-      it("allows first lender to redeem 4000 tranche tokens for 800 USDC", async function () {
+      it("allows first lender to redeem 4000 tranche tokens for 600 USDC", async function () {
         const { firstTrancheVault, lenders, usdc } = await loadFixture(
           uniPoolFixture
         );
@@ -163,20 +165,20 @@ describe("Defaulting", function () {
           .redeem(USDC(4000), lender1Address, lender1Address);
 
         const balanceAfter = await usdc.balanceOf(lender1Address);
-        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(800));
+        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
       });
 
-      it("sets maxWithdraw for second lender to 1200 (6000 * 0.2)", async function () {
+      it("sets maxWithdraw for second lender to 900 (6000 * 0.15)", async function () {
         const { firstTrancheVault, lenders } = await loadFixture(
           uniPoolFixture
         );
 
         expect(
           await firstTrancheVault.maxWithdraw(lenders[1].getAddress())
-        ).to.eq(USDC(1200));
+        ).to.eq(USDC(900));
       });
 
-      it("allows second lender to withdraw 1200 once", async function () {
+      it("allows second lender to withdraw 900 once", async function () {
         const { firstTrancheVault, lenders, usdc } = await loadFixture(
           uniPoolFixture
         );
@@ -186,16 +188,16 @@ describe("Defaulting", function () {
 
         await firstTrancheVault
           .connect(lenders[1])
-          .withdraw(USDC(1200), lender2Address, lender2Address);
+          .withdraw(USDC(900), lender2Address, lender2Address);
 
         const balanceAfter = await usdc.balanceOf(lender2Address);
-        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(1200));
+        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(900));
 
         // second withdrawal should fail
         await expect(
           firstTrancheVault
             .connect(lenders[1])
-            .withdraw(USDC(1200), lender2Address, lender2Address)
+            .withdraw(USDC(900), lender2Address, lender2Address)
         ).to.be.revertedWith("ERC4626: withdraw more than max");
           
         const lastBalance = await usdc.balanceOf(lender2Address);
@@ -206,7 +208,7 @@ describe("Defaulting", function () {
       it('does not allow second lender to withdraw twice', async function () {}); 
 
 
-      it("allows second lender to redeem 6000 tranche tokens for 1200 USDC", async function () {
+      it("allows second lender to redeem 6000 tranche tokens for 900 USDC", async function () {
         const { firstTrancheVault, lenders, usdc } = await loadFixture(
           uniPoolFixture
         );
@@ -219,7 +221,7 @@ describe("Defaulting", function () {
           .redeem(USDC(6000), lender2Address, lender2Address);
 
         const balanceAfter = await usdc.balanceOf(lender2Address);
-        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(1200));
+        expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(900));
       });
     }
   );
@@ -359,11 +361,10 @@ describe("Defaulting", function () {
           // lenders claim interest part 2
           const lender1Claimable2 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
           const lender2Claimable2 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
-          it("funds are not ready for lenders to claim", function () {
+
           // amounts claimable should be the same as before since time based
           expect(lender1Claimable2).to.be.approximately(lender1Claimable1, 40);
           expect(lender2Claimable2).to.be.approximately(lender2Claimable1, 40);
-          })
 
           // check lender usdc balances
           const lender1Balance = await usdc.balanceOf(await lender1.getAddress());
@@ -383,6 +384,7 @@ describe("Defaulting", function () {
           await ethers.provider.send("evm_mine", []);
 
           const lender1Balance2 = await usdc.balanceOf(await lender1.getAddress());
+          const lender2Balance2 = await usdc.balanceOf(await lender2.getAddress());
           // lenders claim interest part 3
           const lender1Claimable3 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
           const lender2Claimable3 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
@@ -413,30 +415,30 @@ describe("Defaulting", function () {
           // expect to be in defaulted state
           expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
           
+          // expect lender 2 to have received all outstanding claimable rewards
+          expect(await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID)).to.eq(0);
+
+          // expect lender 2 balance to be increased by the claimable amount
+          expect(await usdc.balanceOf(await lender2.getAddress())).to.eq(lender2Balance2.add(lender2Claimable4));
+          
           // lender 2 claim part 3 should be available after default established
           const lender1Claimable5 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender1.getAddress(), tranche1ID);
           const lender2Claimable5 = await lendingPool.lenderRewardsByTrancheRedeemable( await lender2.getAddress(), tranche1ID);
 
-          expect(lender2Claimable5).to.eq(lender2Claimable4);
+          expect(lender2Claimable5).to.eq(0);
           expect(lender1Claimable4).to.eq(0);
 
-
-          // lender 2 claims
-          // TODO: Lender 2 is unable to claim earned interest after move to default state. Currently returns a LP004 error
-          // await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(tranche1ID, lender2Claimable5 );
-
-          // verify defaultRatio is ~0.45
           const defaultRatio = await firstTrancheVault.defaultRatioWad();
-          expect(defaultRatio, 'Verify Default Ratio').to.approximately(WAD(0.45), WAD(0.0005));
+          expect(defaultRatio, 'Verify Default Ratio').to.approximately(WAD(0.4421), WAD(0.0005));
           const lender1LastBalance = await usdc.balanceOf(await lender1.getAddress());
 
           const maxWithdraw1 = await firstTrancheVault.maxWithdraw(await lender1.getAddress());
           const maxWithdraw2 = await firstTrancheVault.maxWithdraw(await lender2.getAddress());
-          // verify maxWithdraw for lender 1 is 1000 (5000 * 0.2)
-          expect(maxWithdraw1).to.approximately(USDC(2250), USDC(5));
+          // verify maxWithdraw for lender 1 is 2210 (5000 * 0.4421)
+          expect(maxWithdraw1).to.approximately(USDC(2210), USDC(5));
 
-          // verify maxWithdraw for lender 2 is 1000 (5000 * 0.2)
-          expect(maxWithdraw2).to.approximately(USDC(2250), USDC(5));
+          // verify maxWithdraw for lender 2 is 2210 (5000 * 0.4421)
+          expect(maxWithdraw2).to.approximately(USDC(2210), USDC(5));
 
 
           // lenders claim principal
