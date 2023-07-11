@@ -391,6 +391,30 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
     }
 
+    // // WIP
+    // function _claimInterestForLender(address lender) internal {
+    //     uint totalRewards;
+    //     for (uint8 i; i < tranchesCount; i++) {
+    //         uint rewards = lenderRewardsByTrancheRedeemable(lender, i);
+    //         if (rewards > 0) {
+    //             totalRewards += rewards;
+    //             s_trancheRewardables[i][lender].redeemedRewards += rewards;
+    //             claimInterestB
+    //         }
+    //     }
+
+    //     if (totalRewards > 0) {
+    //         SafeERC20.safeTransfer(_stableCoinContract(), lender, totalRewards);
+    //         emit LenderWithdrawInterest(lender, 0, totalRewards);
+    //     }
+    // }
+
+    // function _claimInterestForAllLenders() internal {
+    //     for (uint8 i; i < lenderCount(); i++) {
+    //         _claimInterestForLender(s_lenders.at(i));
+    //     }
+    // }
+
     function _transitionToDefaultedStage() internal {
         defaultedAt = uint64(block.timestamp);
         currentStage = Stages.DEFAULTED;
@@ -405,7 +429,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
             if (assetsToSend > 0) {
                 SafeERC20.safeTransfer(_stableCoinContract(), address(tv), assetsToSend);
             }
-
+            availableAssets -= assetsToSend;
             tv.setDefaultRatioWad(trancheDefaultRatioWad);
             tv.enableWithdrawals();
         }
