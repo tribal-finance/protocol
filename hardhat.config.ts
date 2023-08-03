@@ -14,8 +14,8 @@ import "@nomiclabs/hardhat-waffle"
 import dotenv from "dotenv";
 dotenv.config({ path: `./.env.shared` });
 
-// import tasks
 import "./tasks/deployments"
+import "./tasks/functions"
 
 const config: HardhatUserConfig = {
   solidity: {
