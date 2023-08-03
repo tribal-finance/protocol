@@ -14,6 +14,9 @@ import "@nomiclabs/hardhat-waffle"
 import dotenv from "dotenv";
 dotenv.config({ path: `./.env.shared` });
 
+// import tasks
+import "./tasks/deployments"
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.18",
@@ -33,7 +36,6 @@ const config: HardhatUserConfig = {
         url: process.env.MAINNET_FORK_ALCHEMY_URL!,
         blockNumber: 16782120,
       },
-      chainId: 1,
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
