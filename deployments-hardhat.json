@@ -1,0 +1,13 @@
+[
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 16782121
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 16782124
+  }
+]
