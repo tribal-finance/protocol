@@ -23,10 +23,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
     .addParam("trancheBoostedAPRsWads", "The boosted APRs for each tranche in wad format (comma-separated)")
     .addParam("trancheBoostRatios", "The boost ratios for each tranche (comma-separated)")
     .addParam("trancheCoveragesWads", "The coverages for each tranche in wad format (comma-separated)")
-    .addParam("trancheVaultAddresses", "The Ethereum addresses of the tranche vaults (comma-separated)")
-    .addParam("feeSharingContractAddress", "The Ethereum address of the fee sharing contract")
-    .addParam("authorityAddress", "The Ethereum address of the authority")
-    .addParam("poolFactoryAddress", "The Ethereum address of the pool factory")
+    .addParam("fundingSplitWads", "The fundingSplitWads for each tranche")
     .setAction(async (taskArgs, hre) => {
         const {ethers} = hre;
 
@@ -54,20 +51,14 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
             taskArgs.trancheCoveragesWads.split(',').map(Number)
         ];
 
-        const _trancheVaultAddresses = taskArgs.trancheVaultAddresses.split(',');
-        const _feeSharingContractAddress = taskArgs.feeSharingContractAddress;
-        const _authorityAddress = taskArgs.authorityAddress;
-        const _poolFactoryAddress = taskArgs.poolFactoryAddress;
+        const fundingSplitWads = taskArgs.fundingSplitWads;
 
         const initData = ethers.utils.defaultAbiCoder.encode(
             [
                 'tuple(string name, string token, address stableCoinContractAddress, address platformTokenContractAddress, uint minFundingCapacity, uint maxFundingCapacity, uint64 fundingPeriodSeconds, uint64 lendingTermSeconds, address borrowerAddress, uint firstLossAssets, uint borrowerTotalInterestRateWad, uint repaymentRecurrenceDays, uint gracePeriodDays, uint protocolFeeWad, uint defaultPenalty, uint penaltyRateWad, uint8 tranchesCount, uint[] trancheAPRsWads, uint[] trancheBoostedAPRsWads, uint[] trancheBoostRatios, uint[] trancheCoveragesWads)',
-                'address[]',
-                'address',
-                'address',
-                'address',
+                'uint[]',
             ],
-            [LendingPoolParams, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress, _poolFactoryAddress]
+            [LendingPoolParams, fundingSplitWads]
         );
 
         console.log("msg.data:", initData);
