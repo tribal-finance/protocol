@@ -1,69 +1,7 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
-import * as fs from 'fs';
-import { EthereumProvider } from "hardhat/types";
-
-interface DeploymentInfo {
-    contractName: string;
-    contractAddress: string;
-    implementationAddress?: string;
-    timestamp: number;
-}
-
-function writeToDeploymentsFile(deployment: DeploymentInfo, network: string): void {
-    const fileName = `deployments/deployments-${network}.json`;
-    const existingDeployments: DeploymentInfo[] = readDeploymentsFromNetwork(network);
-    existingDeployments.push(deployment);
-    const data = JSON.stringify(existingDeployments, null, 2);
-    fs.writeFileSync(fileName, data);
-}
-
-function readDeploymentsFromNetwork(network: string): DeploymentInfo[] {
-    const fileName = `deployments/deployments-${network}.json`;
-    try {
-        const data = fs.readFileSync(fileName, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        return [];
-    }
-}
-
-function getMostCurrentContract(contractNameToRead: string, network: string): DeploymentInfo {
-    const deployments = readDeploymentsFromNetwork(network);
-
-    // Filter deployments by the provided contractNameToRead
-    const filteredDeployments = deployments.filter((deployment) => deployment.contractName === contractNameToRead);
-
-    // Find the most recent deployment based on the timestamp
-    const mostRecentDeployment = filteredDeployments.reduce((prevDeployment, currentDeployment) => {
-        return currentDeployment.timestamp > prevDeployment.timestamp ? currentDeployment : prevDeployment;
-    }, filteredDeployments[0]);
-
-    return mostRecentDeployment;
-}
-
-async function retryableRequest(reqFunc: () => Promise<void>): Promise<void> {
-    try {
-        await reqFunc();
-    } catch (error) {
-        console.error(error);
-        if (readline.keyInYN('An error occurred. Do you want to retry?')) {
-            await retryableRequest(reqFunc);
-        } else {
-            console.log("Skipping request...")
-        }
-    }
-}
-
-function getNumber(maxLength: number): number {
-    let numStr: string;
-
-    do {
-        numStr = readline.question('Please enter starting index: ');
-    } while (Number(numStr) > maxLength || isNaN(Number(numStr)));
-
-    return Number(numStr);
-}
+import {getMostCurrentContract, writeToDeploymentsFile} from "./io";
+import { retryableRequest } from "./utils";
 
 task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
