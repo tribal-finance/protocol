@@ -1,7 +1,7 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
 import {getMostCurrentContract, writeToDeploymentsFile} from "./io";
-import { retryableRequest } from "./utils";
+import { getNumber, retryableRequest } from "./utils";
 
 task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
@@ -10,7 +10,7 @@ task("init-protocol", "deploys the lending protocol for production")
 
     .setAction(async (args: any, hre) => {
         const { ethers, upgrades } = hre;
-        const { stableCoinAddress, disablePlatformToken } = args;
+        const { stableCoinAddress, disablePlatformToken, foundationAddress } = args;
         const network = hre.network.name;
 
         if (!disablePlatformToken) {
@@ -19,6 +19,10 @@ task("init-protocol", "deploys the lending protocol for production")
 
         if (!ethers.utils.isAddress(stableCoinAddress)) {
             throw Error(`--stable-coin-address is not a vaid address '${stableCoinAddress}'`);
+        }
+
+        if (!ethers.utils.isAddress(foundationAddress)) {
+            throw Error(`--foundation-address is not a vaid address '${foundationAddress}'`);
         }
 
         const signers = await ethers.getSigners();
@@ -142,6 +146,12 @@ task("init-protocol", "deploys the lending protocol for production")
                 });
                 console.log("verified implementation")
             })
+        }))
+
+        deploySequence.push("[Optional] Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
+            const Factory = getMostCurrentContract("poolFactory", network);
+            const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+            
         }))
 
         console.log("Select where to begin deployment")
