@@ -1,5 +1,11 @@
 [
   {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 16782124
+  },
+  {
     "contractName": "platformToken",
     "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
     "timestamp": 16782121
@@ -17,9 +23,9 @@
     "timestamp": 16782126
   },
   {
-    "contractName": "staking",
-    "contractAddress": "0xB468647B04bF657C9ee2de65252037d781eABafD",
-    "implementationAddress": "0x0b27a79cb9c0b38ee06ca3d94daa68e0ed17f953",
-    "timestamp": 16782123
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 16782128
   }
 ]

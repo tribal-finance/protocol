@@ -11,7 +11,7 @@ interface DeploymentInfo {
 }
 
 function writeToDeploymentsFile(deployment: DeploymentInfo, network: string): void {
-    const fileName = `deployments-${network}.json`;
+    const fileName = `deployments/deployments-${network}.json`;
     const existingDeployments: DeploymentInfo[] = readDeploymentsFromNetwork(network);
     existingDeployments.push(deployment);
     const data = JSON.stringify(existingDeployments, null, 2);
@@ -19,7 +19,7 @@ function writeToDeploymentsFile(deployment: DeploymentInfo, network: string): vo
 }
 
 function readDeploymentsFromNetwork(network: string): DeploymentInfo[] {
-    const fileName = `deployments-${network}.json`;
+    const fileName = `deployments/deployments-${network}.json`;
     try {
         const data = fs.readFileSync(fileName, 'utf8');
         return JSON.parse(data);
@@ -68,6 +68,7 @@ function getNumber(maxLength: number): number {
 task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
     .addParam("disablePlatformToken", "Include this flag in the command to link LendingPool to Empty Token")
+    .addParam("foundationAddress", "This is the beneficiary of the fee sharing")
 
     .setAction(async (args: any, hre) => {
         const { ethers, upgrades } = hre;
@@ -174,6 +175,36 @@ task("init-protocol", "deploys the lending protocol for production")
             })
         }))
 
+        deploySequence.push("Deploys poolFactory as proxy and verifies the implementation", () => retryableRequest(async () => {
+            const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
+
+            const PoolFactory = await ethers.getContractFactory("PoolFactory");
+            const poolFactory = await upgrades.deployProxy(PoolFactory, [
+                authorityAddress,
+            ]);
+            await poolFactory.deployed();
+          
+            console.log("Pool Factory proxy deployed to: ", poolFactory.address);
+
+            const impl = "0x"+(await ethers.provider.getStorageAt(poolFactory.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+
+            console.log("Pool Factory implementation deployed to address: ", impl);
+
+            writeToDeploymentsFile({
+                contractName: "poolFactory",
+                contractAddress: poolFactory.address,
+                implementationAddress: impl,
+                timestamp: await ethers.provider.getBlockNumber()
+            }, network)
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: impl,
+                    constructorArguments: [],
+                });
+                console.log("verified implementation")
+            })
+        }))
 
         console.log("Select where to begin deployment")
         for (let i = 0; i < deploySequence.length; i += 2) {
