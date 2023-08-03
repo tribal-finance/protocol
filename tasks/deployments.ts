@@ -1,6 +1,7 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
 import * as fs from 'fs';
+import { EthereumProvider } from "hardhat/types";
 
 interface DeploymentInfo {
     contractName: string;
@@ -26,6 +27,7 @@ function readDeploymentsFromNetwork(network: string): DeploymentInfo[] {
         return [];
     }
 }
+
 function getMostCurrentContract(contractNameToRead: string, network: string): DeploymentInfo {
     const deployments = readDeploymentsFromNetwork(network);
 
@@ -39,7 +41,6 @@ function getMostCurrentContract(contractNameToRead: string, network: string): De
 
     return mostRecentDeployment;
 }
-
 
 async function retryableRequest(reqFunc: () => Promise<void>): Promise<void> {
     try {
@@ -116,7 +117,9 @@ task("init-protocol", "deploys the lending protocol for production")
             const authority = await upgrades.deployProxy(Authority, []);
             await authority.deployed();
             console.log("Authority proxy deployed to: ", authority.address);
-            const impl = ethers.utils.hexStripZeros(await ethers.provider.getStorageAt(authority.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'));
+            const impl = "0x"+(await ethers.provider.getStorageAt(authority.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+
+            
             console.log("Authority implementation deployed to address: ", impl);
 
             writeToDeploymentsFile({
@@ -150,7 +153,9 @@ task("init-protocol", "deploys the lending protocol for production")
             await staking.deployed();
             console.log("Staking proxy deployed to: ", staking.address);
 
-            const impl = ethers.utils.hexStripZeros(await ethers.provider.getStorageAt(staking.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'));
+            const impl = "0x"+(await ethers.provider.getStorageAt(staking.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+
+
             console.log("Staking implementation deployed to address: ", impl);
 
             writeToDeploymentsFile({
