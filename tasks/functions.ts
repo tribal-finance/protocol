@@ -26,6 +26,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
     .addParam("fundingSplitWads", "The fundingSplitWads for each tranche")
     .setAction(async (taskArgs, hre) => {
         const {ethers} = hre;
+        const {parseEther} = ethers.utils;
 
         const LendingPoolParams = [
             taskArgs.name, 
@@ -38,28 +39,23 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
             taskArgs.lendingTermSeconds,
             taskArgs.borrowerAddress,
             taskArgs.firstLossAssets,
-            taskArgs.borrowerTotalInterestRateWad,
+            parseEther(taskArgs.borrowerTotalInterestRateWad),
             taskArgs.repaymentRecurrenceDays,
             taskArgs.gracePeriodDays,
-            taskArgs.protocolFeeWad,
-            taskArgs.defaultPenalty,
-            taskArgs.penaltyRateWad,
+            parseEther(taskArgs.protocolFeeWad),
+            parseEther(taskArgs.defaultPenalty),
+            parseEther(taskArgs.penaltyRateWad),
             taskArgs.tranchesCount,
-            taskArgs.trancheAPRsWads.split(',').map(Number),
-            taskArgs.trancheBoostedAPRsWads.split(',').map(Number),
-            taskArgs.trancheBoostRatios.split(',').map(Number),
-            taskArgs.trancheCoveragesWads.split(',').map(Number)
+            taskArgs.trancheAPRsWads.split(',').map(parseEther),
+            taskArgs.trancheBoostedAPRsWads.split(',').map(parseEther),
+            taskArgs.trancheBoostRatios.split(',').map(parseEther),
+            taskArgs.trancheCoveragesWads.split(',').map(parseEther)
         ];
 
-        const fundingSplitWads = taskArgs.fundingSplitWads;
+        const fundingSplitWads = taskArgs.fundingSplitWads.split(',').map(parseEther);
 
-        const initData = ethers.utils.defaultAbiCoder.encode(
-            [
-                'tuple(string name, string token, address stableCoinContractAddress, address platformTokenContractAddress, uint minFundingCapacity, uint maxFundingCapacity, uint64 fundingPeriodSeconds, uint64 lendingTermSeconds, address borrowerAddress, uint firstLossAssets, uint borrowerTotalInterestRateWad, uint repaymentRecurrenceDays, uint gracePeriodDays, uint protocolFeeWad, uint defaultPenalty, uint penaltyRateWad, uint8 tranchesCount, uint[] trancheAPRsWads, uint[] trancheBoostedAPRsWads, uint[] trancheBoostRatios, uint[] trancheCoveragesWads)',
-                'uint[]',
-            ],
-            [LendingPoolParams, fundingSplitWads]
-        );
+        const PoolFactory = await ethers.getContractFactory("PoolFactory");
+        const msgData = PoolFactory.interface.encodeFunctionData("deployPool", [LendingPoolParams, fundingSplitWads]);
 
-        console.log("msg.data:", initData);
+        console.log("msg.data:", msgData);
     });

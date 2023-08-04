@@ -7,10 +7,11 @@ task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
     .addParam("disablePlatformToken", "Include this flag in the command to link LendingPool to Empty Token")
     .addParam("foundationAddress", "This is the beneficiary of the fee sharing")
+    .addParam("lendingPoolParams", "This is a massive byte string you should generate using `npx hardhat encode-pool-initializer --help`")
 
     .setAction(async (args: any, hre) => {
         const { ethers, upgrades } = hre;
-        const { stableCoinAddress, disablePlatformToken, foundationAddress } = args;
+        const { stableCoinAddress, disablePlatformToken, foundationAddress, lendingPoolParams } = args;
         const network = hre.network.name;
 
         if (!disablePlatformToken) {
@@ -148,9 +149,55 @@ task("init-protocol", "deploys the lending protocol for production")
             })
         }))
 
+        deploySequence.push("Deploy lending pool so factory can clone it", () => retryableRequest(async () => {
+            const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
+            const poolCalculations = await PoolCalculations.deploy();
+            await poolCalculations.deployed();
+          
+            const PoolTransfers = await ethers.getContractFactory("PoolTransfers");
+            const poolTransfers = await PoolTransfers.deploy();
+            await poolTransfers.deployed();
+          
+            const LendingPool = await ethers.getContractFactory("LendingPool", {
+              libraries: {
+                PoolCalculations: poolCalculations.address,
+                PoolTransfers: poolTransfers.address
+              }
+            });
+            
+            const lp = await LendingPool.deploy();
+            console.log(`LendingPool implementation deployed to ${lp.address}`);
+
+            const Factory = getMostCurrentContract("poolFactory", network);
+            const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+
+            await factory.setPoolImplementation(lp.address);
+            console.log("implementation address is set on poolFactory");
+
+            writeToDeploymentsFile({
+                contractName: "lendingPoolV1",
+                contractAddress: lp.address,
+                timestamp: await ethers.provider.getBlockNumber()
+            }, network)
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: lp.address,
+                    constructorArguments: [],
+                });
+                console.log("verified implementation")
+            })
+        }))
+
         deploySequence.push("[Optional] Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+            
+            await signers[0].sendTransaction({
+                to: factory.address,
+                data: lendingPoolParams
+            })
+
             
         }))
 
