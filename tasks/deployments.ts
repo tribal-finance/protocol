@@ -189,7 +189,7 @@ task("init-protocol", "deploys the lending protocol for production")
             })
         }))
 
-        deploySequence.push("[Optional] Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
+        deploySequence.push("Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
             
@@ -198,7 +198,7 @@ task("init-protocol", "deploys the lending protocol for production")
                 data: lendingPoolParams
             })
 
-            
+
         }))
 
         console.log("Select where to begin deployment")
