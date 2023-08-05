@@ -39,3 +39,12 @@ export function getMostCurrentContract(contractNameToRead: string, network: stri
 
     return mostRecentDeployment;
 }
+
+export function getMostCurrentContracts(contractNameToRead: string, network: string): DeploymentInfo[] {
+    const deployments = readDeploymentsFromNetwork(network);
+
+    // Filter deployments by the provided contractNameToRead
+    const filteredDeployments = deployments.filter((deployment) => deployment.contractName === contractNameToRead);
+
+    return filteredDeployments;
+}

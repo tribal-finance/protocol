@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
-import {getMostCurrentContract, writeToDeploymentsFile} from "./io";
+import {getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile} from "./io";
 import { getNumber, retryableRequest } from "./utils";
 import { BigNumberish } from "ethers";
 
@@ -59,6 +59,7 @@ task("init-protocol", "deploys the lending protocol for production")
         }
 
         const deploySequence = []
+        const secureDeploymentChecksum: string[] = []
 
         deploySequence.push("Deploys the empty token to use as platform token", () => retryableRequest(async () => {
             const PlatformToken = await ethers.getContractFactory("EmptyToken");
@@ -66,10 +67,12 @@ task("init-protocol", "deploys the lending protocol for production")
             await platformToken.deployed();
             console.log("Deployed Empty Platform Token to", platformToken.address);
 
+            secureDeploymentChecksum.push(platformToken.deployTransaction.data);
+
             writeToDeploymentsFile({
                 contractName: "platformToken",
                 contractAddress: platformToken.address,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
         }));
 
@@ -80,14 +83,15 @@ task("init-protocol", "deploys the lending protocol for production")
             console.log("Authority proxy deployed to: ", authority.address);
             const impl = "0x"+(await ethers.provider.getStorageAt(authority.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
 
-            
+            secureDeploymentChecksum.push(authority.deployTransaction.data);
+
             console.log("Authority implementation deployed to address: ", impl);
 
             writeToDeploymentsFile({
                 contractName: "authority",
                 contractAddress: authority.address,
                 implementationAddress: impl,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
         }))
 
@@ -108,6 +112,7 @@ task("init-protocol", "deploys the lending protocol for production")
 
             const impl = "0x"+(await ethers.provider.getStorageAt(staking.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
 
+            secureDeploymentChecksum.push(staking.deployTransaction.data);
 
             console.log("Staking implementation deployed to address: ", impl);
 
@@ -115,7 +120,7 @@ task("init-protocol", "deploys the lending protocol for production")
                 contractName: "staking",
                 contractAddress: staking.address,
                 implementationAddress: impl,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
         }))
 
@@ -132,6 +137,8 @@ task("init-protocol", "deploys the lending protocol for production")
             console.log("Pool Factory proxy deployed to: ", poolFactory.address);
 
             const impl = "0x"+(await ethers.provider.getStorageAt(poolFactory.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+            
+            secureDeploymentChecksum.push(poolFactory.deployTransaction.data);
 
             console.log("Pool Factory implementation deployed to address: ", impl);
 
@@ -139,7 +146,7 @@ task("init-protocol", "deploys the lending protocol for production")
                 contractName: "poolFactory",
                 contractAddress: poolFactory.address,
                 implementationAddress: impl,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
         }))
 
@@ -157,6 +164,8 @@ task("init-protocol", "deploys the lending protocol for production")
             const feeSharing = await upgrades.deployProxy(FeeSharing, params);
             await feeSharing.deployed();
             console.log("Fee Sharing contract deployed to: ", feeSharing.address);
+            
+            secureDeploymentChecksum.push(feeSharing.deployTransaction.data);
 
             const impl = "0x"+(await ethers.provider.getStorageAt(feeSharing.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
             console.log("Fee Sharing implementation deployed to address: ", impl);
@@ -165,11 +174,12 @@ task("init-protocol", "deploys the lending protocol for production")
                 contractName: "feeSharing",
                 contractAddress: feeSharing.address,
                 implementationAddress: impl,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
 
             const poolFactory = await ethers.getContractAt("PoolFactory", poolFactoryAddress);
-            poolFactory.setFeeSharingContractAddress(feeSharing.address);
+            const tx = await poolFactory.setFeeSharingContractAddress(feeSharing.address);
+            secureDeploymentChecksum.push(tx.data);
             console.log("Set feeSharing address in poolFactory")
         }))
 
@@ -191,37 +201,43 @@ task("init-protocol", "deploys the lending protocol for production")
             
             const lp = await LendingPool.deploy();
             console.log(`LendingPool implementation deployed to ${lp.address}`);
+            secureDeploymentChecksum.push(lp.deployTransaction.data);
 
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
 
-            await factory.setPoolImplementation(lp.address);
+            const tx = await factory.setPoolImplementation(lp.address);
             console.log("implementation address is set on poolFactory");
+            secureDeploymentChecksum.push(tx.data);
 
             writeToDeploymentsFile({
                 contractName: "lendingPoolV1-clonable",
                 contractAddress: lp.address,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
         }))
 
         deploySequence.push("Deploy Tranche Vault and set implementation within pool factory", () => retryableRequest(async () => {
             const TrancheVault = await ethers.getContractFactory("TrancheVault");
             const tv = await TrancheVault.deploy();
-          
+            await tv.deployed();
+
+            secureDeploymentChecksum.push(tv.deployTransaction.data);
+
             console.log(`TrancheVault implementation deployed to ${tv.address}`);
 
             writeToDeploymentsFile({
                 contractName: "trancheVaultV1-clonable",
                 contractAddress: tv.address,
-                timestamp: await ethers.provider.getBlockNumber()
+                timestamp: (await ethers.provider.getBlock(ethers.provider.getBlockNumber())).timestamp
             }, network)
 
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
 
-            await factory.setTrancheVaultImplementation(tv.address);
+            const tx = await factory.setTrancheVaultImplementation(tv.address);
             console.log("implementation address is set on poolFactory");
+            secureDeploymentChecksum.push(tx.data);
 
         }))
 
@@ -232,8 +248,10 @@ task("init-protocol", "deploys the lending protocol for production")
                 to: factory.address,
                 data: lendingPoolParams
             })
+            secureDeploymentChecksum.push(tx.data);
 
             const receipt = await tx.wait();
+            const timestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp
 
             receipt.logs.forEach(log => {
                 try {
@@ -242,31 +260,55 @@ task("init-protocol", "deploys the lending protocol for production")
                         writeToDeploymentsFile({
                             contractName: "trancheVaultV1",
                             contractAddress: parsedLog.args.addr,
-                            timestamp: receipt.blockNumber
+                            timestamp: timestamp
                         }, network)
                     }
                     if(parsedLog.name === 'PoolCloned') {
                         writeToDeploymentsFile({
                             contractName: "lendingPoolV1",
                             contractAddress: parsedLog.args.addr,
-                            timestamp: receipt.blockNumber
+                            timestamp: timestamp
                         }, network)
                     }
-                } catch (error) {
-                    console.error("Failed to write deployment to file")
-                }
+                } catch (error) {}
             });
-
-            // TODO:
-            // get address of pool and vaults
-            // write them to file
         }))
 
         deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {
             const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
             const authority = await ethers.getContractAt("Authority", authorityAddress);
-            await authority.transferOwnership(owner);
+            const tx = await authority.transferOwnership(owner);
+            secureDeploymentChecksum.push(tx.data);
             console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner}`);
+        }))
+
+        deploySequence.push("Validate deployment was neither hijacked nor tampered", () => retryableRequest(async () => {
+            var checksum = "";
+            secureDeploymentChecksum.sort();
+            for(let i = 0; i < secureDeploymentChecksum.length; i++) {
+                checksum += secureDeploymentChecksum[i];
+            }
+            let bytes = ethers.utils.toUtf8Bytes(checksum);
+            const expected = ethers.utils.keccak256(bytes)
+            console.log("Expected Transactional Checksum: ", expected)
+            console.log("Generating Actual, This may take a few minutes...") 
+            const actualChecksome: string[] = []
+            const dataSources = [
+                "platformToken",
+                "authority",
+                "staking",
+                "poolFactory",
+                "feeSharing",
+                "lendingPoolV1",
+                "lendingPoolV1-clonable",
+                "trancheVaultV1",
+                "trancheVaultV1-clonable"
+            ]
+
+            dataSources.forEach(source => {
+                const contract = getMostCurrentContracts(source, network)
+                console.log(contract)
+            })
         }))
 
         deploySequence.push("Verifies the empty token", () => retryableRequest(async () => {
