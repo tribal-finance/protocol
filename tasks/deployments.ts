@@ -11,12 +11,13 @@ task("init-protocol", "deploys the lending protocol for production")
     .addParam("lendingPoolParams", "This is a massive byte string you should generate using `npx hardhat encode-pool-initializer --help`")
     .addParam("feeSharingBeneficiaries", "Sets who recieves awards in feeSharing. Enter param in this format <addr1,addr2,...,addrN>")
     .addParam("feeSharingBeneficiariesSharesWad", "Sets award alocations. Enter Param in this format using floats <0.3,0.1,...,.5> Must add to 1")
+    .addParam("owner", "Address of the timelock, multisig, or governor to switch to after deployment")
 
     .setAction(async (args: any, hre) => {
         const { ethers, upgrades } = hre;
         const {BigNumber} = ethers;
         const {parseEther} = ethers.utils;
-        const { stableCoinAddress, disablePlatformToken, foundationAddress, lendingPoolParams, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad } = args;
+        const { stableCoinAddress, owner, disablePlatformToken, foundationAddress, lendingPoolParams, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad } = args;
         const network = hre.network.name;
 
         if (!disablePlatformToken) {
@@ -29,6 +30,10 @@ task("init-protocol", "deploys the lending protocol for production")
 
         if (!ethers.utils.isAddress(foundationAddress)) {
             throw Error(`--foundation-address is not a vaid address '${foundationAddress}'`);
+        }
+
+        if (!ethers.utils.isAddress(owner)) {
+            throw Error(`--owner is not a vaid address '${owner}'`);
         }
 
         const feeShareBeneficiariesParsed = feeSharingBeneficiaries.split(',')
@@ -194,20 +199,74 @@ task("init-protocol", "deploys the lending protocol for production")
             console.log("implementation address is set on poolFactory");
 
             writeToDeploymentsFile({
-                contractName: "lendingPoolV1",
+                contractName: "lendingPoolV1-clonable",
                 contractAddress: lp.address,
                 timestamp: await ethers.provider.getBlockNumber()
             }, network)
         }))
 
+        deploySequence.push("Deploy Tranche Vault and set implementation within pool factory", () => retryableRequest(async () => {
+            const TrancheVault = await ethers.getContractFactory("TrancheVault");
+            const tv = await TrancheVault.deploy();
+          
+            console.log(`TrancheVault implementation deployed to ${tv.address}`);
+
+            writeToDeploymentsFile({
+                contractName: "trancheVaultV1-clonable",
+                contractAddress: tv.address,
+                timestamp: await ethers.provider.getBlockNumber()
+            }, network)
+
+            const Factory = getMostCurrentContract("poolFactory", network);
+            const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+
+            await factory.setTrancheVaultImplementation(tv.address);
+            console.log("implementation address is set on poolFactory");
+
+        }))
 
         deploySequence.push("Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
-            await signers[0].sendTransaction({
+            const tx = await signers[0].sendTransaction({
                 to: factory.address,
                 data: lendingPoolParams
             })
+
+            const receipt = await tx.wait();
+
+            receipt.logs.forEach(log => {
+                try {
+                    const parsedLog = factory.interface.parseLog(log);
+                    if (parsedLog.name === 'TrancheVaultCloned') {
+                        writeToDeploymentsFile({
+                            contractName: "trancheVaultV1",
+                            contractAddress: parsedLog.args.addr,
+                            timestamp: receipt.blockNumber
+                        }, network)
+                    }
+                    if(parsedLog.name === 'PoolCloned') {
+                        writeToDeploymentsFile({
+                            contractName: "lendingPoolV1",
+                            contractAddress: parsedLog.args.addr,
+                            timestamp: receipt.blockNumber
+                        }, network)
+                    }
+                } catch (error) {
+                    console.error("Failed to write deployment to file")
+                }
+            });
+
+            // TODO:
+            // get address of pool and vaults
+            // write them to file
+        }))
+
+        deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {
+            const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
+            const authority = await ethers.getContractAt("Authority", authorityAddress);
+            await authority.transferOwnership(owner);
+            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner}`);
         }))
 
         deploySequence.push("Verifies the empty token", () => retryableRequest(async () => {
@@ -273,6 +332,16 @@ task("init-protocol", "deploys the lending protocol for production")
 
             await hre.run("verify:verify", {
                 address: pool,
+                constructorArguments: [],
+            });
+            console.log("verified Lending Pool implementation")
+        }))
+
+        deploySequence.push("Verify TrancheVault implementation", () => retryableRequest(async () => {
+            const tv = getMostCurrentContract("trancheVaultV1", network).contractAddress;
+
+            await hre.run("verify:verify", {
+                address: tv,
                 constructorArguments: [],
             });
             console.log("verified Lending Pool implementation")
