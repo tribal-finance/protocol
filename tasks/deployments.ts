@@ -53,7 +53,6 @@ task("init-protocol", "deploys the lending protocol for production")
             process.exit(-1);
         }
 
-
         const deploySequence = []
 
         deploySequence.push("Deploys the empty token to use as platform token", () => retryableRequest(async () => {
@@ -234,7 +233,7 @@ task("init-protocol", "deploys the lending protocol for production")
                 console.log("verified empty token")
             })
         }))
-        
+
         deploySequence.push("Verifies staking implementation", () => retryableRequest(async () => {
             const stakingAddr = getMostCurrentContract("staking", network).implementationAddress;
 

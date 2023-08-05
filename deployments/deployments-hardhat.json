@@ -307,5 +307,39 @@
     "contractName": "lendingPoolV1",
     "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
     "timestamp": 16782135
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 16782121
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 16782124
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 16782126
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 16782128
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 16782130
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
+    "timestamp": 16782135
   }
 ]
