@@ -69,18 +69,6 @@ task("init-protocol", "deploys the lending protocol for production")
             }, network)
         }));
 
-        deploySequence.push("Verifies the empty token", () => retryableRequest(async () => {
-            const platformTokenAddress = getMostCurrentContract("platformToken", network).contractAddress;
-
-            await retryableRequest(async () => {
-                await hre.run("verify:verify", {
-                    address: platformTokenAddress,
-                    constructorArguments: [],
-                });
-                console.log("verified empty token")
-            })
-        }))
-
         deploySequence.push("Deploys authority as proxy", () => retryableRequest(async () => {
             const Authority = await ethers.getContractFactory("Authority");
             const authority = await upgrades.deployProxy(Authority, []);
@@ -97,18 +85,6 @@ task("init-protocol", "deploys the lending protocol for production")
                 implementationAddress: impl,
                 timestamp: await ethers.provider.getBlockNumber()
             }, network)
-        }))
-
-        deploySequence.push("Verifies authority implementation", () => retryableRequest(async () => {
-            const authorityAddress = getMostCurrentContract("authority", network).implementationAddress;
-
-            await retryableRequest(async () => {
-                await hre.run("verify:verify", {
-                    address: authorityAddress,
-                    constructorArguments: [],
-                });
-                console.log("verified empty token")
-            })
         }))
 
         deploySequence.push("Deploys staking as proxy and verifies the implementation", () => retryableRequest(async () => {
@@ -139,17 +115,6 @@ task("init-protocol", "deploys the lending protocol for production")
             }, network)
         }))
 
-        deploySequence.push("Verifies staking implementation", () => retryableRequest(async () => {
-            const stakingAddr = getMostCurrentContract("staking", network).implementationAddress;
-
-            await retryableRequest(async () => {
-                await hre.run("verify:verify", {
-                    address: stakingAddr,
-                    constructorArguments: [],
-                });
-                console.log("verified staking contract")
-            })
-        }))
 
         deploySequence.push("Deploys poolFactory as proxy", () => retryableRequest(async () => {
             const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
@@ -172,18 +137,6 @@ task("init-protocol", "deploys the lending protocol for production")
                 implementationAddress: impl,
                 timestamp: await ethers.provider.getBlockNumber()
             }, network)
-        }))
-
-        deploySequence.push("Verifies poolFactory implementation", () => retryableRequest(async () => {
-            const poolFactoryAddress = getMostCurrentContract("poolFactory", network).implementationAddress;
-
-            await retryableRequest(async () => {
-                await hre.run("verify:verify", {
-                    address: poolFactoryAddress,
-                    constructorArguments: [],
-                });
-                console.log("verified poolFactory implementation")
-            })
         }))
 
         deploySequence.push("Deploy Fee Sharing and set its address for Pool Factory", () => retryableRequest(async () => {
@@ -216,16 +169,6 @@ task("init-protocol", "deploys the lending protocol for production")
             console.log("Set feeSharing address in poolFactory")
         }))
 
-        deploySequence.push("Verify Fee Sharing implementation", () => retryableRequest(async () => {
-            const feeSharingImpl = getMostCurrentContract("feeSharing", network).implementationAddress;
-
-            await hre.run("verify:verify", {
-                address: feeSharingImpl,
-                constructorArguments: [],
-            });
-            console.log("verified feeSharing implementation")
-        }))
-
         deploySequence.push("Deploy lending pool so factory can clone it", () => retryableRequest(async () => {
             const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
             const poolCalculations = await PoolCalculations.deploy();
@@ -256,15 +199,8 @@ task("init-protocol", "deploys the lending protocol for production")
                 contractAddress: lp.address,
                 timestamp: await ethers.provider.getBlockNumber()
             }, network)
-
-            await retryableRequest(async () => {
-                await hre.run("verify:verify", {
-                    address: lp.address,
-                    constructorArguments: [],
-                });
-                console.log("verified implementation")
-            })
         }))
+
 
         deploySequence.push("Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
             const Factory = getMostCurrentContract("poolFactory", network);
@@ -273,6 +209,74 @@ task("init-protocol", "deploys the lending protocol for production")
                 to: factory.address,
                 data: lendingPoolParams
             })
+        }))
+
+        deploySequence.push("Verifies the empty token", () => retryableRequest(async () => {
+            const platformTokenAddress = getMostCurrentContract("platformToken", network).contractAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: platformTokenAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified empty token")
+            })
+        }))
+
+        deploySequence.push("Verifies authority implementation", () => retryableRequest(async () => {
+            const authorityAddress = getMostCurrentContract("authority", network).implementationAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: authorityAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified empty token")
+            })
+        }))
+        
+        deploySequence.push("Verifies staking implementation", () => retryableRequest(async () => {
+            const stakingAddr = getMostCurrentContract("staking", network).implementationAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: stakingAddr,
+                    constructorArguments: [],
+                });
+                console.log("verified staking contract")
+            })
+        }))
+
+        deploySequence.push("Verifies poolFactory implementation", () => retryableRequest(async () => {
+            const poolFactoryAddress = getMostCurrentContract("poolFactory", network).implementationAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: poolFactoryAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified poolFactory implementation")
+            })
+        }))
+
+        deploySequence.push("Verify Fee Sharing implementation", () => retryableRequest(async () => {
+            const feeSharingImpl = getMostCurrentContract("feeSharing", network).implementationAddress;
+
+            await hre.run("verify:verify", {
+                address: feeSharingImpl,
+                constructorArguments: [],
+            });
+            console.log("verified feeSharing implementation")
+        }))
+
+        deploySequence.push("Verify LendingPool implementation", () => retryableRequest(async () => {
+            const pool = getMostCurrentContract("lendingPoolV1", network).contractAddress;
+
+            await hre.run("verify:verify", {
+                address: pool,
+                constructorArguments: [],
+            });
+            console.log("verified Lending Pool implementation")
         }))
 
         console.log("Select where to begin deployment")
