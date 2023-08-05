@@ -46,5 +46,33 @@ export function getMostCurrentContracts(contractNameToRead: string, network: str
     // Filter deployments by the provided contractNameToRead
     const filteredDeployments = deployments.filter((deployment) => deployment.contractName === contractNameToRead);
 
-    return filteredDeployments;
+    const grouped: { [key: string]: DeploymentInfo[] } = {};
+
+    filteredDeployments.forEach(contract => {
+        if (!grouped[contract.timestamp]) {
+            grouped[contract.timestamp] = [];
+        }
+        grouped[contract.timestamp].push(contract);
+    });
+
+    // Find the max key (timestamp)
+    const maxTimestamp = Math.max(...Object.keys(grouped).map(Number));
+
+    // Return the group with the max key (timestamp)
+    // Filter out duplicate contractAddresses
+    const seenAddresses: { [key: string]: boolean } = {};
+    const uniqueContracts = grouped[maxTimestamp.toString()].filter(member => {
+        if (seenAddresses[member.contractAddress]) {
+            return false;
+        }
+        seenAddresses[member.contractAddress] = true;
+        return true;
+    });
+
+    return uniqueContracts;
 }
+
+
+
+
+

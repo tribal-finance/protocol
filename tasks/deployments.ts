@@ -291,6 +291,8 @@ task("init-protocol", "deploys the lending protocol for production")
             let bytes = ethers.utils.toUtf8Bytes(checksum);
             const expected = ethers.utils.keccak256(bytes)
             console.log("Expected Transactional Checksum: ", expected)
+            console.log("skipping...")
+            return;
             console.log("Generating Actual, This may take a few minutes...") 
             const actualChecksome: string[] = []
             const dataSources = [
@@ -305,10 +307,18 @@ task("init-protocol", "deploys the lending protocol for production")
                 "trancheVaultV1-clonable"
             ]
 
+            const sourceAddresses: string[] = []
             dataSources.forEach(source => {
-                const contract = getMostCurrentContracts(source, network)
-                console.log(contract)
+                const contracts = getMostCurrentContracts(source, network)
+                for(let i = 0; i < contracts.length; i++) {
+                    sourceAddresses.push(contracts[i].contractAddress)
+                }
             })
+
+            for(let i = 0; i <sourceAddresses.length; i++) {
+                const transactionCount = await ethers.provider.getTransactionCount(sourceAddresses[i], 'latest');
+
+            }
         }))
 
         deploySequence.push("Verifies the empty token", () => retryableRequest(async () => {

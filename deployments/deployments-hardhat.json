@@ -106,5 +106,275 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0xe46CE9e0197A23b8940299CCe380568134aD087e",
     "timestamp": 1678261315
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 1678261300
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 1678261303
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 1678261305
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 1678261307
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261309
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
+    "timestamp": 1678261314
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0x1f53E116c31F171e59f45f0752AEc5d1F5aA3714",
+    "timestamp": 1678261315
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x249e96150a51568511aEFBac07Ba971a19caf814",
+    "timestamp": 1678261317
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc5f78dAe4D4eaD52410271170183146b28615F29",
+    "timestamp": 1678261317
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xe46CE9e0197A23b8940299CCe380568134aD087e",
+    "timestamp": 1678261317
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 1678261299
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 1678261302
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 1678261304
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 1678261306
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261308
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
+    "timestamp": 1678261313
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0x1f53E116c31F171e59f45f0752AEc5d1F5aA3714",
+    "timestamp": 1678261314
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x249e96150a51568511aEFBac07Ba971a19caf814",
+    "timestamp": 1678261316
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc5f78dAe4D4eaD52410271170183146b28615F29",
+    "timestamp": 1678261316
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xe46CE9e0197A23b8940299CCe380568134aD087e",
+    "timestamp": 1678261316
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 1678261298
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 1678261301
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 1678261303
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 1678261305
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261307
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
+    "timestamp": 1678261312
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0x1f53E116c31F171e59f45f0752AEc5d1F5aA3714",
+    "timestamp": 1678261313
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x249e96150a51568511aEFBac07Ba971a19caf814",
+    "timestamp": 1678261315
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc5f78dAe4D4eaD52410271170183146b28615F29",
+    "timestamp": 1678261315
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xe46CE9e0197A23b8940299CCe380568134aD087e",
+    "timestamp": 1678261315
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 1678261299
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 1678261302
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 1678261304
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 1678261306
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261308
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
+    "timestamp": 1678261313
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0x1f53E116c31F171e59f45f0752AEc5d1F5aA3714",
+    "timestamp": 1678261314
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x249e96150a51568511aEFBac07Ba971a19caf814",
+    "timestamp": 1678261316
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc5f78dAe4D4eaD52410271170183146b28615F29",
+    "timestamp": 1678261316
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xe46CE9e0197A23b8940299CCe380568134aD087e",
+    "timestamp": 1678261316
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 1678261298
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x47c05BCCA7d57c87083EB4e586007530eE4539e9",
+    "implementationAddress": "0x7bdd3b028c4796ef0eaf07d11394d0d9d8c24139",
+    "timestamp": 1678261301
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 1678261303
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 1678261305
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261307
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0xA9d0Fb5837f9c42c874e16da96094b14Af0e2784",
+    "timestamp": 1678261312
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0x1f53E116c31F171e59f45f0752AEc5d1F5aA3714",
+    "timestamp": 1678261313
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x249e96150a51568511aEFBac07Ba971a19caf814",
+    "timestamp": 1678261315
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc5f78dAe4D4eaD52410271170183146b28615F29",
+    "timestamp": 1678261315
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xe46CE9e0197A23b8940299CCe380568134aD087e",
+    "timestamp": 1678261315
   }
 ]
