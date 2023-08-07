@@ -4,9 +4,39 @@ import {getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile}
 import { getNumber, retryableRequest } from "./utils";
 import { BigNumberish } from "ethers";
 
+task("deploy-empty-token", "deploys the 'no-platform-token'")
+    .setAction(async (args: any, hre) => {
+        const { ethers, upgrades } = hre;
+        const network = hre.network.name;
+
+        await retryableRequest(async () => {
+            const PlatformToken = await ethers.getContractFactory("EmptyToken");
+            const platformToken = await PlatformToken.deploy();
+            await platformToken.deployed();
+            console.log("Deployed Empty Platform Token to", platformToken.address);
+
+            writeToDeploymentsFile({
+                contractName: "platformToken",
+                contractAddress: platformToken.address,
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+            }, network)
+        });
+
+        await retryableRequest(async () => {
+            const platformTokenAddress = getMostCurrentContract("platformToken", network).contractAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: platformTokenAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified empty token")
+            })
+        })
+    })
+
 task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
-    .addParam("disablePlatformToken", "Include this flag in the command to link LendingPool to Empty Token")
     .addParam("foundationAddress", "This is the beneficiary of the fee sharing")
     .addParam("lendingPoolParams", "This is a massive byte string you should generate using `npx hardhat encode-pool-initializer --help`")
     .addParam("feeSharingBeneficiaries", "Sets who recieves awards in feeSharing. Enter param in this format <addr1,addr2,...,addrN>")
@@ -17,12 +47,8 @@ task("init-protocol", "deploys the lending protocol for production")
         const { ethers, upgrades } = hre;
         const {BigNumber} = ethers;
         const {parseEther} = ethers.utils;
-        const { stableCoinAddress, owner, disablePlatformToken, foundationAddress, lendingPoolParams, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad } = args;
+        const { stableCoinAddress, owner, foundationAddress, lendingPoolParams, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad } = args;
         const network = hre.network.name;
-
-        if (!disablePlatformToken) {
-            throw Error("No logic to handle protocol initialization with Tribal platform token. Re-run with --disable-platform-token true")
-        }
 
         if (!ethers.utils.isAddress(stableCoinAddress)) {
             throw Error(`--stable-coin-address is not a vaid address '${stableCoinAddress}'`);
@@ -60,21 +86,6 @@ task("init-protocol", "deploys the lending protocol for production")
 
         const deploySequence = []
         const secureDeploymentChecksum: string[] = []
-
-        deploySequence.push("Deploys the empty token to use as platform token", () => retryableRequest(async () => {
-            const PlatformToken = await ethers.getContractFactory("EmptyToken");
-            const platformToken = await PlatformToken.deploy();
-            await platformToken.deployed();
-            console.log("Deployed Empty Platform Token to", platformToken.address);
-
-            secureDeploymentChecksum.push(platformToken.deployTransaction.data);
-
-            writeToDeploymentsFile({
-                contractName: "platformToken",
-                contractAddress: platformToken.address,
-                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
-            }, network)
-        }));
 
         deploySequence.push("Deploys authority as proxy", () => retryableRequest(async () => {
             const Authority = await ethers.getContractFactory("Authority");
@@ -319,18 +330,6 @@ task("init-protocol", "deploys the lending protocol for production")
                 const transactionCount = await ethers.provider.getTransactionCount(sourceAddresses[i], 'latest');
 
             }
-        }))
-
-        deploySequence.push("Verifies the empty token", () => retryableRequest(async () => {
-            const platformTokenAddress = getMostCurrentContract("platformToken", network).contractAddress;
-
-            await retryableRequest(async () => {
-                await hre.run("verify:verify", {
-                    address: platformTokenAddress,
-                    constructorArguments: [],
-                });
-                console.log("verified empty token")
-            })
         }))
 
         deploySequence.push("Verifies authority implementation", () => retryableRequest(async () => {

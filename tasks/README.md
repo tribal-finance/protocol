@@ -8,7 +8,7 @@ The `npx hardhat init-protocol` is a global command with options that are used t
 
 You can use the following options:
 
-- `--disable-platform-token`: Link LendingPool to Empty Token.
+- `--platform-token`: Link LendingPool to Empty Token or tribal token.
 - `--fee-sharing-beneficiaries`: Set the recipients of awards in feeSharing.
 - `--fee-sharing-beneficiaries-shares-wad`: Set award allocations.
 - `--foundation-address`: The beneficiary of the fee sharing.
@@ -32,9 +32,12 @@ Example:
 
 # Here's what happens at each step of deployment process:
 
-- The encode-pool-deploy-staging.sh script is executed.
+- `npx hardhat clean` is run to ensure fresh deployment artifacts
+- `npx hardhat compile` runs to gen artifacts to make verification easy
+- [Optional] The `deploy-empty-token` is run if no platform token exists
+- The `encode-pool-deploy-staging.sh` script is executed passing the platform token address.
 - A long byte string (msg.data) is generated as a result.
-- User then may run `npx hardhat init-protocol` to meet msg.data gen requirment
+- User then may run `npx hardhat init-protocol` passing encoded params to meet msg.data gen requirment
 - The user is prompted to confirm the use of an Ethereum address at a certain amount of ether on a specific chain as the deployer.
 - The user is asked to select where to begin deployment from a list of options, which include deploying various aspects of the protocol, such as the empty token, the authority proxy, and more.
 - The deployment process begins from the chosen starting point. Addresses are provided for each deployed contract.
