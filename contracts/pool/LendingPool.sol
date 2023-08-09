@@ -260,6 +260,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
             _authorityAddress
         );
 
+        PoolCalculations.validateWad(params.trancheCoveragesWads);
+
         name = params.name;
         token = params.token;
         stableCoinContractAddress = params.stableCoinContractAddress;
