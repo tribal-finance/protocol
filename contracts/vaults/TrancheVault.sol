@@ -267,7 +267,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         }
     }
 
-    function executeRolloverAndBurn(address lender, uint256 rewards) external returns (uint256) {
+    function executeRolloverAndBurn(address lender, uint256 rewards) external onlyPool returns (uint256) {
         TrancheVault newTranche = TrancheVault(_msgSender());
         uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
