@@ -37,6 +37,10 @@ contract Authority is OwnableUpgradeable, IAuthority {
         __Ownable_init();
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice adds borrower address to the whitelist.
      * @param a address to add to the whitelist
