@@ -311,7 +311,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
-    function adminOpenPool() external onlyWhitelisted atStage(Stages.FLC_DEPOSITED) {
+    function adminOpenPool() external onlyOwnerOrAdmin atStage(Stages.FLC_DEPOSITED) {
         openedAt = uint64(block.timestamp);
         currentStage = Stages.OPEN;
 
