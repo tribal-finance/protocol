@@ -80,6 +80,12 @@ contract PoolFactory is AuthorityAware {
         LendingPool.LendingPoolParams calldata params,
         uint[] calldata fundingSplitWads
     ) external onlyOwner returns (address) {
+        // validate wad
+        uint256 wad;
+        for(uint256 i = 0; i < fundingSplitWads.length; i++) {
+            wad += fundingSplitWads[i];
+        }
+        require(wad == 1e18, "LP024 - bad wad");
         address poolAddress = _clonePool();
 
         address[] memory trancheVaultAddresses = _deployTrancheVaults(
