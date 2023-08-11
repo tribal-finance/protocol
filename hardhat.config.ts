@@ -16,6 +16,7 @@ dotenv.config({ path: `./.env.shared` });
 
 import "./tasks/deployments"
 import "./tasks/functions"
+import "./tasks/state-machine"
 
 const config: HardhatUserConfig = {
   solidity: {

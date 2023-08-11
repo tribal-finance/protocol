@@ -44,17 +44,17 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     }
 
     enum Stages {
-        INITIAL,
-        OPEN,
-        FUNDED,
-        FUNDING_FAILED,
-        FLC_DEPOSITED,
-        BORROWED,
-        BORROWER_INTEREST_REPAID,
-        DELINQUENT,
-        REPAID,
-        DEFAULTED,
-        FLC_WITHDRAWN
+        INITIAL,                    // 0
+        OPEN,                       // 1
+        FUNDED,                     // 2
+        FUNDING_FAILED,             // 3
+        FLC_DEPOSITED,              // 4
+        BORROWED,                   // 5
+        BORROWER_INTEREST_REPAID,   // 6
+        DELINQUENT,                 // 7
+        REPAID,                     // 8
+        DEFAULTED,                  // 9
+        FLC_WITHDRAWN               // 10
     }
 
     struct LendingPoolParams {
