@@ -1,7 +1,7 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
 import {getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile} from "./io";
-import { getNumber, retryableRequest } from "./utils";
+import { getNumber, processLendingPoolParams, retryableRequest } from "./utils";
 import { BigNumberish } from "ethers";
 
 task("deploy-empty-token", "deploys the 'no-platform-token'")
@@ -255,34 +255,7 @@ task("init-protocol", "deploys the lending protocol for production")
         deploySequence.push("Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
-            const tx = await signers[0].sendTransaction({
-                to: factory.address,
-                data: lendingPoolParams
-            })
-            secureDeploymentChecksum.push(tx.data);
-
-            const receipt = await tx.wait();
-            const timestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp
-
-            receipt.logs.forEach(log => {
-                try {
-                    const parsedLog = factory.interface.parseLog(log);
-                    if (parsedLog.name === 'TrancheVaultCloned') {
-                        writeToDeploymentsFile({
-                            contractName: "trancheVaultV1",
-                            contractAddress: parsedLog.args.addr,
-                            timestamp: timestamp
-                        }, network)
-                    }
-                    if(parsedLog.name === 'PoolCloned') {
-                        writeToDeploymentsFile({
-                            contractName: "lendingPoolV1",
-                            contractAddress: parsedLog.args.addr,
-                            timestamp: timestamp
-                        }, network)
-                    }
-                } catch (error) {}
-            });
+            await processLendingPoolParams(ethers, factory, lendingPoolParams, network);
         }))
 
         deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {

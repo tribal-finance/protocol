@@ -16,3 +16,6 @@ export default STAGES;
 
 const flipped = Object.entries(STAGES).map(([key, value]) => [value, key]);
 export const STAGES_LOOKUP = Object.fromEntries(flipped);
+
+const stringify = Object.entries(STAGES).map(([key, value]) => [key.toString(), value.toString()]);
+export const STAGES_LOOKUP_STR = Object.fromEntries(stringify);
