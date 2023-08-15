@@ -34,11 +34,9 @@ contract PoolFactory is AuthorityAware {
 
     address public feeSharingContractAddress;
 
-
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
     mapping(address => bool) public prevDeployedTranche;
-
 
     function initialize(address _authority) public initializer {
         __Ownable_init();
