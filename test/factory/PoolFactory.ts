@@ -8,6 +8,7 @@ import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import { PoolFactory } from "../../typechain-types";
 import { USDC, WAD } from "../helpers/conversion";
 import {
+  DEFAULT_LENDING_POOL_PARAMS,
   deployDuotranchePool,
   deployFactoryAndImplementations,
   deployUnitranchePool,
@@ -125,6 +126,16 @@ describe("PoolFactory", function () {
       admin = setupData.deployer
       addr1 = setupData.borrower
       poolFactory = setupData.poolFactory
+    })
+
+    it('should fail to deploy pool if lender is not whitelisted', async () => {
+
+      const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+
+      const lendingPoolParams = { ...defaultParams, borrowerAddress: ((await ethers.getSigners())[10]).address };
+
+      await expect(poolFactory.deployPool(lendingPoolParams, [WAD(1)])).to.be.revertedWith("LP023");
+
     })
 
     it('should not allow unauthorized address to clear pool records', async function () {
