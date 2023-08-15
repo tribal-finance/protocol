@@ -128,7 +128,7 @@ describe("PoolFactory", function () {
       poolFactory = setupData.poolFactory
     })
 
-    it('should fail to deploy pool if lender is not whitelisted', async () => {
+    it('should fail to deploy pool if borrower is not whitelisted', async () => {
 
       const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
 
