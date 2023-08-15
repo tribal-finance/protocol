@@ -278,7 +278,7 @@ library PoolCalculations {
         for(uint256 i = 0; i < ints.length; i++) {
             sum += ints[i];
         }
-        require(sum == 1e18, "LP024 - bad wad");
+        require(sum <= 1e18, "LP024 - bad wad");
     }
 
     function setInitializer(
