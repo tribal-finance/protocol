@@ -24,7 +24,7 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 
-describe.only("Full cycle sequential test in a fail state", function () {
+describe("Full cycle sequential test in a fail state", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -157,16 +157,17 @@ describe.only("Full cycle sequential test in a fail state", function () {
 
     it("borrower can't withdraw first loss capital", async () => {
       const balanceInitial = await usdc.balanceOf(await borrower.getAddress());
-      const tx = lendingPool.connect(borrower).borrowerRecoverFirstLossCapital();
-      await expect(tx).to.be.rejectedWith("LP004")
+      const tx = lendingPool
+        .connect(borrower)
+        .borrowerRecoverFirstLossCapital();
+      await expect(tx).to.be.rejectedWith("LP004");
       const balanceFinal = await usdc.balanceOf(await borrower.getAddress());
-      expect(balanceFinal.sub(balanceInitial)).equals(0)
-    })
+      expect(balanceFinal.sub(balanceInitial)).equals(0);
+    });
 
     it("gets adminTransitionToFundedState() call from deployer", () => {
       lendingPool.connect(deployer).adminTransitionToFundedState();
     });
-
 
     it("transitions to the FUNDED_FAILED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FUNDING_FAILED);
@@ -178,7 +179,7 @@ describe.only("Full cycle sequential test in a fail state", function () {
       const balanceFinal = await usdc.balanceOf(await borrower.getAddress());
       const delta = balanceFinal.sub(balanceInitial);
       expect(delta).equals(ethers.utils.parseUnits("2000", 6));
-    })
+    });
 
     it("borrower cannot keep withdrawing first loss capital", async () => {
       const balanceInitial = await usdc.balanceOf(await borrower.getAddress());
@@ -186,7 +187,7 @@ describe.only("Full cycle sequential test in a fail state", function () {
       const balanceFinal = await usdc.balanceOf(await borrower.getAddress());
       const delta = balanceFinal.sub(balanceInitial);
       expect(delta).equals(ethers.utils.parseUnits("0", 6));
-    })
+    });
 
     it("borrower cannot keep withdrawing first loss capital", async () => {
       const balanceInitial = await usdc.balanceOf(await borrower.getAddress());
@@ -194,6 +195,6 @@ describe.only("Full cycle sequential test in a fail state", function () {
       const balanceFinal = await usdc.balanceOf(await borrower.getAddress());
       const delta = balanceFinal.sub(balanceInitial);
       expect(delta).equals(ethers.utils.parseUnits("0", 6));
-    })
+    });
   });
 });
