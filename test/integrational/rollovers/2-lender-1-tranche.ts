@@ -345,22 +345,16 @@ describe("Rollovers (2 Lender)", function () {
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
         const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
+        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(false);
+
         await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
+        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(true);
 
         nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
 
-        console.log(futureLenders);
-        console.log(futureTranches);
-
-        console.log("nextPoolAddr", nextPoolAddr)
-
         expect(nextPoolAddr).hexEqual(futureLenders[0]);
 
-        console.log("tranche count", await nextLendingPool.tranchesCount());
-
         const nextTrancheAddr = await nextLendingPool.trancheVaultAddresses(0);
-
-        console.log("nextTrancheAddr", nextTrancheAddr);
 
         expect(nextTrancheAddr).hexEqual(futureTranches[0]);
 

@@ -703,6 +703,13 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, collectedAssets);
     }
 
+    /** @notice Lets the borrower withdraw first loss deposit in the event of funding failed */
+    function borrowerRecoverFirstLossCapital() external atStage(Stages.FUNDING_FAILED) {
+        uint256 copyFirstLossAssets = firstLossAssets;
+        firstLossAssets = 0;
+        SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, copyFirstLossAssets);
+    }
+
     /** @notice Make an interest payment.
      *  If the pool is delinquent, the minimum payment is penalty + whatever interest that needs to be paid to bring the pool back to healthy state
      */
