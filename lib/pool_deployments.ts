@@ -52,7 +52,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   trancheBoostRatios: [ethers.utils.parseUnits("2", 12)],
   trancheCoveragesWads: [WAD(1)],
 };
-export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.8), WAD(0.2)];
+export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [[WAD(0.8), WAD(0.75)], [WAD(0.2), WAD(0.15)]];
 
 export async function deployPlatformToken(
   deployer: Signer,
@@ -223,7 +223,7 @@ export async function deployUnitranchePool(
     ...poolInitParamsOverrides,
   };
 
-  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
+  const tx = await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(.95)]]);
   await tx.wait();
 
   console.log("Deployed Unitranche Pool");
