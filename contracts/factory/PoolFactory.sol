@@ -91,7 +91,7 @@ contract PoolFactory is AuthorityAware {
         }
         require(wadMax == 1e18, "LP024 - bad max wad");
         require(wadMin <= 1e18, "LP027 - bad min wad");
-        
+
         address poolAddress = _clonePool();
 
         address[] memory trancheVaultAddresses = _deployTrancheVaults(
@@ -153,8 +153,8 @@ contract PoolFactory is AuthorityAware {
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
-                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], WAD),
                 params.minFundingCapacity.mulDiv(fundingSplitWads[i][1], WAD),
+                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], WAD),
                 string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
                 string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
                 params.stableCoinContractAddress,
