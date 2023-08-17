@@ -65,7 +65,7 @@ describe("PoolFactory", function () {
       it("sets minFundingCapacity to pool.minFundingCapacity", async () => {
         let { firstTrancheVault } = await loadFixture(uniPoolFixture);
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
-          USDC(10000)
+          USDC(9500)
         );
       });
 
@@ -99,7 +99,7 @@ describe("PoolFactory", function () {
       it("sets minFundingCapacity to pool.minFundingCapacity * split", async () => {
         let { firstTrancheVault } = await loadFixture(duoPoolFixture);
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
-          USDC(10000 * 0.8)
+          USDC(10000 * 0.75)
         );
       });
 
