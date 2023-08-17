@@ -137,24 +137,6 @@ describe("TrancheVault contract", function () {
         });
     });
 
-    describe("setMaxFundingCapacity() function tests", () => {
-        it("should fail to set the max funding capacity if the sender is not the owner", async () => {
-            await expect(trancheVault.connect(nonOwner).setMaxFundingCapacity(2000)).to.be.revertedWith(
-                "Ownable: caller is not the owner"
-            );
-        });
-
-        it("should successfully set the max funding capacity", async () => {
-            const targetCapacity = 2000;
-            let maxFundingCapacity = await trancheVault.maxFundingCapacity();
-            expect(maxFundingCapacity).to.not.equal(targetCapacity);
-
-            await trancheVault.connect(owner).setMaxFundingCapacity(2000);
-            maxFundingCapacity = await trancheVault.maxFundingCapacity();
-            expect(maxFundingCapacity).to.equal(2000);
-        });
-    });
-
     describe("pause() and unpause() function tests", () => {
         it("should fail to pause if the sender is not the owner or admin", async () => {
             await expect(trancheVault.connect(nonOwner).pause()).to.be.revertedWith("AA:OA");
