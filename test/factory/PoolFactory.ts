@@ -118,6 +118,7 @@ describe("PoolFactory", function () {
     let poolFactory: Contract;
     let admin: Signer;
     let addr1: Signer;
+    let borrower: Signer;
 
     beforeEach(async () => {
       const setupData = await loadFixture(
@@ -125,6 +126,7 @@ describe("PoolFactory", function () {
       );
       admin = setupData.deployer
       addr1 = setupData.borrower
+      borrower = setupData.borrower;
       poolFactory = setupData.poolFactory
     })
 
@@ -134,7 +136,9 @@ describe("PoolFactory", function () {
 
       const lendingPoolParams = { ...defaultParams, borrowerAddress: ((await ethers.getSigners())[10]).address };
 
-      await expect(poolFactory.deployPool(lendingPoolParams, [WAD(1)])).to.be.revertedWith("LP023");
+      await expect(poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]])).to.be.revertedWith("LP023");
+
+      await expect(poolFactory.deployPool({ ...defaultParams, borrowerAddress: await borrower.getAddress() }, [[WAD(1), WAD(1)]])).to.not.be.reverted;
 
     })
 
