@@ -1,10 +1,26 @@
 import { task } from "hardhat/config";
-import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, isValidTransition } from "../test/helpers/stages";
-import { processLendingPoolParams } from "./utils";
+import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, Transition, findPath, isValidTransition, transitionToString, transitionsToString } from "../test/helpers/stages";
+import { processLendingPoolParams, retryableRequest } from "./utils";
 import { LendingPool, PoolFactory } from "../typechain-types";
 import { getMostCurrentContract } from "./io";
+import { Wallet } from "ethers";
 
-const getTestnetSigners = async (ethers: any) => {
+type Signers = {
+    deployer: any,
+    lender1: any,
+    lender2: any,
+    borrower: any
+};
+
+type TransitionalParams = {
+    ethers: any, 
+    lendingPool: LendingPool, 
+    borrower: Wallet
+}
+
+type TransitionToPromiseMap = { [key in string]: Promise<void> };
+
+const getTestnetSigners = async (ethers: any): Promise<Signers> => {
     const deployerKey = process.env.GOERLI_DEPLOYER_KEY;
     if (!deployerKey) {
         throw new Error('GOERLI_DEPLOYER_KEY is not set in the environment.');
@@ -35,9 +51,13 @@ const getTestnetSigners = async (ethers: any) => {
     }
 }
 
-const moveFromInitialToOpen = async () => {
-
+const moveFromInitialToFLCDeposited = async (params: TransitionalParams): Promise<void> => {
+    const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
+    const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
+    const balanceOf = await stablecoin.balanceOf(params.borrower.address);
+    console.log(balanceOf)
 }
+
 
 
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
@@ -78,17 +98,63 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         const desiredStage = STAGES_LOOKUP_STR[`${stage.toUpperCase()}`];
         const currentStage = parseInt((await lendingPool.currentStage()).toString());
 
-        if(!isValidTransition(currentStage, parseInt(desiredStage))) {
-            throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${STAGES_LOOKUP[desiredStage]}`)
-        }
-
-        console.log(`LendingPool at ${lendingPool.address} will be set to ${desiredStage} from ${STAGES_LOOKUP[currentStage]}`)
-
         if (!desiredStage) {
             throw new Error(`stage: ${stage} is not an element of [${Object.keys(STAGES).map((value, index) => {
                 return (index != 0 ? " " : "") + value.toLowerCase();
             })}]`)
         }
 
+        const path = findPath(currentStage, parseInt(desiredStage));
+        if (!path) {
+            throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${STAGES_LOOKUP[desiredStage]}`)
+        } else {
+            console.log("Found valid path:")
+            console.log(transitionsToString(path));
+        }
 
+        const { deployer, lender1, lender2, borrower } = await getTestnetSigners(ethers);
+
+        const params: TransitionalParams = {
+            ethers,
+            lendingPool,
+            borrower
+        }
+
+        // realize state machine routing data on-chain
+        for(let i = 0; i < path.length; i++) {
+            const t: Transition = path[i];
+            console.log("realizing transition for step", i);
+            if(t[0] === STAGES.INITIAL && t[1] === STAGES.FLC_DEPOSITED) {
+                console.log("executing INITIAL -> FLC_DEPOSITED...")
+                await retryableRequest(() => moveFromInitialToFLCDeposited(params));
+            }
+
+            if(t[0] === STAGES.FLC_DEPOSITED && t[1] === STAGES.OPEN) {
+                console.log("executing FLC_DEPOSITED -> OPEN...")
+            }
+
+            if(t[0] === STAGES.OPEN && t[1] === STAGES.FUNDED) {
+                console.log("executing OPEN -> FUNDED...")
+            }
+
+            if(t[0] === STAGES.OPEN && t[1] === STAGES.FUNDING_FAILED) {
+                console.log("executing OPEN -> FUNDING_FAILED...")
+            }
+
+            if(t[0] === STAGES.BORROWED && t[1] === STAGES.REPAID) {
+                console.log("executing BORROWED -> STAGES...")
+            }
+
+            if(t[0] === STAGES.BORROWED && t[1] === STAGES.DEFAULTED) {
+                console.log("executing BORROWED -> DEFAULTED...")
+            }
+
+            if(t[0] === STAGES.FUNDED && t[1] === STAGES.BORROWED) {
+                console.log("executing FUNDED -> BORROWED...")
+            }
+
+            if(t[0] === STAGES.REPAID && t[1] === STAGES.FLC_WITHDRAWN) {
+                console.log("executing REPAID -> FLC_WITHDRAWN...")
+            }
+        }
     });
