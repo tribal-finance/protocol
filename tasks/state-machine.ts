@@ -3,9 +3,8 @@ import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, isValidTransition } from "../
 import { processLendingPoolParams } from "./utils";
 import { LendingPool, PoolFactory } from "../typechain-types";
 import { getMostCurrentContract } from "./io";
-import { ethers } from "hardhat";
 
-const getTestnetSigners = async () => {
+const getTestnetSigners = async (ethers: any) => {
     const deployerKey = process.env.GOERLI_DEPLOYER_KEY;
     if (!deployerKey) {
         throw new Error('GOERLI_DEPLOYER_KEY is not set in the environment.');
@@ -77,11 +76,10 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
 
         let lendingPool: LendingPool = !poolAddress ? await ethers.getContractAt("LendingPool", getMostCurrentContract("lendingPoolV1", network).contractAddress) : await ethers.getContractAt("LendingPool", poolAddress);
         const desiredStage = STAGES_LOOKUP_STR[`${stage.toUpperCase()}`];
-        const desiredStageAsInt = STAGES[`${desiredStage}`];
         const currentStage = parseInt((await lendingPool.currentStage()).toString());
 
-        if(!isValidTransition(currentStage, desiredStageAsInt)) {
-            throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${desiredStage}`)
+        if(!isValidTransition(currentStage, parseInt(desiredStage))) {
+            throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${STAGES_LOOKUP[desiredStage]}`)
         }
 
         console.log(`LendingPool at ${lendingPool.address} will be set to ${desiredStage} from ${STAGES_LOOKUP[currentStage]}`)
