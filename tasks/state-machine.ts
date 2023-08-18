@@ -5,6 +5,11 @@ import { LendingPool, PoolFactory } from "../typechain-types";
 import { getMostCurrentContract } from "./io";
 
 
+const moveFromInitialToOpen = async () => {
+    
+}
+
+
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
     .addOptionalParam("poolAddress", "The LendingPool's address to set the state, if this param is excluded, a new pool will be deployed")
     .addOptionalParam("lendingPoolParams", "This is a massive byte string you should generate using `npx hardhat encode-pool-initializer --help` it is only required if you need to deploy a new pool")
