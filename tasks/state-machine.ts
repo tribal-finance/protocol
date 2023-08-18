@@ -52,13 +52,17 @@ const getTestnetSigners = async (ethers: any): Promise<Signers> => {
 }
 
 const moveFromInitialToFLCDeposited = async (params: TransitionalParams): Promise<void> => {
+    console.log("LendingPool: ", params.lendingPool.address)
     const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
     const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
     const balanceOf = await stablecoin.balanceOf(params.borrower.address);
-    console.log(balanceOf)
+    const firstloss = await params.lendingPool.firstLossAssets();
+    console.log("borrower", params.borrower.address)
+    console.log("balance of borrower", balanceOf)
+    console.log("requested firstLossDepositSize", firstloss);
+    await stablecoin.connect(params.borrower).approve(params.lendingPool.address, firstloss);
+    await params.lendingPool.connect(params.borrower).borrowerDepositFirstLossCapital();
 }
-
-
 
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
     .addOptionalParam("poolAddress", "The LendingPool's address to set the state, if this param is excluded, a new pool will be deployed")
@@ -142,7 +146,7 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
             }
 
             if(t[0] === STAGES.BORROWED && t[1] === STAGES.REPAID) {
-                console.log("executing BORROWED -> STAGES...")
+                console.log("executing BORROWED -> REPAID...")
             }
 
             if(t[0] === STAGES.BORROWED && t[1] === STAGES.DEFAULTED) {
