@@ -1,7 +1,7 @@
 import { task } from "hardhat/config";
 import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, Transition, findPath, isValidTransition, transitionToString, transitionsToString } from "../test/helpers/stages";
 import { processLendingPoolParams, retryableRequest } from "./utils";
-import { LendingPool, PoolFactory } from "../typechain-types";
+import { Authority, LendingPool, PoolFactory } from "../typechain-types";
 import { getMostCurrentContract } from "./io";
 import { Wallet } from "ethers";
 
@@ -14,7 +14,8 @@ type Signers = {
 
 type TransitionalParams = {
     ethers: any, 
-    lendingPool: LendingPool, 
+    lendingPool: LendingPool,
+    authority: Authority, 
     borrower: Wallet,
     lender1: Wallet,
 }
@@ -75,15 +76,30 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
     const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
     const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
     const balanceOf = await stablecoin.balanceOf(params.lender1.address);
+    const collectedAssets = await params.lendingPool.collectedAssets();
     console.log("lender1", params.lender1.address)
     console.log("balance of lender1", balanceOf)
+    console.log(`collectedAssets ${collectedAssets}, minFundingCapacity ${minFundingCapacity}`);
+    if(collectedAssets.gte(minFundingCapacity)) {
+        await params.lendingPool.adminTransitionToFundedState();
+        return;
+    }
     
     for(let i = 0; i < vaultCount; i++) {
         const Vault = await params.lendingPool.trancheVaultAddresses(i);
         const vault = await params.ethers.getContractAt("TrancheVault", Vault);
         const vMinFunding = await vault.minFundingCapacity();
-        await stablecoin.connect(params.lender1).approve(params.lendingPool.address, vMinFunding);
-        console.log("requested minFundingCapacity", minFundingCapacity);
+        await stablecoin.connect(params.lender1).approve(Vault, vMinFunding);
+        console.log("requested vMinFunding", vMinFunding);
+
+        // MAKE SURE LENDER1 IS WHITELISTED IF THEY ARE NOT ALREADY
+        if(!(await params.authority.isWhitelistedLender(params.lender1.address))) {
+            await params.authority.addLender(params.lender1.address);
+            console.log("whitelisted lender1")
+        } else {
+            console.log("lender1 already whitelisted")
+        }
+
         await vault.connect(params.lender1).deposit(vMinFunding, params.lender1.address);
         const currCap = await params.lendingPool.collectedAssets();
         if(currCap.gte(minFundingCapacity)) {
@@ -94,7 +110,7 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
     if(currCap.gte(minFundingCapacity)) {
         await params.lendingPool.adminTransitionToFundedState();
     } else {
-        throw new Error("Could not set to funded state. needs more deposit")
+        throw new Error(`Could not set to funded state. needs more deposit, collectedAssets ${currCap}, minFundingCapacity ${minFundingCapacity}`)
     }
 }
 
@@ -167,7 +183,8 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
             ethers,
             lendingPool,
             borrower,
-            lender1
+            lender1,
+            authority: await ethers.getContractAt("Authority", await lendingPool.authority())
         }
 
         // realize state machine routing data on-chain
