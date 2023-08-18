@@ -275,6 +275,12 @@ library PoolCalculations {
         require(_authorityAddress != address(0), "LP022"); // "LendingPool: authorityAddress empty"
     }
 
+    function validateWad(uint256[] memory ints) external pure {
+        for(uint256 i = 0; i < ints.length; i++) {
+            require(ints[i] <= 1e18, "LP024 - bad wad");
+        }
+    }
+
     function setInitializer(
         LendingPool.LendingPoolParams calldata params,
         string storage name,
