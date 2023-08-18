@@ -99,7 +99,13 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
 }
 
 const moveFromOpenToFundedFailed = async (params: TransitionalParams): Promise<void> => {
-    
+    const minFundingCapacity = await params.lendingPool.minFundingCapacity();
+    const currCap = await params.lendingPool.collectedAssets();
+    if(currCap.lt(minFundingCapacity)) {
+        await params.lendingPool.adminTransitionToFundedState();
+    } else {
+        throw new Error("Could not set to funded state failed. needs less deposit")
+    }
 }
 
 
@@ -180,10 +186,12 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
 
             if(t[0] === STAGES.OPEN && t[1] === STAGES.FUNDED) {
                 console.log("executing OPEN -> FUNDED...")
+                await retryableRequest(() => moveFromOpenToFunded(params));
             }
 
             if(t[0] === STAGES.OPEN && t[1] === STAGES.FUNDING_FAILED) {
                 console.log("executing OPEN -> FUNDING_FAILED...")
+                await retryableRequest(() => moveFromOpenToFundedFailed(params));
             }
 
             if(t[0] === STAGES.BORROWED && t[1] === STAGES.REPAID) {
