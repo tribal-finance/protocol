@@ -149,6 +149,13 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         _;
     }
 
+    modifier onlyDeadTranche() {
+        LendingPool pool = LendingPool(s_poolAddress);
+        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
+        require(factory.prevDeployedTranche(msg.sender), "Vault: onlyDeadTranche");
+        _;
+    }
+
     modifier onlyOwnerOrPool() {
         require(_msgSender() == poolAddress() || _msgSender() == owner(), "Vault: onlyOwnerOrPool");
         _;
@@ -259,7 +266,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         }
     }
 
-    function executeRolloverAndBurn(address lender, uint256 rewards) external returns (uint256) {
+    function executeRolloverAndBurn(address lender, uint256 rewards) external onlyDeadTranche returns (uint256) {
         TrancheVault newTranche = TrancheVault(_msgSender());
         uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);

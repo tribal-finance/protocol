@@ -311,13 +311,15 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
-    function adminOpenPool() external onlyWhitelisted atStage(Stages.FLC_DEPOSITED) {
+    function adminOpenPool() external onlyOwnerOrAdmin atStage(Stages.FLC_DEPOSITED) {
         openedAt = uint64(block.timestamp);
         currentStage = Stages.OPEN;
 
+        TrancheVault[] memory vaults = trancheVaultContracts();
+
         for (uint i; i < trancheVaultAddresses.length; i++) {
-            trancheVaultContracts()[i].enableDeposits();
-            trancheVaultContracts()[i].enableWithdrawals();
+            vaults[i].enableDeposits();
+            vaults[i].enableWithdrawals();
         }
 
         emit PoolOpen(openedAt);
@@ -343,8 +345,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         fundedAt = uint64(block.timestamp);
         currentStage = Stages.FUNDED;
 
-        for (uint i; i < trancheVaultContracts().length; i++) {
-            TrancheVault tv = trancheVaultContracts()[i];
+        TrancheVault[] memory vaults = trancheVaultContracts();
+
+        for (uint i; i < vaults.length; i++) {
+            TrancheVault tv = vaults[i];
             tv.disableDeposits();
             tv.disableWithdrawals();
             tv.sendAssetsToPool(tv.totalAssets());
@@ -356,10 +360,12 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function _transitionToFundingFailedStage() internal {
         fundingFailedAt = uint64(block.timestamp);
         currentStage = Stages.FUNDING_FAILED;
+        
+        TrancheVault[] memory vaults = trancheVaultContracts();
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
-            trancheVaultContracts()[i].disableDeposits();
-            trancheVaultContracts()[i].enableWithdrawals();
+            vaults[i].disableDeposits();
+            vaults[i].enableWithdrawals();
         }
         emit PoolFundingFailed(fundingFailedAt);
     }
@@ -401,9 +407,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     }
 
     function _claimInterestForAllLenders() internal {
+        TrancheVault[] memory vaults = trancheVaultContracts();
+
         for (uint8 i; i < tranchesCount; i++) {
             for (uint j; j < lenderCount(); j++) {
-                _claimTrancheInterestForLender(lendersAt(j), trancheVaultContracts()[i].id());
+                _claimTrancheInterestForLender(lendersAt(j), vaults[i].id());
             }
         }
     }
@@ -419,9 +427,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         // TODO: update repaid interest to be the total interest paid to lenders
         // TODO: should the protocol fees be paid in event of default
         uint availableAssets = _stableCoinContract().balanceOf(address(this));
+        TrancheVault[] memory vaults = trancheVaultContracts();
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
-            TrancheVault tv = trancheVaultContracts()[i];
+            TrancheVault tv = vaults[i];
             uint assetsToSend = (trancheCoveragesWads[i] * availableAssets) / WAD;
             uint trancheDefaultRatioWad = (assetsToSend * WAD) / tv.totalAssets();
 
@@ -702,6 +711,13 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, collectedAssets);
     }
 
+    /** @notice Lets the borrower withdraw first loss deposit in the event of funding failed */
+    function borrowerRecoverFirstLossCapital() external atStage(Stages.FUNDING_FAILED) {
+        uint256 copyFirstLossAssets = firstLossAssets;
+        firstLossAssets = 0;
+        SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, copyFirstLossAssets);
+    }
+
     /** @notice Make an interest payment.
      *  If the pool is delinquent, the minimum payment is penalty + whatever interest that needs to be paid to bring the pool back to healthy state
      */
@@ -746,10 +762,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         require(borrowerPenaltyAmount() == 0, "LP204"); // "LendingPool: penalty must be paid before repaying principal"
 
         _transitionToPrincipalRepaidStage(borrowedAssets);
+        TrancheVault[] memory vaults = trancheVaultContracts();
 
         SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), borrowedAssets);
         for (uint i; i < tranchesCount; ++i) {
-            TrancheVault tv = trancheVaultContracts()[i];
+            TrancheVault tv = vaults[i];
             SafeERC20.safeTransfer(_stableCoinContract(), address(tv), tv.totalAssets());
             tv.enableWithdrawals();
         }
@@ -880,7 +897,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
        HELPERS
     ///////////////////////////////////*/
 
-    function trancheVaultContracts() internal view returns (TrancheVault[] memory contracts) {
+    function trancheVaultContracts() internal view returns (TrancheVault[] memory) {
         return PoolCalculations.trancheVaultContracts(this);
     }
 
