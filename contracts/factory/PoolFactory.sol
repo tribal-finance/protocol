@@ -43,6 +43,10 @@ contract PoolFactory is AuthorityAware {
         __AuthorityAware__init(_authority);
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice it should be expressed that updating implemetation will make nonces at prior implementation stale
     /// @dev sets implementation for future pool deployments
     function setPoolImplementation(address implementation) external onlyOwnerOrAdmin {
