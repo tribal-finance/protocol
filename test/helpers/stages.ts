@@ -1,4 +1,4 @@
-const STAGES = {
+const STAGES:  { [key: string]: number } = {
   INITIAL: 0,
   OPEN: 1,
   FUNDED: 2,
@@ -18,4 +18,4 @@ const flipped = Object.entries(STAGES).map(([key, value]) => [value, key]);
 export const STAGES_LOOKUP = Object.fromEntries(flipped);
 
 const stringify = Object.entries(STAGES).map(([key, value]) => [key.toString(), value.toString()]);
-export const STAGES_LOOKUP_STR = Object.fromEntries(stringify);
+export const STAGES_LOOKUP_STR:  { [key: string]: string }  = Object.fromEntries(stringify);
