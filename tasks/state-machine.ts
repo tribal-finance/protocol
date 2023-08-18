@@ -15,7 +15,8 @@ type Signers = {
 type TransitionalParams = {
     ethers: any, 
     lendingPool: LendingPool, 
-    borrower: Wallet
+    borrower: Wallet,
+    lender1: Wallet,
 }
 
 type TransitionToPromiseMap = { [key in string]: Promise<void> };
@@ -63,6 +64,44 @@ const moveFromInitialToFLCDeposited = async (params: TransitionalParams): Promis
     await stablecoin.connect(params.borrower).approve(params.lendingPool.address, firstloss);
     await params.lendingPool.connect(params.borrower).borrowerDepositFirstLossCapital();
 }
+
+const moveFromFLCDepositedToOpen = async (params: TransitionalParams): Promise<void> => {
+    await params.lendingPool.adminOpenPool();
+}
+
+const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> => {
+    const minFundingCapacity = await params.lendingPool.minFundingCapacity();
+    const vaultCount = await params.lendingPool.tranchesCount();
+    const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
+    const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
+    const balanceOf = await stablecoin.balanceOf(params.lender1.address);
+    console.log("lender1", params.lender1.address)
+    console.log("balance of lender1", balanceOf)
+    
+    for(let i = 0; i < vaultCount; i++) {
+        const Vault = await params.lendingPool.trancheVaultAddresses(i);
+        const vault = await params.ethers.getContractAt("TrancheVault", Vault);
+        const vMinFunding = await vault.minFundingCapacity();
+        await stablecoin.connect(params.lender1).approve(params.lendingPool.address, vMinFunding);
+        console.log("requested minFundingCapacity", minFundingCapacity);
+        await vault.connect(params.lender1).deposit(vMinFunding, params.lender1.address);
+        const currCap = await params.lendingPool.collectedAssets();
+        if(currCap.gte(minFundingCapacity)) {
+            break;
+        }
+    }
+    const currCap = await params.lendingPool.collectedAssets();
+    if(currCap.gte(minFundingCapacity)) {
+        await params.lendingPool.adminTransitionToFundedState();
+    } else {
+        throw new Error("Could not set to funded state. needs more deposit")
+    }
+}
+
+const moveFromOpenToFundedFailed = async (params: TransitionalParams): Promise<void> => {
+    
+}
+
 
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
     .addOptionalParam("poolAddress", "The LendingPool's address to set the state, if this param is excluded, a new pool will be deployed")
@@ -121,7 +160,8 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         const params: TransitionalParams = {
             ethers,
             lendingPool,
-            borrower
+            borrower,
+            lender1
         }
 
         // realize state machine routing data on-chain
@@ -135,6 +175,7 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
 
             if(t[0] === STAGES.FLC_DEPOSITED && t[1] === STAGES.OPEN) {
                 console.log("executing FLC_DEPOSITED -> OPEN...")
+                await retryableRequest(() => moveFromFLCDepositedToOpen(params));
             }
 
             if(t[0] === STAGES.OPEN && t[1] === STAGES.FUNDED) {
