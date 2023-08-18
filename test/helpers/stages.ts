@@ -12,6 +12,17 @@ const STAGES:  { [key: string]: number } = {
   FLC_WITHDRAWN: 10,
 };
 
+const STATE_MACHINE = [
+  [0, 4],
+  [4, 1],
+  [1, 2],
+  [1, 3],
+  [2, 5],
+  [5, 8],
+  [8, 10],
+  [5, 9]
+]
+
 export default STAGES;
 
 const flipped = Object.entries(STAGES).map(([key, value]) => [value, key]);
