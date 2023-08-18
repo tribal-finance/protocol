@@ -12,7 +12,7 @@ const STAGES:  { [key: string]: number } = {
   FLC_WITHDRAWN: 10,
 };
 
-const STATE_MACHINE = [
+export const STATE_MACHINE: number[][] = [
   [0, 4],
   [4, 1],
   [1, 2],
@@ -21,7 +21,11 @@ const STATE_MACHINE = [
   [5, 8],
   [8, 10],
   [5, 9]
-]
+];
+
+export function isValidTransition(state1: number, state2: number): boolean {
+  return STATE_MACHINE.some(transition => transition[0] === state1 && transition[1] === state2);
+}
 
 export default STAGES;
 

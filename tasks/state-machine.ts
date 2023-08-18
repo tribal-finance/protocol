@@ -1,5 +1,5 @@
 import { task } from "hardhat/config";
-import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR } from "../test/helpers/stages";
+import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, isValidTransition } from "../test/helpers/stages";
 import { processLendingPoolParams } from "./utils";
 import { LendingPool, PoolFactory } from "../typechain-types";
 import { getMostCurrentContract } from "./io";
@@ -79,6 +79,10 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         const desiredStage = STAGES_LOOKUP_STR[`${stage.toUpperCase()}`];
         const desiredStageAsInt = STAGES[`${desiredStage}`];
         const currentStage = parseInt((await lendingPool.currentStage()).toString());
+
+        if(!isValidTransition(currentStage, desiredStageAsInt)) {
+            throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${desiredStage}`)
+        }
 
         console.log(`LendingPool at ${lendingPool.address} will be set to ${desiredStage} from ${STAGES_LOOKUP[currentStage]}`)
 
