@@ -1,6 +1,6 @@
 import { expect } from "chai";
 
-import { ethers, waffle } from "hardhat";
+import { ethers, upgrades, waffle } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
@@ -18,21 +18,22 @@ async function deployFeeSharingStandaloneFixture(useWaffleProvider=false) {
 
     const [owner, dev, otherBeneficiary] = useWaffleProvider ? new MockProvider().getWallets() : await ethers.getSigners();
 
-    const feeSharing = await deployContract(owner, FeeSharing)
-
+    
     const mockAuthority = await deployMockContract(owner, Authority.abi);
     const mockAssetContract = await deployMockContract(owner, ERC20.abi);
     const mockStakingContract = await deployMockContract(owner, Staking.abi);
-
+    
     const beneficiaries = [mockStakingContract.address, otherBeneficiary.address];
-
-    const wad = await feeSharing.WAD();
-
+    
+    const wad = ethers.utils.parseEther("1");
+    
     expect(wad).equals(ethers.utils.parseUnits("1", 18))
-
+    
     const shares = [wad.div(2), wad.div(2)]; // 50% each for this example
-
-    await feeSharing.initialize(mockAuthority.address, mockAssetContract.address, beneficiaries, shares);
+    
+    const feeSharing = await upgrades.deployProxy(await ethers.getContractFactory("FeeSharing"), 
+    [mockAuthority.address, mockAssetContract.address, beneficiaries, shares],
+    { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
 
     return {
         feeSharing, dev, beneficiaries, shares, wad, otherBeneficiary, mockAssetContract, owner, mockAuthority, mockStakingContract

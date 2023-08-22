@@ -1,5 +1,5 @@
 // test/Authority.test.ts
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { Signer, Contract } from "ethers";
 import { expect } from "chai";
 
@@ -15,10 +15,8 @@ describe("Authority", function () {
 
   beforeEach(async function () {
     [owner, borrower1, borrower2, lender1, lender2, admin1, admin2] =await ethers.getSigners();
-    const AuthorityFactory = await ethers.getContractFactory("Authority");
-    authority = await AuthorityFactory.deploy();
-    await authority.deployed();
-    await authority.initialize();
+    const AuthorityProxy = await upgrades.deployProxy(await ethers.getContractFactory("Authority"), [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+    authority = await ethers.getContractAt("Authority", AuthorityProxy.address);
     await authority.connect(owner).addAdmin(await admin1.getAddress());
   });
 

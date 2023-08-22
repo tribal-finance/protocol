@@ -157,6 +157,13 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         _;
     }
 
+    modifier onlyDeadTranche() {
+        LendingPool pool = LendingPool(s_poolAddress);
+        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
+        require(factory.prevDeployedTranche(msg.sender), "Vault: onlyDeadTranche");
+        _;
+    }
+
     modifier onlyOwnerOrPool() {
         require(_msgSender() == poolAddress() || _msgSender() == owner(), "Vault: onlyOwnerOrPool");
         _;
@@ -251,7 +258,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     /** @dev called by the pool in order to send assets*/
-    function sendAssetsToPool(uint assets) external onlyPool {
+    function sendAssetsToPool(uint assets) external onlyPool whenNotPaused {
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
@@ -267,7 +274,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         }
     }
 
-    function executeRolloverAndBurn(address lender, uint256 rewards) external returns (uint256) {
+    function executeRolloverAndBurn(address lender, uint256 rewards) external onlyDeadTranche whenNotPaused returns (uint256) {
         TrancheVault newTranche = TrancheVault(_msgSender());
         uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
@@ -398,7 +405,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         return _initialConvertToAssets(shares, rounding); // 1:1
     }
 
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal whenNotPaused override {
         // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
         // calls the vault, which is assumed not malicious.
@@ -422,7 +429,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         address owner,
         uint256 assets,
         uint256 shares
-    ) internal override {
+    ) internal override whenNotPaused {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }

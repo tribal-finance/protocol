@@ -36,11 +36,15 @@ contract PoolFactory is AuthorityAware {
 
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
-
+    mapping(address => bool) public prevDeployedTranche;
 
     function initialize(address _authority) public initializer {
         __Ownable_init();
         __AuthorityAware__init(_authority);
+    }
+
+    constructor() {
+        _disableInitializers();
     }
 
     /// @notice it should be expressed that updating implemetation will make nonces at prior implementation stale
@@ -137,6 +141,7 @@ contract PoolFactory is AuthorityAware {
             trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
 
             emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
+            prevDeployedTranche[trancheVaultAddresses[i]] = true;
 
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,

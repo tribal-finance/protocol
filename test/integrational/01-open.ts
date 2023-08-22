@@ -109,7 +109,7 @@ describe("When Pool moves to Open state", function () {
       const { lendingPool } = await loadFixture(uniPoolFixture);
       const signer = (await ethers.getSigners())[10];
       expect(await signer.getAddress()).to.not.hexEqual(await lendingPool.owner());
-      await expect(lendingPool.connect(signer).adminOpenPool()).to.be.revertedWith("AA:W");
+      await expect(lendingPool.connect(signer).adminOpenPool()).to.be.revertedWith("AA:OA");
     });
 
     describe("Tranche vault", async () => {

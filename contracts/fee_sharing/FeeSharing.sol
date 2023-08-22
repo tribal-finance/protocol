@@ -40,6 +40,10 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
         updateBenificiariesAndShares(_beneficiaries, _beneficiariesSharesWad);
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /** @notice update the beneficiaries and their shares
      *  IMPORTANT: the assumption is that the first beneficiary is the staking contract
      */
