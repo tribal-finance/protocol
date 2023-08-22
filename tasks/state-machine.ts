@@ -63,12 +63,14 @@ const moveFromInitialToFLCDeposited = async (params: TransitionalParams): Promis
     console.log("borrower", params.borrower.address)
     console.log("balance of borrower", balanceOf)
     console.log("requested firstLossDepositSize", firstloss);
-    await stablecoin.connect(params.borrower).approve(params.lendingPool.address, firstloss);
-    await params.lendingPool.connect(params.borrower).borrowerDepositFirstLossCapital();
+    let tx = await stablecoin.connect(params.borrower).approve(params.lendingPool.address, firstloss);
+    await tx.wait();
+    tx = await params.lendingPool.connect(params.borrower).borrowerDepositFirstLossCapital();
+    await tx.wait();
 }
 
 const moveFromFLCDepositedToOpen = async (params: TransitionalParams): Promise<void> => {
-    await params.lendingPool.adminOpenPool();
+    await (await params.lendingPool.adminOpenPool()).wait();
 }
 
 const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> => {
@@ -82,7 +84,7 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
     console.log("balance of lender1", balanceOf)
     console.log(`collectedAssets ${collectedAssets}, minFundingCapacity ${minFundingCapacity}`);
     if(collectedAssets.gte(minFundingCapacity)) {
-        await params.lendingPool.adminTransitionToFundedState();
+        await (await params.lendingPool.adminTransitionToFundedState()).wait();
         return;
     }
     
@@ -90,18 +92,18 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
         const Vault = await params.lendingPool.trancheVaultAddresses(i);
         const vault = await params.ethers.getContractAt("TrancheVault", Vault);
         const vMinFunding = await vault.minFundingCapacity();
-        await stablecoin.connect(params.lender1).approve(Vault, vMinFunding);
+        await (await stablecoin.connect(params.lender1).approve(Vault, vMinFunding)).wait();
         console.log("requested vMinFunding", vMinFunding);
 
         // MAKE SURE LENDER1 IS WHITELISTED IF THEY ARE NOT ALREADY
         if(!(await params.authority.isWhitelistedLender(params.lender1.address))) {
-            await params.authority.addLender(params.lender1.address);
+            await (await params.authority.addLender(params.lender1.address)).wait();
             console.log("whitelisted lender1")
         } else {
             console.log("lender1 already whitelisted")
         }
 
-        await vault.connect(params.lender1).deposit(vMinFunding, params.lender1.address);
+        await (await vault.connect(params.lender1).deposit(vMinFunding, params.lender1.address)).wait();
         const currCap = await params.lendingPool.collectedAssets();
         if(currCap.gte(minFundingCapacity)) {
             break;
@@ -109,7 +111,7 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
     }
     const currCap = await params.lendingPool.collectedAssets();
     if(currCap.gte(minFundingCapacity)) {
-        await params.lendingPool.adminTransitionToFundedState();
+        await (await params.lendingPool.adminTransitionToFundedState()).wait();
     } else {
         throw new Error(`Could not set to funded state. needs more deposit, collectedAssets ${currCap}, minFundingCapacity ${minFundingCapacity}`)
     }
@@ -119,14 +121,14 @@ const moveFromOpenToFundedFailed = async (params: TransitionalParams): Promise<v
     const minFundingCapacity = await params.lendingPool.minFundingCapacity();
     const currCap = await params.lendingPool.collectedAssets();
     if(currCap.lt(minFundingCapacity)) {
-        await params.lendingPool.adminTransitionToFundedState();
+        await (await (params.lendingPool.adminTransitionToFundedState())).wait();
     } else {
         throw new Error("Could not set to funded state failed. needs less deposit")
     }
 }
 
 const moveFromFundedToBorrowed = async(params: TransitionalParams): Promise<void> => {
-    await params.lendingPool.connect(params.borrower).borrow();
+    await (await params.lendingPool.connect(params.borrower).borrow()).wait();
 }
 
 const moveFromBorrowedToRepaid = async(params: TransitionalParams): Promise<void> => {
@@ -137,14 +139,13 @@ const moveFromBorrowedToRepaid = async(params: TransitionalParams): Promise<void
     console.log("Borrower penalty: ", penalty);
     console.log("Outstanding Interest", outstandingInterest);
     if(!outstandingInterest.eq(0)) {
-        await stablecoin.connect(params.borrower).approve(params.lendingPool.address, outstandingInterest);
-        await params.lendingPool.connect(params.borrower).borrowerPayInterest(outstandingInterest);
+        await (await stablecoin.connect(params.borrower).approve(params.lendingPool.address, outstandingInterest)).wait();
+        await (await params.lendingPool.connect(params.borrower).borrowerPayInterest(outstandingInterest)).wait();
     }
-    await stablecoin.connect(params.borrower).approve(params.lendingPool.address, await params.lendingPool.borrowedAssets());
-    await params.lendingPool.connect(params.borrower).borrowerRepayPrincipal();
- 
+    
     if(penalty.eq(0) && outstandingInterest.eq(0)) {
-        await params.lendingPool.connect(params.borrower).borrowerRepayPrincipal();
+        await (await stablecoin.connect(params.borrower).approve(params.lendingPool.address, await params.lendingPool.borrowedAssets())).wait();
+        await (await params.lendingPool.connect(params.borrower).borrowerRepayPrincipal()).wait();
     } else {
         throw new Error(`Penalty ${penalty} not 0 or outstandingInterest ${outstandingInterest} not 0`)
     }
@@ -152,11 +153,11 @@ const moveFromBorrowedToRepaid = async(params: TransitionalParams): Promise<void
 
 const moveFromBorrowedToDefaulted = async(params: TransitionalParams): Promise<void> => {
     console.log("Will fail not if enough time has passed, check error for [LP023]...")
-    await params.lendingPool.connect(params.deployer).adminTransitionToDefaultedState();
+    await (await params.lendingPool.connect(params.deployer).adminTransitionToDefaultedState()).wait();
 }
 
 const moveFromRepaidToFLCWithdrawn = async(params: TransitionalParams): Promise<void> => {
-    await params.lendingPool.connect(params.borrower).borrowerWithdrawFirstLossCapitalAndExcessSpread();
+    await (await params.lendingPool.connect(params.borrower).borrowerWithdrawFirstLossCapitalAndExcessSpread()).wait();
 }
 
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
