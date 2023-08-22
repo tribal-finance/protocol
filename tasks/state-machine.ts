@@ -133,8 +133,21 @@ const moveFromBorrowedToRepaid = async(params: TransitionalParams): Promise<void
     const outstandingInterest = await params.lendingPool.borrowerOutstandingInterest();
     const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
     const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
-    await stablecoin.connect(params.borrower).approve(params.lendingPool.address, outstandingInterest);
-    await params.lendingPool.connect(params.borrower).borrowerPayInterest(outstandingInterest);
+    const penalty = await params.lendingPool.borrowerPenaltyAmount();
+    console.log("Borrower penalty: ", penalty);
+    console.log("Outstanding Interest", outstandingInterest);
+    if(!outstandingInterest.eq(0)) {
+        await stablecoin.connect(params.borrower).approve(params.lendingPool.address, outstandingInterest);
+        await params.lendingPool.connect(params.borrower).borrowerPayInterest(outstandingInterest);
+    }
+    await stablecoin.connect(params.borrower).approve(params.lendingPool.address, await params.lendingPool.borrowedAssets());
+    await params.lendingPool.connect(params.borrower).borrowerRepayPrincipal();
+ 
+    if(penalty.eq(0) && outstandingInterest.eq(0)) {
+        await params.lendingPool.connect(params.borrower).borrowerRepayPrincipal();
+    } else {
+        throw new Error(`Penalty ${penalty} not 0 or outstandingInterest ${outstandingInterest} not 0`)
+    }
 }
 
 const moveFromBorrowedToDefaulted = async(params: TransitionalParams): Promise<void> => {
@@ -194,7 +207,7 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         if (!path) {
             throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${STAGES_LOOKUP[desiredStage]}`)
         } else {
-            console.log("Found valid path:")
+            console.log(`Found valid path starting from  ${STAGES_LOOKUP[currentStage]}:`)
             console.log(transitionsToString(path));
         }
 
