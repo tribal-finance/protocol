@@ -18,6 +18,7 @@ type TransitionalParams = {
     authority: Authority, 
     borrower: Wallet,
     lender1: Wallet,
+    deployer: Wallet,
 }
 
 type TransitionToPromiseMap = { [key in string]: Promise<void> };
@@ -124,6 +125,26 @@ const moveFromOpenToFundedFailed = async (params: TransitionalParams): Promise<v
     }
 }
 
+const moveFromFundedToBorrowed = async(params: TransitionalParams): Promise<void> => {
+    await params.lendingPool.connect(params.borrower).borrow();
+}
+
+const moveFromBorrowedToRepaid = async(params: TransitionalParams): Promise<void> => {
+    const outstandingInterest = await params.lendingPool.borrowerOutstandingInterest();
+    const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
+    const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
+    await stablecoin.connect(params.borrower).approve(params.lendingPool.address, outstandingInterest);
+    await params.lendingPool.connect(params.borrower).borrowerPayInterest(outstandingInterest);
+}
+
+const moveFromBorrowedToDefaulted = async(params: TransitionalParams): Promise<void> => {
+    console.log("Will fail not if enough time has passed, check error for [LP023]...")
+    await params.lendingPool.connect(params.deployer).adminTransitionToDefaultedState();
+}
+
+const moveFromRepaidToFLCWithdrawn = async(params: TransitionalParams): Promise<void> => {
+    await params.lendingPool.connect(params.borrower).borrowerWithdrawFirstLossCapitalAndExcessSpread();
+}
 
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
     .addOptionalParam("poolAddress", "The LendingPool's address to set the state, if this param is excluded, a new pool will be deployed")
@@ -184,7 +205,8 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
             lendingPool,
             borrower,
             lender1,
-            authority: await ethers.getContractAt("Authority", await lendingPool.authority())
+            authority: await ethers.getContractAt("Authority", await lendingPool.authority()),
+            deployer
         }
 
         // realize state machine routing data on-chain
@@ -213,18 +235,23 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
 
             if(t[0] === STAGES.BORROWED && t[1] === STAGES.REPAID) {
                 console.log("executing BORROWED -> REPAID...")
+                await retryableRequest(() => moveFromBorrowedToRepaid(params));
             }
 
             if(t[0] === STAGES.BORROWED && t[1] === STAGES.DEFAULTED) {
                 console.log("executing BORROWED -> DEFAULTED...")
+                await retryableRequest(() => moveFromBorrowedToDefaulted(params));
             }
 
             if(t[0] === STAGES.FUNDED && t[1] === STAGES.BORROWED) {
                 console.log("executing FUNDED -> BORROWED...")
+                await retryableRequest(() => moveFromFundedToBorrowed(params));
             }
 
             if(t[0] === STAGES.REPAID && t[1] === STAGES.FLC_WITHDRAWN) {
                 console.log("executing REPAID -> FLC_WITHDRAWN...")
+                await retryableRequest(() => moveFromRepaidToFLCWithdrawn(params));
+
             }
         }
     });
