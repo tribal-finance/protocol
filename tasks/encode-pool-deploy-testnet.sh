@@ -11,8 +11,8 @@ npx hardhat encode-pool-initializer \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 10000 \
   --max-funding-capacity 12000 \
-  --funding-period-seconds 5 \
-  --lending-term-seconds 15768000 \
+  --funding-period-seconds 86400 \
+  --lending-term-seconds 5 \
   --first-loss-assets 2000 \
   --repayment-recurrence-days 30 \
   --grace-period-days 5 \
