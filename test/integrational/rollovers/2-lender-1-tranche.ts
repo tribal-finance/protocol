@@ -344,10 +344,9 @@ describe("Rollovers (2 Lender)", function () {
 
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
+        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]); // view only execution to check lender address
         expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(false);
-
-        await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
+        await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]); // run the state change
         expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(true);
 
         nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);

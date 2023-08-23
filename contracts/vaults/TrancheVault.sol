@@ -63,10 +63,6 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         emit ChangeMinFundingCapacity(oldValue, newValue);
     }
 
-    function setMinFundingCapacity(uint256 newValue) external onlyOwner {
-        _setMinFundingCapacity(newValue);
-    }
-
     /* maxFundingCapacity */
     uint256 private s_maxFundingCapacity;
     event ChangeMaxFundingCapacity(uint256 oldValue, uint256 newValue);
@@ -79,10 +75,6 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 oldValue = s_maxFundingCapacity;
         s_maxFundingCapacity = newValue;
         emit ChangeMaxFundingCapacity(oldValue, newValue);
-    }
-
-    function setMaxFundingCapacity(uint256 newValue) external onlyOwner {
-        _setMaxFundingCapacity(newValue);
     }
 
     /* withdrawEnabled */
