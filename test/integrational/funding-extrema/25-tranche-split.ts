@@ -26,7 +26,7 @@ import STAGES from "../../helpers/stages";
 const deterministicRand = (seed: number) => {
     const numbers = []
     for(let i = 0; i < 25; i++) {
-        const rand = Math.sqrt(Math.abs(100000* Math.sin(i * 32)));
+        const rand = Math.sqrt(Math.abs((100000 + seed)* Math.sin(i * 32)));
         const str = rand.toString().substring(4, 8);
         numbers.push(parseFloat(str) || 12);
     }
@@ -125,8 +125,8 @@ describe("Deploy lending with 25 vaults, fine granularity test", function () {
             defaultParams.trancheBoostRatios = Array(25).fill(1);
             defaultParams.trancheBoostedAPRsWads =  Array(25).fill(1);
 
-            const mins = deterministicRand(453)
-            const maxs = deterministicRand(32323)
+            const mins = deterministicRand(0)
+            const maxs = deterministicRand(10)
 
             const fundingSplitsWads = []
             for(let i = 0; i < 25; i++) {
