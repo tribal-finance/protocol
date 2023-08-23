@@ -91,10 +91,9 @@ contract PoolFactory is AuthorityAware {
             require(fundingSplitWads[i].length == 2, "LP026 - bad fundingSplitWads");
             wadMax += fundingSplitWads[i][0];
             wadMin += fundingSplitWads[i][1];
-            require(fundingSplitWads[i][1] <= fundingSplitWads[i][0], "LP027 - min gt max");
         }
         require(wadMax == 1e18, "LP024 - bad max wad");
-        require(wadMin <= 1e18, "LP027 - bad min wad");
+        require(wadMin == 1e18, "LP027 - bad min wad");
 
         address poolAddress = _clonePool();
 

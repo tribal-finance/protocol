@@ -1,3 +1,4 @@
+import { parse } from "dotenv";
 import { task } from "hardhat/config";
 
 
@@ -52,10 +53,15 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
             taskArgs.trancheCoveragesWads.split(',').map(parseEther)
         ];
 
-        const fundingSplitWads = taskArgs.fundingSplitWads.split(',').map(parseEther);
+        const fundingSplitWads = taskArgs.fundingSplitWads.split(':');
+        const fundingSplitWads2D = []
+        for(let i = 0; i < fundingSplitWads.length; i++) {
+            const extrema = fundingSplitWads[i].split(',').map(parseEther);
+            fundingSplitWads2D.push(extrema)
+        }
 
         const PoolFactory = await ethers.getContractFactory("PoolFactory");
-        const msgData = PoolFactory.interface.encodeFunctionData("deployPool", [LendingPoolParams, fundingSplitWads]);
+        const msgData = PoolFactory.interface.encodeFunctionData("deployPool", [LendingPoolParams, fundingSplitWads2D]);
 
         console.log("msg.data:", msgData);
     });

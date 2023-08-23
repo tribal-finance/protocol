@@ -160,6 +160,9 @@ const moveFromRepaidToFLCWithdrawn = async(params: TransitionalParams): Promise<
     await (await params.lendingPool.connect(params.borrower).borrowerWithdrawFirstLossCapitalAndExcessSpread()).wait();
 }
 
+// npx hardhat set-pool-state --stage flc_withdrawn --network goerli  
+// npx hardhat set-pool-state --pool-factory-address 0x95d90156E29B8d2F197aa33908F20ecc5E9f2AE9  --stage initial --network goerli   
+
 task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool in a specific state")
     .addOptionalParam("poolAddress", "The LendingPool's address to set the state, if this param is excluded, a new pool will be deployed")
     .addOptionalParam("lendingPoolParams", "This is a massive byte string you should generate using `npx hardhat encode-pool-initializer --help` it is only required if you need to deploy a new pool")
