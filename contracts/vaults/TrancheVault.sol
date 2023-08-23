@@ -193,6 +193,11 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         address _underlying,
         address _authority
     ) external initializer {
+        if (_minCapacity > _maxCapacity) {
+            uint256 tmpMin = _minCapacity;
+            _minCapacity = _maxCapacity;
+            _maxCapacity = tmpMin;
+        }
         require(_minCapacity <= _maxCapacity, "Vault: min > max");
         _setPoolAddress(_poolAddress);
         _setId(_trancheId);
