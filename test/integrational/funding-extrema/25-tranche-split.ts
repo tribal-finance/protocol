@@ -167,6 +167,8 @@ describe("Deploy lending with 25 vaults, fine granularity test", function () {
                 expect(parseInt(expectedMaxFundingCapacity.toString())).equals(formattedVmax)
             }
 
+            // ensures total sum of vault mins/max match global min/max set in lending pool
+            // proof number partitioning is working as expected and gives very granular settings for min/maxs for each vault
             expect(totalVMax).equals(defaultParams.maxFundingCapacity)
             expect(totalVMin).equals(defaultParams.minFundingCapacity);
 
