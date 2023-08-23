@@ -82,8 +82,19 @@ contract PoolFactory is AuthorityAware {
      */
     function deployPool(
         LendingPool.LendingPoolParams calldata params,
-        uint[] calldata fundingSplitWads
+        uint[][] calldata fundingSplitWads
     ) external onlyOwner returns (address) {
+        // validate wad
+        uint256 wadMax;
+        uint256 wadMin;
+        for(uint256 i = 0; i < fundingSplitWads.length; i++) {
+            require(fundingSplitWads[i].length == 2, "LP026 - bad fundingSplitWads");
+            wadMax += fundingSplitWads[i][0];
+            wadMin += fundingSplitWads[i][1];
+        }
+        require(wadMax == 1e18, "LP024 - bad max wad");
+        require(wadMin == 1e18, "LP027 - bad min wad");
+
         address poolAddress = _clonePool();
 
         address[] memory trancheVaultAddresses = _deployTrancheVaults(
@@ -129,7 +140,7 @@ contract PoolFactory is AuthorityAware {
 
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
-        uint[] calldata fundingSplitWads,
+        uint[][] calldata fundingSplitWads,
         address poolAddress,
         address ownerAddress
     ) internal onlyOwner returns (address[] memory trancheVaultAddresses) {
@@ -146,8 +157,8 @@ contract PoolFactory is AuthorityAware {
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
-                params.minFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
-                params.maxFundingCapacity.mulDiv(fundingSplitWads[i], WAD),
+                params.minFundingCapacity.mulDiv(fundingSplitWads[i][1], WAD),
+                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], WAD),
                 string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
                 string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
                 params.stableCoinContractAddress,

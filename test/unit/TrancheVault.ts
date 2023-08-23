@@ -83,13 +83,13 @@ describe("TrancheVault contract", function () {
         });
 
         it("Should correctly get minFundingCapacity", async function () {
-            expect(await tranches[0].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0]).div(ethers.utils.parseEther("1")));
-            expect(await tranches[1].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1]).div(ethers.utils.parseEther("1")));
+            expect(await tranches[0].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][1]).div(ethers.utils.parseEther("1")));
+            expect(await tranches[1].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][1]).div(ethers.utils.parseEther("1")));
         });
 
         it("Should correctly get maxFundingCapacity", async function () {
-            expect(await tranches[0].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0]).div(ethers.utils.parseEther("1")));
-            expect(await tranches[1].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1]).div(ethers.utils.parseEther("1")));
+            expect(await tranches[0].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][0]).div(ethers.utils.parseEther("1")));
+            expect(await tranches[1].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][0]).div(ethers.utils.parseEther("1")));
 
         });
 
@@ -134,24 +134,6 @@ describe("TrancheVault contract", function () {
                 await tranches[0].enableTransfers();
                 await expect(tranches[0].connect(lenders[0]).transfer(ethers.constants.AddressZero, ethers.constants.AddressZero)).to.be.revertedWith("Transfers are not implemented");
             });
-        });
-    });
-
-    describe("setMaxFundingCapacity() function tests", () => {
-        it("should fail to set the max funding capacity if the sender is not the owner", async () => {
-            await expect(trancheVault.connect(nonOwner).setMaxFundingCapacity(2000)).to.be.revertedWith(
-                "Ownable: caller is not the owner"
-            );
-        });
-
-        it("should successfully set the max funding capacity", async () => {
-            const targetCapacity = 2000;
-            let maxFundingCapacity = await trancheVault.maxFundingCapacity();
-            expect(maxFundingCapacity).to.not.equal(targetCapacity);
-
-            await trancheVault.connect(owner).setMaxFundingCapacity(2000);
-            maxFundingCapacity = await trancheVault.maxFundingCapacity();
-            expect(maxFundingCapacity).to.equal(2000);
         });
     });
 
