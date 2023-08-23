@@ -12,8 +12,6 @@ import "../authority/AuthorityAware.sol";
 import "../pool/LendingPool.sol";
 import "../factory/PoolFactory.sol";
 
-import "hardhat/console.sol";
-
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
     using MathUpgradeable for uint256;
 
@@ -200,8 +198,6 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
             _minCapacity = _maxCapacity;
             _maxCapacity = tmpMin;
         }
-        console.log(_minCapacity);
-        console.log(_maxCapacity);
         require(_minCapacity <= _maxCapacity, "Vault: min > max");
         _setPoolAddress(_poolAddress);
         _setId(_trancheId);
