@@ -21,7 +21,7 @@ npx hardhat encode-pool-initializer \
   --protocol-fee-wad 0.1 \
   --default-penalty 0 \
   --penalty-rate-wad 0.02 \
-  --tranches-count 2 \
+  --tranches-count 1 \
   --tranche-a-p-rs-wads "0.1,0.1" \
   --tranche-boosted-a-p-rs-wads "0.1,0.1" \
   --tranche-boost-ratios "2,2" \
