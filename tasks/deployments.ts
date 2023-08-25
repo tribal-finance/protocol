@@ -1,7 +1,7 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
 import {getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile} from "./io";
-import { getNumber, retryableRequest } from "./utils";
+import { getNumber, processLendingPoolParams, retryableRequest } from "./utils";
 import { BigNumberish } from "ethers";
 
 task("deploy-empty-token", "deploys the 'no-platform-token'")
@@ -89,7 +89,7 @@ task("init-protocol", "deploys the lending protocol for production")
 
         deploySequence.push("Deploys authority as proxy", () => retryableRequest(async () => {
             const Authority = await ethers.getContractFactory("Authority");
-            const authority = await upgrades.deployProxy(Authority, []);
+            const authority = await upgrades.deployProxy(Authority, [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
             await authority.deployed();
             console.log("Authority proxy deployed to: ", authority.address);
             const impl = "0x"+(await ethers.provider.getStorageAt(authority.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
@@ -116,7 +116,7 @@ task("init-protocol", "deploys the lending protocol for production")
               platformTokenAddress,
               stableCoinAddress,
               60,
-            ]);
+            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
 
             await staking.deployed();
             console.log("Staking proxy deployed to: ", staking.address);
@@ -142,7 +142,7 @@ task("init-protocol", "deploys the lending protocol for production")
             const PoolFactory = await ethers.getContractFactory("PoolFactory");
             const poolFactory = await upgrades.deployProxy(PoolFactory, [
                 authorityAddress,
-            ]);
+            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
             await poolFactory.deployed();
           
             console.log("Pool Factory proxy deployed to: ", poolFactory.address);
@@ -172,7 +172,7 @@ task("init-protocol", "deploys the lending protocol for production")
                 Array.isArray(feeShareBeneficiariesParsed) ? feeShareBeneficiariesParsed : [feeShareBeneficiariesParsed],
                 Array.isArray(feeSharingBeneficiariesSharesWadParsed) ? feeSharingBeneficiariesSharesWadParsed : [feeSharingBeneficiariesSharesWadParsed],
             ];
-            const feeSharing = await upgrades.deployProxy(FeeSharing, params);
+            const feeSharing = await upgrades.deployProxy(FeeSharing, params, { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
             await feeSharing.deployed();
             console.log("Fee Sharing contract deployed to: ", feeSharing.address);
             
@@ -255,34 +255,7 @@ task("init-protocol", "deploys the lending protocol for production")
         deploySequence.push("Deploy Lending Pool and Vaults through Pool Factory", () => retryableRequest(async () => {
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
-            const tx = await signers[0].sendTransaction({
-                to: factory.address,
-                data: lendingPoolParams
-            })
-            secureDeploymentChecksum.push(tx.data);
-
-            const receipt = await tx.wait();
-            const timestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp
-
-            receipt.logs.forEach(log => {
-                try {
-                    const parsedLog = factory.interface.parseLog(log);
-                    if (parsedLog.name === 'TrancheVaultCloned') {
-                        writeToDeploymentsFile({
-                            contractName: "trancheVaultV1",
-                            contractAddress: parsedLog.args.addr,
-                            timestamp: timestamp
-                        }, network)
-                    }
-                    if(parsedLog.name === 'PoolCloned') {
-                        writeToDeploymentsFile({
-                            contractName: "lendingPoolV1",
-                            contractAddress: parsedLog.args.addr,
-                            timestamp: timestamp
-                        }, network)
-                    }
-                } catch (error) {}
-            });
+            await processLendingPoolParams(ethers, factory, lendingPoolParams, network);
         }))
 
         deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {

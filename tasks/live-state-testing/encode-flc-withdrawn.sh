@@ -5,8 +5,8 @@ export BORROWER_ADDRESS="0x8DfA5E23c8bd7911ea7A31b180b1572B5858300B"
 export PLATFORM_TOKEN_ADDRESS="0x0f81CdC8c06CF924B829E9FDA1f616fA716322F2"
 
 npx hardhat encode-pool-initializer \
-  --name "Test Pool" \
-  --token "TST" \
+  --name "Test Pool: State FLC_WITHDRAWN" \
+  --token "TST FLC_WITHDRAWN" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 10000 \
