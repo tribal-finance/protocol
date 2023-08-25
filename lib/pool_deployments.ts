@@ -30,6 +30,8 @@ const { parseUnits } = ethers.utils;
 
 const WAIT_CONFIRMATIONS = 1;
 
+upgrades.silenceWarnings();
+
 export const DEFAULT_LENDING_POOL_PARAMS = {
   name: "Test Pool",
   token: "TST",
@@ -52,7 +54,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   trancheBoostRatios: [ethers.utils.parseUnits("2", 12)],
   trancheCoveragesWads: [WAD(1)],
 };
-export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [WAD(0.8), WAD(0.2)];
+export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [[WAD(0.8), WAD(0.75)], [WAD(0.2), WAD(0.25)]];
 
 export async function deployPlatformToken(
   deployer: Signer,
@@ -89,10 +91,8 @@ export async function deployAuthority(
   lenders: Array<Signer>,
   foundationAddress: string | null
 ): Promise<Authority> {
-  const Authority = await ethers.getContractFactory("Authority");
-  const authority = await Authority.connect(deployer).deploy();
-  await authority.deployed();
-  await authority.initialize();
+  const AuthorityProxy = await upgrades.deployProxy(await ethers.getContractFactory("Authority"), [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+  const authority = await ethers.getContractAt("Authority", AuthorityProxy.address);
 
   authority.connect(deployer).addAdmin(await deployer.getAddress());
   if (foundationAddress) {
@@ -119,7 +119,7 @@ export async function deployStaking(
     platformTokenAddress,
     usdcAddress,
     60,
-  ]);
+  ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
   await staking.deployed();
 
   return staking;
@@ -156,7 +156,7 @@ export async function deployFactoryAndImplementations(
     USDC_ADDRESS_6,
     [staking.address, foundationAddress],
     [ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.8")],
-  ]);
+  ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
   await feeSharing.deployed();
 
   const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
@@ -182,11 +182,14 @@ export async function deployFactoryAndImplementations(
   ).deploy();
   await trancheVaultImplementation.deployed();
 
-  const PoolFactory = await ethers.getContractFactory("PoolFactory");
-  const poolFactory = await PoolFactory.connect(deployer).deploy();
-  await poolFactory.deployed();
+  const PoolFactory = await upgrades.deployProxy(
+    await ethers.getContractFactory("PoolFactory"), 
+    [authority.address], 
+    { 'initializer': 'initialize', 'unsafeAllow': ['constructor']}
+  );
 
-  await poolFactory.connect(deployer).initialize(authority.address);
+  const poolFactory = await ethers.getContractAt("PoolFactory", PoolFactory.address)
+
   await poolFactory
     .connect(deployer)
     .setPoolImplementation(poolImplementation.address);
@@ -223,7 +226,7 @@ export async function deployUnitranchePool(
     ...poolInitParamsOverrides,
   };
 
-  const tx = await poolFactory.deployPool(lendingPoolParams, [WAD(1)]);
+  const tx = await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]);
   await tx.wait();
 
   console.log("Deployed Unitranche Pool");

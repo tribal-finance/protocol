@@ -77,6 +77,10 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         __AuthorityAware__init(_authority);
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     /*///////////////////////////////////
         ADDITION OF REWARDS
     ///////////////////////////////////*/

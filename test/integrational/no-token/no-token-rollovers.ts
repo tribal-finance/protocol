@@ -342,8 +342,8 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
 
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [WAD(1)]); // view only execution to check lender address
-        await poolFactory.deployPool(lendingPoolParams, [WAD(1)]); // run the state change
+        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]); // view only execution to check lender address
+        await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]); // run the state change
 
         nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
 

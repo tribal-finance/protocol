@@ -1,0 +1,11 @@
+stages:
+  - 'pre-build'
+  - 'build'
+  - 'test'
+  - 'deploy-iac'
+  - 'deploy'
+  - 'post-deploy'
+
+include:
+  - project: 'tribal-credit/development/sre/core'
+    file: '/lib/gitlab/ci/templates/SDLC.gitlab-ci.yml'

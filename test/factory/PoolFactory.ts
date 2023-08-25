@@ -8,6 +8,7 @@ import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import { PoolFactory } from "../../typechain-types";
 import { USDC, WAD } from "../helpers/conversion";
 import {
+  DEFAULT_LENDING_POOL_PARAMS,
   deployDuotranchePool,
   deployFactoryAndImplementations,
   deployUnitranchePool,
@@ -99,7 +100,7 @@ describe("PoolFactory", function () {
       it("sets minFundingCapacity to pool.minFundingCapacity * split", async () => {
         let { firstTrancheVault } = await loadFixture(duoPoolFixture);
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
-          USDC(10000 * 0.8)
+          USDC(10000 * 0.75)
         );
       });
 
@@ -117,6 +118,7 @@ describe("PoolFactory", function () {
     let poolFactory: Contract;
     let admin: Signer;
     let addr1: Signer;
+    let borrower: Signer;
 
     beforeEach(async () => {
       const setupData = await loadFixture(
@@ -124,7 +126,20 @@ describe("PoolFactory", function () {
       );
       admin = setupData.deployer
       addr1 = setupData.borrower
+      borrower = setupData.borrower;
       poolFactory = setupData.poolFactory
+    })
+
+    it('should fail to deploy pool if borrower is not whitelisted', async () => {
+
+      const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+
+      const lendingPoolParams = { ...defaultParams, borrowerAddress: ((await ethers.getSigners())[10]).address };
+
+      await expect(poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]])).to.be.revertedWith("LP023");
+
+      await expect(poolFactory.deployPool({ ...defaultParams, borrowerAddress: await borrower.getAddress() }, [[WAD(1), WAD(1)]])).to.not.be.reverted;
+
     })
 
     it('should not allow unauthorized address to clear pool records', async function () {
