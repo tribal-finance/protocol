@@ -200,6 +200,8 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         let lendingPool: LendingPool = !poolAddress ? await ethers.getContractAt("LendingPool", getMostCurrentContract("lendingPoolV1", network).contractAddress) : await ethers.getContractAt("LendingPool", poolAddress);
         const desiredStage = STAGES_LOOKUP_STR[`${stage.toUpperCase()}`];
         const currentStage = parseInt((await lendingPool.currentStage()).toString());
+        console.log("PoolFactoryAddress: ", poolFactoryAddress)
+        console.log("PoolFactoryAddress: ", poolFactory.address)
 
         if (!desiredStage) {
             throw new Error(`stage: ${stage} is not an element of [${Object.keys(STAGES).map((value, index) => {
