@@ -27,19 +27,19 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
     .addParam("fundingSplitWads", "The fundingSplitWads for each tranche")
     .setAction(async (taskArgs, hre) => {
         const {ethers} = hre;
-        const {parseEther} = ethers.utils;
+        const {parseEther, parseUnits} = ethers.utils;
 
         const LendingPoolParams = [
             taskArgs.name, 
             taskArgs.token,
             taskArgs.stableCoinContractAddress,
             taskArgs.platformTokenContractAddress,
-            taskArgs.minFundingCapacity,
-            taskArgs.maxFundingCapacity,
+            parseUnits(taskArgs.minFundingCapacity, 6),
+            parseUnits(taskArgs.maxFundingCapacity, 6),
             taskArgs.fundingPeriodSeconds,
             taskArgs.lendingTermSeconds,
             taskArgs.borrowerAddress,
-            taskArgs.firstLossAssets,
+            parseUnits(taskArgs.firstLossAssets, 6),
             parseEther(taskArgs.borrowerTotalInterestRateWad),
             taskArgs.repaymentRecurrenceDays,
             taskArgs.gracePeriodDays,
@@ -63,5 +63,5 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         const PoolFactory = await ethers.getContractFactory("PoolFactory");
         const msgData = PoolFactory.interface.encodeFunctionData("deployPool", [LendingPoolParams, fundingSplitWads2D]);
 
-        console.log("msg.data:", msgData);
+        console.log(msgData);
     });
