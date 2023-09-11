@@ -151,7 +151,7 @@ library PoolCalculations {
         uint fundedAt = lendingPool.fundedAt();
         uint lendingTermSeconds = lendingPool.lendingTermSeconds();
 
-        if (fundedAt > block.timestamp) {
+        if (fundedAt == 0 || fundedAt > block.timestamp) {
             return 0;
         }
         uint secondsElapsed = block.timestamp - fundedAt;

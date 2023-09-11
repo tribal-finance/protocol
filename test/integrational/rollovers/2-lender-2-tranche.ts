@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { Signer } from "ethers";
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
@@ -200,8 +200,11 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
     });
 
-    it("👮 gets adminTransitionToFundedState() call from deployer", () => {
-      lendingPool.connect(deployer).adminTransitionToFundedState();
+    it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
+      const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
+      await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+      await network.provider.send("evm_mine");
+      await lendingPool.connect(deployer).adminTransitionToFundedState();
     });
 
     it("transitions to the FUNDED stage", async () => {

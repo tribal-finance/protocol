@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
@@ -67,6 +67,11 @@ describe("Marking the pool as Funded", function () {
         await firstTrancheVault
           .connect(lender1)
           .deposit(USDC(3000), await lender1.getAddress());
+
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         await lendingPool.connect(deployer).adminTransitionToFundedState();
 
         return data;
@@ -115,6 +120,11 @@ describe("Marking the pool as Funded", function () {
         await firstTrancheVault
           .connect(lender1)
           .deposit(toDeposit, await lender1.getAddress());
+
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         await lendingPool.connect(deployer).adminTransitionToFundedState();
 
         return data;
