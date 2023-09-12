@@ -197,9 +197,14 @@ describe("Full cycle sequential test", function () {
 
     it("sets allLendersInterest() to 625 USDC", async () => {
       expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+
+      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).equals(0)
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
+
+      await expect(lendingPool.connect(deployer).adminTransitionToFundedState()).to.be.revertedWith("Cannot accrue interest or declare failure before start time");
+
       // wait a delay such that now > openedAt + fundingPeriodSeconds is true
       const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
       await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
@@ -251,6 +256,7 @@ describe("Full cycle sequential test", function () {
       // wait 30 days
       await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine", []);
+      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).not.equals(0)
     });
 
     it("🏛️ borrower pays $125 interest", async () => {

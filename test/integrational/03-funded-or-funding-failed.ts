@@ -122,6 +122,7 @@ describe("Marking the pool as Funded", function () {
           .deposit(toDeposit, await lender1.getAddress());
 
         // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        await expect(lendingPool.connect(deployer).adminTransitionToFundedState()).to.be.revertedWith("Cannot accrue interest or declare failure before start time");
         const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
         await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
         await network.provider.send("evm_mine");
