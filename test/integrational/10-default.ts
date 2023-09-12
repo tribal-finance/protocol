@@ -208,8 +208,6 @@ describe("Defaulting", function () {
       expect(lastBalance).to.eq(balanceAfter);
     });
 
-    it("does not allow second lender to withdraw twice", async function () { });
-
     it("allows second lender to redeem 6000 tranche tokens for 900 USDC", async function () {
       const { firstTrancheVault, lenders, usdc } = await loadFixture(
         uniPoolFixture
