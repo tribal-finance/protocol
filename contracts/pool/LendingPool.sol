@@ -332,6 +332,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  this function is expected to be called by *owner* once the funding period ends
      */
     function adminTransitionToFundedState() external onlyOwnerOrAdmin atStage(Stages.OPEN) {
+        require(block.timestamp >= openedAt + fundingPeriodSeconds, "Cannot accrue interest or declare failure before start time");
         if (collectedAssets >= minFundingCapacity) {
             _transitionToFundedStage();
         } else {

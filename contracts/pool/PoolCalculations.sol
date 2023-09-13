@@ -146,14 +146,14 @@ library PoolCalculations {
         address lenderAddress, 
         uint8 trancheId
     ) public view returns (uint) {
-        uint lenderDepositedAssets = lendingPool.lenderDepositedAssetsByTranche(lenderAddress, trancheId);
-        uint lenderEffectiveApr = lendingPool.lenderEffectiveAprByTrancheWad(lenderAddress, trancheId);
         uint fundedAt = lendingPool.fundedAt();
-        uint lendingTermSeconds = lendingPool.lendingTermSeconds();
-
-        if (fundedAt > block.timestamp) {
+        if (fundedAt == 0) {
             return 0;
         }
+        uint lenderDepositedAssets = lendingPool.lenderDepositedAssetsByTranche(lenderAddress, trancheId);
+        uint lenderEffectiveApr = lendingPool.lenderEffectiveAprByTrancheWad(lenderAddress, trancheId);
+        uint lendingTermSeconds = lendingPool.lendingTermSeconds();
+
         uint secondsElapsed = block.timestamp - fundedAt;
         if (secondsElapsed > lendingTermSeconds) {
             secondsElapsed = lendingTermSeconds;

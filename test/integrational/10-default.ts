@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
@@ -77,6 +77,11 @@ describe("Defaulting", function () {
           .connect(lender2)
           .deposit(toDeposit, await lender2.getAddress());
 
+
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await contracts.lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         // transition to funded state
         await contracts.lendingPool
           .connect(deployer)
@@ -203,8 +208,6 @@ describe("Defaulting", function () {
       expect(lastBalance).to.eq(balanceAfter);
     });
 
-    it("does not allow second lender to withdraw twice", async function () {});
-
     it("allows second lender to redeem 6000 tranche tokens for 900 USDC", async function () {
       const { firstTrancheVault, lenders, usdc } = await loadFixture(
         uniPoolFixture
@@ -284,6 +287,10 @@ describe("Defaulting", function () {
           .connect(lender2)
           .deposit(toDeposit, await lender2.getAddress());
 
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await contracts.lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         // transition to funded state
         await contracts.lendingPool
           .connect(deployer)
@@ -583,6 +590,10 @@ describe("Defaulting", function () {
           throw new Error("Second tranche vault not deployed");
         }
 
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await contracts.lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         // Set pool to funded state
         await contracts.lendingPool
           .connect(deployer)
