@@ -9,11 +9,11 @@ npx hardhat encode-pool-initializer \
   --token "TST FUNDING_FAILED" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
-  --min-funding-capacity 100 \
-  --max-funding-capacity 10000000 \
-  --funding-period-seconds 86400 \
-  --lending-term-seconds 5 \
-  --first-loss-assets 410 \
+  --min-funding-capacity 11400 \
+  --max-funding-capacity 12300 \
+  --funding-period-seconds 30 \
+  --lending-term-seconds 1814400 \
+  --first-loss-assets 200 \
   --repayment-recurrence-days 30 \
   --grace-period-days 5 \
   --borrower-total-interest-rate-wad 0.15 \
