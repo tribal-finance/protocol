@@ -43,7 +43,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         bool platformTokens;
     }
 
-    enum Stages {
+    enum Stages {                   // WARNING, DO NOT REORDER ENUM!!!
         INITIAL,                    // 0
         OPEN,                       // 1
         FUNDED,                     // 2
