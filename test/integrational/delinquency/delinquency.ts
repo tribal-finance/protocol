@@ -104,6 +104,7 @@ describe("Full cycle sequential test", function () {
     it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.INITIAL);
       expect(await lendingPool.firstLossAssets()).to.equal(USDC(2000));
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("🏛️ 2000 USDC flc deposit from the borrower", async () => {
@@ -113,14 +114,17 @@ describe("Full cycle sequential test", function () {
 
     it("transitions to the FLC_DEPOSITED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("👮 receives adminOpenPool() from deployer", async () => {
       await lendingPool.connect(deployer).adminOpenPool();
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("transitions to OPEN stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("👛 8000 USDC deposit from lender 1", async () => {
@@ -211,10 +215,12 @@ describe("Full cycle sequential test", function () {
       await network.provider.send("evm_mine");
 
       await lendingPool.connect(deployer).adminTransitionToFundedState();
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("transitions to the FUNDED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FUNDED);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("pool contract now holds 12000 USDC", async () => {
@@ -228,153 +234,16 @@ describe("Full cycle sequential test", function () {
       expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
         USDC(10000)
       );
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
-    it("⏳ 30 days pass by", async () => {
+    it("⏳ 300 days pass by", async () => {
       // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
+      await ethers.provider.send("evm_increaseTime", [300 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine", []);
+      // lender is now deliquent
+      expect(await lendingPool.borrowerPenaltyAmount()).not.equals(0)
     });
 
-    it("🏛️ borrower pays $125 interest", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
-      await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-    });
-
-    it("⏳ 30 days pass by", async () => {
-      // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-    });
-
-    it("🏛️ borrower pays $125 interest", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
-      await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-    });
-
-    it("⏳ 30 days pass by", async () => {
-      // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).not.equals(0)
-    });
-
-    it("🏛️ borrower pays $125 interest", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
-      await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-    });
-
-    it("👛 125 USDC interest withdrawal for lender 1", async () => {
-      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(125)]);
-    });
-
-    it("⏳ 30 days pass by", async () => {
-      // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-    });
-
-    it("🏛️ borrower pays $125 interest", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
-      await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-    });
-
-    it("⏳ 30 days pass by", async () => {
-      // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-    });
-
-    it("🏛️ borrower pays $125 interest", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
-      await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-    });
-
-    it("⏳ 30 days pass by", async () => {
-      // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-    });
-
-    it("🏛️ borrower pays $125 interest", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
-      await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-    });
-
-    it("borrowerOutstandingInterest() is now 0 (borrower already paid 750 USDC)", async () => {
-      expect(await lendingPool.borrowerOutstandingInterest()).to.equal(0);
-    });
-
-    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(50));
-    });
-
-    it("⏳ 3 days pass by", async () => {
-      // wait 30 days
-      await ethers.provider.send("evm_increaseTime", [3 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-    });
-
-    it("🏛️ borrower repays 10000 USDC as principal", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(10000));
-      await lendingPool.connect(borrower).borrowerRepayPrincipal();
-    });
-
-    it("transitions to REPAID stage", async () => {
-      expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
-    });
-
-    it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
-      const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
-      await lendingPool
-        .connect(borrower)
-        .borrowerWithdrawFirstLossCapitalAndExcessSpread();
-      const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-        USDC(2050)
-      );
-    });
-
-    it("transitions to FLC_WITHDRAWN stage", async () => {
-      expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
-    });
-
-    it("👛 400 USDC interest withdrawal for lender 1", async () => {
-      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
-    });
-
-    it("👛 10000 PLATFORM tokens unlock for lender 1", async () => {
-      await lendingPool
-        .connect(lender1)
-        .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
-    });
-
-    it("👜 100 USDC interest withdraw from lender 2", async () => {
-      await lendingPool.connect(lender2).lenderRedeemRewards([USDC(100)]);
-    });
-
-    it("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
-      expect(await usdc.balanceOf(lendingPool.address)).to.equal(0);
-    });
-
-    it("👛 8000 usdc principal withdrawal for lender 1", async () => {
-      await firstTrancheVault
-        .connect(lender1)
-        .withdraw(
-          USDC(8000),
-          await lender1.getAddress(),
-          await lender1.getAddress()
-        );
-    });
-
-    it("👜 2000 usdc principal withdrawal for lender 2", async () => {
-      await firstTrancheVault
-        .connect(lender2)
-        .withdraw(
-          USDC(2000),
-          await lender2.getAddress(),
-          await lender2.getAddress()
-        );
-    });
   });
 });
