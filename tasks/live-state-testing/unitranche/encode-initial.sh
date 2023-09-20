@@ -5,15 +5,15 @@ export BORROWER_ADDRESS="0x8DfA5E23c8bd7911ea7A31b180b1572B5858300B"
 export PLATFORM_TOKEN_ADDRESS="0x0f81CdC8c06CF924B829E9FDA1f616fA716322F2"
 
 npx hardhat encode-pool-initializer \
-  --name "Test Pool: State Initial v1.0.1 (Long Funding Period)" \
+  --name "v1.0.1 Initial" \
   --token "TST Initial" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
-  --min-funding-capacity 100 \
-  --max-funding-capacity 1200 \
-  --funding-period-seconds 8640000 \
-  --lending-term-seconds 8640000 \
-  --first-loss-assets 2000 \
+  --min-funding-capacity 10000 \
+  --max-funding-capacity 10000 \
+  --funding-period-seconds 30 \
+  --lending-term-seconds 1814400 \
+  --first-loss-assets 200 \
   --repayment-recurrence-days 30 \
   --grace-period-days 5 \
   --borrower-total-interest-rate-wad 0.15 \
