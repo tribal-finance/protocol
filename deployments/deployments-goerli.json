@@ -818,5 +818,20 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0xAA417FcDD306E363E6e89E1Da319878F26CC3F34",
     "timestamp": 1694646696
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x91639d36CDcA09a4d098475D7751A79B675D86b1",
+    "timestamp": 1695333840
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x44de2049Ab6C696f8aC2749314B3399df68dfc4B",
+    "timestamp": 1695333840
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x6681EEefa19a543F65F00E94932457cd108005F1",
+    "timestamp": 1695333840
   }
 ]
