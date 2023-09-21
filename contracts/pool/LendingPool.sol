@@ -43,7 +43,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         bool platformTokens;
     }
 
-    enum Stages {
+    enum Stages {                   // WARNING, DO NOT REORDER ENUM!!!
         INITIAL,                    // 0
         OPEN,                       // 1
         FUNDED,                     // 2
@@ -810,7 +810,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */
     function borrowerPenaltyAmount() public view returns (uint) {
-        return PoolCalculations.borrowerPenaltyAmount(this);
+        if(currentStage > Stages.FLC_DEPOSITED) {
+            return PoolCalculations.borrowerPenaltyAmount(this);
+        }
     }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets
