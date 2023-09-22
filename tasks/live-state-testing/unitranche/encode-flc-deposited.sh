@@ -19,7 +19,7 @@ npx hardhat encode-pool-initializer \
   --borrower-total-interest-rate-wad 0.15 \
   --borrower-address $BORROWER_ADDRESS \
   --protocol-fee-wad 0.1 \
-  --default-penalty 0 \
+  --default-penalty 0.1 \
   --penalty-rate-wad 0.02 \
   --tranches-count 1 \
   --tranche-a-p-rs-wads "0.1" \

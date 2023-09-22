@@ -26,4 +26,4 @@ npx hardhat encode-pool-initializer \
   --tranche-boosted-a-p-rs-wads "0.1,0.1" \
   --tranche-boost-ratios "2,2" \
   --tranche-coverages-wads "1,1" \
-  --funding-split-wads "0.8,0.2:0.2,0.8"
+  --funding-split-wads "0.8,0.8:0.2,0.2"
