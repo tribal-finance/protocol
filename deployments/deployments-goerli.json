@@ -1387,5 +1387,75 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0xDC9a560BF53AFab720602adaD3be7e9943C01E30",
     "timestamp": 1695671280
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x9Fc5F9110c41e27e45A37C39370e377B3F7f1c02",
+    "timestamp": 1695671436
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x80FeD1c455E79dC98880FeEd71e8b144D97f52Aa",
+    "timestamp": 1695671436
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xb658D2825E944Df7B3702d512861C4A67a781Af7",
+    "timestamp": 1695671496
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x11DB97E75F1Ae13f87A204a606Bd052bBc2A2252",
+    "timestamp": 1695671496
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xb83b1d8d43EfAE20640740F87309Be697C8EdD78",
+    "timestamp": 1695671724
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x4bBed0e4d8565881070865Ae590Ee8123Cd152E5",
+    "timestamp": 1695671724
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x04c0641f7C60619D488DA522D83b9ba53aEB9fDb",
+    "timestamp": 1695671844
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x33e9A3e0438265d47ec434334b2beB7c4B9b399a",
+    "timestamp": 1695671844
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xE82a61f515B7676D56549EC41787604cB34337F8",
+    "timestamp": 1695671964
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xEC574CD50e660fa836dcdDa5042Ff3ac60e3161e",
+    "timestamp": 1695671964
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x79dDd0a60d5F850E523EE9356EF55c9fe20B2651",
+    "timestamp": 1695672024
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x0577F288648399650F3d7A89c91FCd652bF0F54d",
+    "timestamp": 1695672024
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x3CDa718dA474c5DE84591F8DBFF7E059c9e80910",
+    "timestamp": 1695672228
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc6EDD3A8E32404033cA8794b182053d47af8613b",
+    "timestamp": 1695672228
   }
 ]
