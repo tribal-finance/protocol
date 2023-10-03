@@ -616,6 +616,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
         uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        if(hasRewarded > willReward) {
+            return hasRewarded - willReward;
+        }
         return willReward - hasRewarded;
     }
 
