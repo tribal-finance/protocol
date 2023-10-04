@@ -12,7 +12,7 @@ npx hardhat encode-pool-initializer \
   --min-funding-capacity 10000 \
   --max-funding-capacity 12000 \
   --funding-period-seconds 30 \
-  --lending-term-seconds 43200 \
+  --lending-term-seconds 30 \
   --first-loss-assets 200 \
   --repayment-recurrence-days 30 \
   --grace-period-days 5 \
