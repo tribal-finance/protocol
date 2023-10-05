@@ -14,6 +14,7 @@ import {
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
+import { assertPoolViews } from "../helpers/view";
 
 describe("Defaulting", function () {
   context("unitranche pool without payments", function () {
@@ -117,13 +118,14 @@ describe("Defaulting", function () {
     }
 
     it("sets the pool to defaulted stage", async function () {
-      const { lendingPool } = await loadFixture(uniPoolFixture);
+      const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
+      await assertPoolViews(lendingPool, lenders[0])
 
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
 
     it("sets default ratio on the first tranche to 0.15 ((2000-500)/10000)", async function () {
-      const { firstTrancheVault, lendingPool, usdc } = await loadFixture(
+      const { firstTrancheVault, lendingPool, lenders } = await loadFixture(
         uniPoolFixture
       );
       const totalTrancheInterest = await lendingPool.allLendersInterest();
@@ -132,10 +134,13 @@ describe("Defaulting", function () {
       expect(await firstTrancheVault.defaultRatioWad(), "Default Ratio").to.eq(
         WAD(0.15)
       );
+      await assertPoolViews(lendingPool, lenders[0])
+
     });
 
     it("sets maxWithdraw for first lender to 600 (4000 * 0.15)", async function () {
-      const { firstTrancheVault, lenders } = await loadFixture(uniPoolFixture);
+      const { firstTrancheVault, lenders, lendingPool } = await loadFixture(uniPoolFixture);
+      await assertPoolViews(lendingPool, lenders[0])
 
       expect(
         await firstTrancheVault.maxWithdraw(lenders[0].getAddress())
@@ -143,7 +148,7 @@ describe("Defaulting", function () {
     });
 
     it("allows first lender to withdraw 600", async function () {
-      const { firstTrancheVault, lenders, usdc } = await loadFixture(
+      const { firstTrancheVault, lenders, usdc, lendingPool } = await loadFixture(
         uniPoolFixture
       );
 
@@ -156,10 +161,13 @@ describe("Defaulting", function () {
 
       const balanceAfter = await usdc.balanceOf(lender1Address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
+
+      await assertPoolViews(lendingPool, lenders[0])
+
     });
 
     it("allows first lender to redeem 4000 tranche tokens for 600 USDC", async function () {
-      const { firstTrancheVault, lenders, usdc } = await loadFixture(
+      const { firstTrancheVault, lenders, usdc, lendingPool } = await loadFixture(
         uniPoolFixture
       );
 
@@ -172,6 +180,9 @@ describe("Defaulting", function () {
 
       const balanceAfter = await usdc.balanceOf(lender1Address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
+
+      await assertPoolViews(lendingPool, lenders[0])
+
     });
 
     it("sets maxWithdraw for second lender to 900 (6000 * 0.15)", async function () {

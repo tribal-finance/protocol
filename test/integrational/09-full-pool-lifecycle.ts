@@ -23,6 +23,7 @@ import {
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
+import { assertPoolViews } from "../helpers/view";
 
 describe("Full cycle sequential test", function () {
   context("For unitranche pool", async function () {
@@ -100,6 +101,16 @@ describe("Full cycle sequential test", function () {
       lender1 = data.lenders[0];
       lender2 = data.lenders[1];
     });
+
+    beforeEach(async () => {
+      await assertPoolViews(lendingPool, lender1)
+      await assertPoolViews(lendingPool, lender2)
+    })
+
+    afterEach(async () => {
+      await assertPoolViews(lendingPool, lender1)
+      await assertPoolViews(lendingPool, lender2)
+    })
 
     it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.INITIAL);
