@@ -180,7 +180,10 @@ describe("Defaulting", function () {
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
 
       // used to revert with panic code 17 (over/under flow)
-      await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.not.be.reverted;
+      await expect(lendingPool.lenderRewardsByTrancheRedeemableSpecial(await lenders[0].getAddress(), 0)).to.not.be.reverted;
+      
+      // we want to the og function to revert with panic 17
+      await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.be.reverted;
 
     });
 

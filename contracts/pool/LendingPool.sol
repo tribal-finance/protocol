@@ -613,7 +613,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  @param lenderAddress lender address
      *  @param trancheId tranche id
      */
-    function lenderRewardsByTrancheRedeemableSpecial(address lenderAddress, uint8 trancheId) public view returns (uint) {
+    function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
         uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
         return willReward - hasRewarded;
@@ -623,7 +623,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  @param lenderAddress lender address
      *  @param trancheId tranche id
      */
-    function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
+    function lenderRewardsByTrancheRedeemableSpecial(address lenderAddress, uint8 trancheId) public view returns (uint) {
         uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
         if(hasRewarded > willReward) {
