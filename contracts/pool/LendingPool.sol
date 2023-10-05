@@ -609,7 +609,17 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         return s_trancheRewardables[trancheId][lenderAddress].redeemedRewards;
     }
 
-    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed)
+    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed). Special means this one is distinguished from the FE version and is only used within the SCs
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderRewardsByTrancheRedeemableSpecial(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
+        uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        return willReward - hasRewarded;
+    }
+
+    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed) only use in FE
      *  @param lenderAddress lender address
      *  @param trancheId tranche id
      */
@@ -617,7 +627,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
         if(hasRewarded > willReward) {
-            return hasRewarded - willReward;
+            return 0;
         }
         return willReward - hasRewarded;
     }

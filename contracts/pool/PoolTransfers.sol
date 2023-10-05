@@ -79,7 +79,7 @@ library PoolTransfers {
 
             for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
                 TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
-                uint256 rewards = settings.rewards ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
+                uint256 rewards = settings.rewards ? deadpool.lenderRewardsByTrancheRedeemableSpecial(lender, trancheId) : 0;
                 // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
                 // transfer rewards from dead lender to dead tranche
                 SafeERC20.safeTransferFrom(
