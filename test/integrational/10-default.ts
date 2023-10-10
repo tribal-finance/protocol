@@ -119,7 +119,7 @@ describe("Defaulting", function () {
 
     it("sets the pool to defaulted stage", async function () {
       const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
-      await assertPoolViews(lendingPool, lenders[0])
+      await assertPoolViews(lendingPool, lenders[0], 1000)
 
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
@@ -140,13 +140,13 @@ describe("Defaulting", function () {
       expect(await firstTrancheVault.defaultRatioWad(), "Default Ratio").to.eq(
         WAD(0.15)
       );
-      await assertPoolViews(lendingPool, lenders[0])
+      await assertPoolViews(lendingPool, lenders[0], 1001)
 
     });
 
     it("sets maxWithdraw for first lender to 600 (4000 * 0.15)", async function () {
       const { firstTrancheVault, lenders, lendingPool } = await loadFixture(uniPoolFixture);
-      await assertPoolViews(lendingPool, lenders[0])
+      await assertPoolViews(lendingPool, lenders[0], 1002)
 
       expect(
         await firstTrancheVault.maxWithdraw(lenders[0].getAddress())
@@ -168,7 +168,7 @@ describe("Defaulting", function () {
       const balanceAfter = await usdc.balanceOf(lender1Address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
 
-      await assertPoolViews(lendingPool, lenders[0])
+      await assertPoolViews(lendingPool, lenders[0], 1003)
 
     });
 
@@ -187,7 +187,7 @@ describe("Defaulting", function () {
       const balanceAfter = await usdc.balanceOf(lender1Address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
 
-      await assertPoolViews(lendingPool, lenders[0])
+      await assertPoolViews(lendingPool, lenders[0], 1004)
       // used to revert with panic code 17 (over/under flow)
       await expect(lendingPool.lenderRewardsByTrancheRedeemableSpecial(await lenders[0].getAddress(), 0)).to.not.be.reverted;
       
