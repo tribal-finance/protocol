@@ -124,6 +124,12 @@ describe("Defaulting", function () {
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
 
+    it("Assert lenderRewardsByTrancheRedeemable() doesn't revert before withdrawal", async () => {
+      const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
+
+      await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.not.be.reverted;
+    })
+
     it("sets default ratio on the first tranche to 0.15 ((2000-500)/10000)", async function () {
       const { firstTrancheVault, lendingPool, lenders } = await loadFixture(
         uniPoolFixture
@@ -167,7 +173,7 @@ describe("Defaulting", function () {
     });
 
     it("allows first lender to redeem 4000 tranche tokens for 600 USDC", async function () {
-      const { firstTrancheVault, lenders, usdc, lendingPool } = await loadFixture(
+      const { lendingPool, firstTrancheVault, lenders, usdc } = await loadFixture(
         uniPoolFixture
       );
 
@@ -182,6 +188,11 @@ describe("Defaulting", function () {
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
 
       await assertPoolViews(lendingPool, lenders[0])
+      // used to revert with panic code 17 (over/under flow)
+      await expect(lendingPool.lenderRewardsByTrancheRedeemableSpecial(await lenders[0].getAddress(), 0)).to.not.be.reverted;
+      
+      // we want to the og function to revert with panic 17
+      await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.be.reverted;
 
     });
 
