@@ -12,10 +12,10 @@ npx hardhat encode-pool-initializer \
   --min-funding-capacity 3333 \
   --max-funding-capacity 4444 \
   --funding-period-seconds 30 \
-  --lending-term-seconds 43200 \
+  --lending-term-seconds 432000 \
   --first-loss-assets 200 \
-  --repayment-recurrence-days 30 \
-  --grace-period-days 5 \
+  --repayment-recurrence-days 0 \
+  --grace-period-days 0 \
   --borrower-total-interest-rate-wad 0.15 \
   --borrower-address $BORROWER_ADDRESS \
   --protocol-fee-wad 0.1 \
