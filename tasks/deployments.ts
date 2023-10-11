@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 import * as readline from 'readline-sync';
-import {getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile} from "./io";
+import { getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile } from "./io";
 import { getNumber, processLendingPoolParams, retryableRequest } from "./utils";
 import { BigNumberish } from "ethers";
 
@@ -42,12 +42,12 @@ task("init-protocol", "deploys the lending protocol for production")
     .addParam("feeSharingBeneficiaries", "Sets who recieves awards in feeSharing. Enter param in this format <addr1,addr2,...,addrN>")
     .addParam("feeSharingBeneficiariesSharesWad", "Sets award alocations. Enter Param in this format using floats <0.3,0.1,...,.5> Must add to 1")
     .addParam("owner", "Address of the timelock, multisig, or governor to switch to after deployment")
-
+    .addParam("borrower", "Address of borrower that needs to be whitelisted")
     .setAction(async (args: any, hre) => {
         const { ethers, upgrades } = hre;
-        const {BigNumber} = ethers;
-        const {parseEther} = ethers.utils;
-        const { stableCoinAddress, owner, foundationAddress, lendingPoolParams, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad } = args;
+        const { BigNumber } = ethers;
+        const { parseEther } = ethers.utils;
+        const { stableCoinAddress, owner, foundationAddress, lendingPoolParams, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad, borrower } = args;
         const network = hre.network.name;
 
         if (!ethers.utils.isAddress(stableCoinAddress)) {
@@ -62,6 +62,10 @@ task("init-protocol", "deploys the lending protocol for production")
             throw Error(`--owner is not a vaid address '${owner}'`);
         }
 
+        if(!ethers.utils.isAddress(borrower)) {
+            throw Error(`--borrower is not a valid address ${borrower}`)
+        }
+
         const feeShareBeneficiariesParsed = feeSharingBeneficiaries.split(',')
         feeShareBeneficiariesParsed.forEach((addr: string) => {
             if (!ethers.utils.isAddress(addr)) {
@@ -74,7 +78,7 @@ task("init-protocol", "deploys the lending protocol for production")
         feeSharingBeneficiariesSharesWadParsed.forEach((num: BigNumberish) => {
             sum = sum.add(num);
         })
-        if(!sum.eq(parseEther("1"))) {
+        if (!sum.eq(parseEther("1"))) {
             throw Error(`Sum of all feeSharing portions should be ${parseEther("1")}, actual: ${sum.toString()}`);
         }
 
@@ -89,10 +93,10 @@ task("init-protocol", "deploys the lending protocol for production")
 
         deploySequence.push("Deploys authority as proxy", () => retryableRequest(async () => {
             const Authority = await ethers.getContractFactory("Authority");
-            const authority = await upgrades.deployProxy(Authority, [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+            const authority = await upgrades.deployProxy(Authority, [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
             await authority.deployed();
             console.log("Authority proxy deployed to: ", authority.address);
-            const impl = "0x"+(await ethers.provider.getStorageAt(authority.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+            const impl = "0x" + (await ethers.provider.getStorageAt(authority.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
 
             secureDeploymentChecksum.push(authority.deployTransaction.data);
 
@@ -104,6 +108,14 @@ task("init-protocol", "deploys the lending protocol for production")
                 implementationAddress: impl,
                 timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
             }, network)
+
+            // MAKE SURE LENDER1 IS WHITELISTED IF THEY ARE NOT ALREADY
+            if (!(await authority.isWhitelistedBorrower(borrower))) {
+                await (await authority.addBorrower(borrower)).wait();
+                console.log("whitelisted lender1")
+            } else {
+                console.log("lender1 already whitelisted")
+            }
         }))
 
         deploySequence.push("Deploys staking as proxy and verifies the implementation", () => retryableRequest(async () => {
@@ -112,16 +124,16 @@ task("init-protocol", "deploys the lending protocol for production")
 
             const Staking = await ethers.getContractFactory("Staking");
             const staking = await upgrades.deployProxy(Staking, [
-              authorityAddress,
-              platformTokenAddress,
-              stableCoinAddress,
-              60,
-            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+                authorityAddress,
+                platformTokenAddress,
+                stableCoinAddress,
+                60,
+            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
 
             await staking.deployed();
             console.log("Staking proxy deployed to: ", staking.address);
 
-            const impl = "0x"+(await ethers.provider.getStorageAt(staking.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+            const impl = "0x" + (await ethers.provider.getStorageAt(staking.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
 
             secureDeploymentChecksum.push(staking.deployTransaction.data);
 
@@ -142,13 +154,13 @@ task("init-protocol", "deploys the lending protocol for production")
             const PoolFactory = await ethers.getContractFactory("PoolFactory");
             const poolFactory = await upgrades.deployProxy(PoolFactory, [
                 authorityAddress,
-            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
             await poolFactory.deployed();
-          
+
             console.log("Pool Factory proxy deployed to: ", poolFactory.address);
 
-            const impl = "0x"+(await ethers.provider.getStorageAt(poolFactory.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
-            
+            const impl = "0x" + (await ethers.provider.getStorageAt(poolFactory.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+
             secureDeploymentChecksum.push(poolFactory.deployTransaction.data);
 
             console.log("Pool Factory implementation deployed to address: ", impl);
@@ -172,13 +184,13 @@ task("init-protocol", "deploys the lending protocol for production")
                 Array.isArray(feeShareBeneficiariesParsed) ? feeShareBeneficiariesParsed : [feeShareBeneficiariesParsed],
                 Array.isArray(feeSharingBeneficiariesSharesWadParsed) ? feeSharingBeneficiariesSharesWadParsed : [feeSharingBeneficiariesSharesWadParsed],
             ];
-            const feeSharing = await upgrades.deployProxy(FeeSharing, params, { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+            const feeSharing = await upgrades.deployProxy(FeeSharing, params, { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
             await feeSharing.deployed();
             console.log("Fee Sharing contract deployed to: ", feeSharing.address);
-            
+
             secureDeploymentChecksum.push(feeSharing.deployTransaction.data);
 
-            const impl = "0x"+(await ethers.provider.getStorageAt(feeSharing.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
+            const impl = "0x" + (await ethers.provider.getStorageAt(feeSharing.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc')).slice(-40);
             console.log("Fee Sharing implementation deployed to address: ", impl);
 
             writeToDeploymentsFile({
@@ -198,18 +210,18 @@ task("init-protocol", "deploys the lending protocol for production")
             const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
             const poolCalculations = await PoolCalculations.deploy();
             await poolCalculations.deployed();
-          
+
             const PoolTransfers = await ethers.getContractFactory("PoolTransfers");
             const poolTransfers = await PoolTransfers.deploy();
             await poolTransfers.deployed();
-          
+
             const LendingPool = await ethers.getContractFactory("LendingPool", {
-              libraries: {
-                PoolCalculations: poolCalculations.address,
-                PoolTransfers: poolTransfers.address
-              }
+                libraries: {
+                    PoolCalculations: poolCalculations.address,
+                    PoolTransfers: poolTransfers.address
+                }
             });
-            
+
             const lp = await LendingPool.deploy();
             console.log(`LendingPool implementation deployed to ${lp.address}`);
             secureDeploymentChecksum.push(lp.deployTransaction.data);
@@ -269,7 +281,7 @@ task("init-protocol", "deploys the lending protocol for production")
         deploySequence.push("Validate deployment was neither hijacked nor tampered", () => retryableRequest(async () => {
             var checksum = "";
             secureDeploymentChecksum.sort();
-            for(let i = 0; i < secureDeploymentChecksum.length; i++) {
+            for (let i = 0; i < secureDeploymentChecksum.length; i++) {
                 checksum += secureDeploymentChecksum[i];
             }
             let bytes = ethers.utils.toUtf8Bytes(checksum);
@@ -277,7 +289,7 @@ task("init-protocol", "deploys the lending protocol for production")
             console.log("Expected Transactional Checksum: ", expected)
             console.log("skipping...")
             return;
-            console.log("Generating Actual, This may take a few minutes...") 
+            console.log("Generating Actual, This may take a few minutes...")
             const actualChecksome: string[] = []
             const dataSources = [
                 "platformToken",
@@ -294,12 +306,12 @@ task("init-protocol", "deploys the lending protocol for production")
             const sourceAddresses: string[] = []
             dataSources.forEach(source => {
                 const contracts = getMostCurrentContracts(source, network)
-                for(let i = 0; i < contracts.length; i++) {
+                for (let i = 0; i < contracts.length; i++) {
                     sourceAddresses.push(contracts[i].contractAddress)
                 }
             })
 
-            for(let i = 0; i <sourceAddresses.length; i++) {
+            for (let i = 0; i < sourceAddresses.length; i++) {
                 const transactionCount = await ethers.provider.getTransactionCount(sourceAddresses[i], 'latest');
 
             }
