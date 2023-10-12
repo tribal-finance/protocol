@@ -89,11 +89,20 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
     }
     
     for(let i = 0; i < vaultCount; i++) {
+        console.log("Funding vault:", i);
         const Vault = await params.lendingPool.trancheVaultAddresses(i);
         const vault = await params.ethers.getContractAt("TrancheVault", Vault);
         const vMinFunding = await vault.minFundingCapacity();
-        await (await stablecoin.connect(params.lender1).approve(Vault, vMinFunding)).wait();
-        console.log("requested vMinFunding", vMinFunding);
+        console.log("min funding capacity", vMinFunding);
+        const currentVaultFunding = await vault.totalAssets();
+        console.log("currentVaultFunding", currentVaultFunding);
+        const requiredFunding = vMinFunding.sub(currentVaultFunding);
+        if(requiredFunding.eq(0)) {
+            console.log("vault",i,"is funded, skipping...")
+            continue;
+        }
+        await (await stablecoin.connect(params.lender1).approve(Vault, requiredFunding)).wait();
+        console.log("requested required funding", requiredFunding);
 
         // MAKE SURE LENDER1 IS WHITELISTED IF THEY ARE NOT ALREADY
         if(!(await params.authority.isWhitelistedLender(params.lender1.address))) {
