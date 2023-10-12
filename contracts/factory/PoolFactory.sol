@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "../authority/AuthorityAware.sol";
 import "../pool/LendingPool.sol";
+import "../component/Component.sol";
 
 contract PoolFactory is AuthorityAware {
     using Math for uint;
@@ -37,6 +38,9 @@ contract PoolFactory is AuthorityAware {
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
     mapping(address => bool) public prevDeployedTranche;
+
+    /// @notice used to gain function level access to systems by their instance id
+    mapping(uint256 => Component[]) public componentBundles;
 
     function initialize(address _authority) public initializer {
         __Ownable_init();
