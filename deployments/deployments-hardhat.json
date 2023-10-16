@@ -528,5 +528,40 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0x964B89318C12F2Df086573b29338b0258a3B2f41",
     "timestamp": 1678261315
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0xB468647B04bF657C9ee2de65252037d781eABafD",
+    "implementationAddress": "0x0b27a79cb9c0b38ee06ca3d94daa68e0ed17f953",
+    "timestamp": 1678261307
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0x773330693cb7d5D233348E25809770A32483A940",
+    "implementationAddress": "0x408f924baec71cc3968614cb2c58e155a35e6890",
+    "timestamp": 1678261310
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x40A633EeF249F21D95C8803b7144f19AAfeEF7ae",
+    "implementationAddress": "0x52173b6ac069619c206b9a0e75609fc92860ab2a",
+    "timestamp": 1678261312
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xdB012DD3E3345e2f8D23c0F3cbCb2D94f430Be8C",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261314
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0x1eB5C49630E08e95Ba7f139BcF4B9BA171C9a8C7",
+    "implementationAddress": "0x532802f2f9e0e3ee9d5ba70c35e1f43c0498772d",
+    "timestamp": 1678261318
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0xF9c0bF1CFAAB883ADb95fed4cfD60133BffaB18a",
+    "timestamp": 1678261324
   }
 ]
