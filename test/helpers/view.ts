@@ -4,8 +4,37 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { LendingPool } from "../../typechain-types";
 import { Signer } from "ethers";
-import STAGES from "./stages";
+import STAGES, { STAGES_LOOKUP, STATE_MACHINE } from "./stages";
 
+export const assertDefaultRatioWad = async(lendingPool: LendingPool) => {
+    const stage = await lendingPool.currentStage();
+    const trancheVaults = []
+    const length = await lendingPool.tranchesCount();
+
+    for(let i = 0; i < length; i++) {
+        trancheVaults.push(await ethers.getContractAt("TrancheVault", await lendingPool.trancheVaultAddresses(i)))
+    }
+
+    const stablecoin = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
+
+    const availableAssets = await stablecoin.balanceOf(lendingPool.address);
+    console.log(STAGES_LOOKUP[stage])
+    let trancheDefaultRatioWad: any = "foo"
+    for(let i = 0; i < length; i++) {
+        const assetsToSend = (await lendingPool.trancheCoveragesWads(i)).mul(availableAssets).div(ethers.constants.WeiPerEther)
+        trancheDefaultRatioWad = (assetsToSend.mul(ethers.constants.WeiPerEther)).div(await trancheVaults[i].totalAssets());
+    }
+
+    if(stage === STAGES.DEFAULTED) {
+        for(let i = 0; i < length; i++) {
+            expect(await trancheVaults[i].defaultRatioWad()).not.equals(0)
+        }
+    } else {
+        for(let i = 0; i < length; i++) {
+            expect(await trancheVaults[i].defaultRatioWad()).equals(0)
+        }
+    }
+}
 
 export const assertPoolViews = async (lendingPool: LendingPool, lender: Signer, failCase: number) => {
 

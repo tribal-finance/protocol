@@ -14,7 +14,7 @@ import {
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
-import { assertPoolViews } from "../helpers/view";
+import { assertDefaultRatioWad, assertPoolViews } from "../helpers/view";
 
 describe("Defaulting", function () {
   context("unitranche pool without payments", function () {
@@ -97,10 +97,13 @@ describe("Defaulting", function () {
           .lendingTermSeconds();
         await ethers.provider.send("evm_increaseTime", [toWait.toNumber()]);
         await ethers.provider.send("evm_mine", []);
-
+        await assertDefaultRatioWad(contracts.lendingPool)
+        
         await contracts.lendingPool
-          .connect(deployer)
-          .adminTransitionToDefaultedState();
+        .connect(deployer)
+        .adminTransitionToDefaultedState();
+        
+        await assertDefaultRatioWad(contracts.lendingPool);
 
         return contracts;
       };
@@ -120,7 +123,6 @@ describe("Defaulting", function () {
     it("sets the pool to defaulted stage", async function () {
       const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
       await assertPoolViews(lendingPool, lenders[0], 1000)
-
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
 
