@@ -619,6 +619,7 @@ describe("Defaulting", function () {
         await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
         await network.provider.send("evm_mine");
         // Set pool to funded state
+
         await contracts.lendingPool
           .connect(deployer)
           .adminTransitionToFundedState();
@@ -678,7 +679,9 @@ describe("Defaulting", function () {
         );
 
       // move to defaulted state
+      await assertDefaultRatioWad(lendingPool);
       await lendingPool.connect(deployer).adminTransitionToDefaultedState();
+      await assertDefaultRatioWad(lendingPool); // triggers the buggy 0 defaultRatioWad
 
       // expect to be in defaulted state
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
@@ -723,7 +726,8 @@ describe("Defaulting", function () {
 
       // expect the defaultRatio for the second tranche to be 0
       const defaultRatio2 = await secondTrancheVault.defaultRatioWad();
-      expect(defaultRatio2).to.eq(WAD(0));
+      expect(defaultRatio2).to.eq(WAD(0));  // triggers the buggy 0 defaultRatioWad
+      assertDefaultRatioWad(lendingPool)
     });
   });
 });
