@@ -18,11 +18,14 @@ export const assertDefaultRatioWad = async(lendingPool: LendingPool) => {
     const stablecoin = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
 
     const availableAssets = await stablecoin.balanceOf(lendingPool.address);
-    console.log(STAGES_LOOKUP[stage])
     let trancheDefaultRatioWad: any = "foo"
     for(let i = 0; i < length; i++) {
         const assetsToSend = (await lendingPool.trancheCoveragesWads(i)).mul(availableAssets).div(ethers.constants.WeiPerEther)
-        trancheDefaultRatioWad = (assetsToSend.mul(ethers.constants.WeiPerEther)).div(await trancheVaults[i].totalAssets());
+        let totalAssets = await trancheVaults[i].totalAssets();
+        if(totalAssets.eq(ethers.BigNumber.from(0))) {
+            totalAssets = ethers.BigNumber.from(1);
+        }
+        trancheDefaultRatioWad = (assetsToSend.mul(ethers.constants.WeiPerEther)).div(totalAssets);
     }
 
     if(stage === STAGES.DEFAULTED) {
