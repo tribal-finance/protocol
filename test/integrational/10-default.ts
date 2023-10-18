@@ -726,10 +726,12 @@ describe("Defaulting", function () {
 
       // expect the defaultRatio for the second tranche to be 0
       const defaultRatio2 = await secondTrancheVault.defaultRatioWad();
-      expect(defaultRatio2).to.eq(WAD(0));  // triggers the buggy 0 defaultRatioWad
+      expect(defaultRatio2).to.eq(WAD(0));  // triggers the buggy 0 defaultRatioWad and strange maxWithdraw value
       assertDefaultRatioWad(lendingPool)
       expect(await firstTrancheVault.isDefaulted()).equals(true);
+      expect(await firstTrancheVault.maxWithdraw(await lender1.getAddress())).not.equals(0)
       expect(await secondTrancheVault.isDefaulted()).equals(false);
+      expect(await secondTrancheVault.maxWithdraw(await lender1.getAddress())).equals(0)
     });
   });
 });
