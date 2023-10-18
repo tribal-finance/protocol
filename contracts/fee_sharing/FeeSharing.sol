@@ -7,11 +7,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-import "../staking/IStaking.sol";
-import "./IFeeSharing.sol";
-import "../authority/AuthorityAware.sol";
 
-contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
+import "./IFeeSharing.sol";
+import "../staking/IStaking.sol";
+import "../governance/TribalGovernance.sol";
+
+contract FeeSharing is IFeeSharing, Initializable {
     using MathUpgradeable for uint;
 
     uint public constant WAD = 10 ** 18;
@@ -19,24 +20,23 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
     IERC20 public assetContract;
     address[] public beneficiaries;
     uint[] public beneficiariesSharesWad;
+    TribalGovernance public governance;
 
     /** @notice initializer
      *  IMPORTANT: the assumption is that the first beneficiary is the staking contract
-     *  @param _authority address of the Authority contract
+     *  @param _governance address of the Authority contract
      *  @param _assetContract address of the asset contract (USDC)
      *  @param _beneficiaries array of addresses of the beneficiaries where the funds will be distributed
      *  @param _beneficiariesSharesWad array of shares of the beneficiaries where the funds will be distributed (in WAD. 100% = 10**18)
      */
     function initialize(
-        address _authority,
+        TribalGovernance _governance,
         IERC20 _assetContract,
         address[] calldata _beneficiaries,
         uint[] calldata _beneficiariesSharesWad
     ) external initializer {
         assetContract = _assetContract;
-
-        __Ownable_init();
-        __AuthorityAware__init(_authority);
+        governance = _governance;
         updateBenificiariesAndShares(_beneficiaries, _beneficiariesSharesWad);
     }
 
@@ -50,7 +50,8 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
     function updateBenificiariesAndShares(
         address[] calldata _beneficiaries,
         uint[] calldata _beneficiariesSharesWad
-    ) public onlyOwnerOrAdmin {
+    ) public {
+        require(governance.hasRole(Constants.ADMIN, msg.sender), "only admin");
         require(
             _beneficiaries.length == _beneficiariesSharesWad.length,
             "beneficiaries and shares must have the same length"
@@ -63,7 +64,8 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
     /** @notice update the beneficiaries shares
      *   @param shareWads array of shares of the beneficiaries where the funds will be distributed (in WAD. 100% = 10**18)
      */
-    function updateShares(uint[] calldata shareWads) external onlyOwnerOrAdmin {
+    function updateShares(uint[] calldata shareWads) external {
+        require(governance.hasRole(Constants.ADMIN, msg.sender), "only admin");
         require(shareWads.length == beneficiaries.length, "beneficiaries and shares must have the same length");
         _validateShares(shareWads);
         beneficiariesSharesWad = shareWads;
@@ -80,7 +82,8 @@ contract FeeSharing is IFeeSharing, Initializable, AuthorityAware {
     /** @notice distribute the collected fees to the beneficiaries
      *  IMPORTANT: the assumption is that the first beneficiary is the staking contract
      */
-    function distributeFees() external onlyOwnerOrAdmin {
+    function distributeFees() external {
+        require(governance.hasRole(Constants.ADMIN, msg.sender), "only admin");
         uint balance = assetContract.balanceOf(address(this));
         // distribute shares
         for (uint i = 0; i < beneficiaries.length; i++) {

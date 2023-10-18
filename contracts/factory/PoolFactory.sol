@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
-import "../authority/AuthorityAware.sol";
+import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
 import "../component/Component.sol";
 

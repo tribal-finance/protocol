@@ -8,11 +8,11 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "../authority/AuthorityAware.sol";
+import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
 import "../factory/PoolFactory.sol";
 
-contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
+contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable {
     using MathUpgradeable for uint256;
 
     /*////////////////////////////////////////////////
