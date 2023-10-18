@@ -9,7 +9,7 @@ import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
 import "../component/Component.sol";
 
-contract PoolFactory is AuthorityAware {
+contract PoolFactory is Initializable {
     using Math for uint;
 
     struct PoolRecord {
@@ -35,6 +35,8 @@ contract PoolFactory is AuthorityAware {
 
     address public feeSharingContractAddress;
 
+    TribalGovernance public governance;
+
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
     mapping(address => bool) public prevDeployedTranche;
@@ -42,9 +44,8 @@ contract PoolFactory is AuthorityAware {
     /// @notice used to gain function level access to systems by their instance id
     mapping(uint256 => Component[]) public componentBundles;
 
-    function initialize(address _authority) public initializer {
-        __Ownable_init();
-        __AuthorityAware__init(_authority);
+    function initialize(address _governance) public initializer {
+        governance = TribalGovernance(_governance);
     }
 
     constructor() {
@@ -53,16 +54,19 @@ contract PoolFactory is AuthorityAware {
 
     /// @notice it should be expressed that updating implemetation will make nonces at prior implementation stale
     /// @dev sets implementation for future pool deployments
-    function setPoolImplementation(address implementation) external onlyOwnerOrAdmin {
+    function setPoolImplementation(address implementation) external {
+        require(governance.isAdmin(msg.sender), "not admin");
         poolImplementationAddress = implementation;
     }
 
     /// @dev sets implementation for future tranche vault deployments
-    function setTrancheVaultImplementation(address implementation) external onlyOwnerOrAdmin {
+    function setTrancheVaultImplementation(address implementation) external {
+        require(governance.isAdmin(msg.sender), "not admin");
         trancheVaultImplementationAddress = implementation;
     }
 
-    function setFeeSharingContractAddress(address implementation) external onlyOwnerOrAdmin {
+    function setFeeSharingContractAddress(address implementation) external {
+        require(governance.isAdmin(msg.sender), "not admin");
         feeSharingContractAddress = implementation;
     }
 
@@ -72,7 +76,8 @@ contract PoolFactory is AuthorityAware {
     }
 
     /// @dev removes all the pool records from storage
-    function clearPoolRecords() external onlyOwnerOrAdmin {
+    function clearPoolRecords() external {
+        require(governance.isAdmin(msg.sender), "not admin");
         delete poolRegistry;
     }
 
@@ -87,7 +92,8 @@ contract PoolFactory is AuthorityAware {
     function deployPool(
         LendingPool.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads
-    ) external onlyOwner returns (address) {
+    ) external returns (address) {
+        require(governance.isOwner(msg.sender), "not owner");
         // validate wad
         uint256 wadMax;
         uint256 wadMin;
@@ -105,7 +111,7 @@ contract PoolFactory is AuthorityAware {
             params,
             fundingSplitWads,
             poolAddress,
-            _msgSender()
+            msg.sender
         );
 
         initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
@@ -113,7 +119,8 @@ contract PoolFactory is AuthorityAware {
         return poolAddress;
     }
 
-    function _clonePool() internal onlyOwner returns (address poolAddress) {
+    function _clonePool() internal returns (address poolAddress) {
+        require(governance.isOwner(msg.sender), "not owner");
         address impl = poolImplementationAddress;
         poolAddress = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
         emit PoolCloned(poolAddress, poolImplementationAddress);
@@ -147,7 +154,8 @@ contract PoolFactory is AuthorityAware {
         uint[][] calldata fundingSplitWads,
         address poolAddress,
         address ownerAddress
-    ) internal onlyOwner returns (address[] memory trancheVaultAddresses) {
+    ) internal returns (address[] memory trancheVaultAddresses) {
+        require(governance.isOwner(msg.sender), "not owner");
         require(params.tranchesCount > 0, "Error TrancheCount must be gt 0");
         trancheVaultAddresses = new address[](params.tranchesCount);
 
@@ -166,9 +174,11 @@ contract PoolFactory is AuthorityAware {
                 string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
                 string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
                 params.stableCoinContractAddress,
-                address(authority)
+                address(governance)
             );
-            TrancheVault(trancheVaultAddresses[i]).transferOwnership(ownerAddress);
+            require(!governance.hasRole(Constants.OWNER, ownerAddress), "must be unique owner");
+            // TODO: remove this requirement in monolithic storage
+            governance.grantRole(Constants.OWNER, ownerAddress);
         }
     }
 
@@ -177,15 +187,16 @@ contract PoolFactory is AuthorityAware {
         LendingPool.LendingPoolParams calldata params,
         address[] memory trancheVaultAddresses,
         address _feeSharingContractAddress
-    ) public onlyOwner {
+    ) public {
+        require(governance.isOwner(msg.sender), "not owner");
         LendingPool(poolAddress).initialize(
             params,
             trancheVaultAddresses,
             _feeSharingContractAddress,
-            address(authority),
+            address(governance),
             address(this)
         );
-        Ownable(poolAddress).transferOwnership(_msgSender());
+        Ownable(poolAddress).transferOwnership(msg.sender);
 
         PoolRecord memory record = PoolRecord(
             params.name,
@@ -198,6 +209,6 @@ contract PoolFactory is AuthorityAware {
         );
         poolRegistry.push(record);
 
-        emit PoolDeployed(_msgSender(), record);
+        emit PoolDeployed(msg.sender, record);
     }
 }

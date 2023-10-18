@@ -19,11 +19,19 @@ contract TribalGovernance is AccessControl {
         _;
     }
 
-    constructor(address _admin) {
-        _setupRole(Constants.DEPLOYER, msg.sender); // The deployer is granted the deployer role
+    constructor(address _admin, address _owner) {
+        _grantRole(Constants.OWNER, _owner);
+        _grantRole(Constants.ADMIN, _owner);
+
+        _grantRole(Constants.DEPLOYER, msg.sender);
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(Constants.ADMIN, _admin);    // The admin is also granted by constructor argument
-        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+
+        _grantRole(Constants.ADMIN, _admin);    
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+
+        _setRoleAdmin(Constants.PROTOCOL, Constants.ADMIN); // admin govern's protocol
+        _setRoleAdmin(Constants.OWNER, Constants.PROTOCOL); // protocol govern's owners
+
         
     }
 
@@ -38,7 +46,12 @@ contract TribalGovernance is AccessControl {
     function isAdmin(address _admin) public view returns (bool) {
         return hasRole(Constants.ADMIN, _admin);
     }
-    function isWhitelisted(address _user) external view {
-        require(isWhitelistedBorrower(_user) || isWhitelistedLender(_user) || isAdmin(_user), "not borrower, lender, or admin");
+
+    function isOwner(address _admin) public view returns (bool) {
+        return hasRole(Constants.OWNER, _admin);
+    }
+
+    function isWhitelisted(address _user) external view returns (bool) {
+        return isWhitelistedBorrower(_user) || isWhitelistedLender(_user) || isAdmin(_user);
     }
 }

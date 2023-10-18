@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -12,8 +13,9 @@ import "./ILendingPool.sol";
 
 import "../fee_sharing/IFeeSharing.sol";
 import "../vaults/TrancheVault.sol";
+import "../governance/TribalGovernance.sol";
 
-contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
+contract LendingPool is ILendingPool, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint;
 
@@ -138,6 +140,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     mapping(address => RollOverSetting) private s_rollOverSettings;
 
     Stages public currentStage;
+
+    TribalGovernance public governance;
 
     /*///////////////////////////////////
        MODIFIERS
@@ -287,9 +291,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         feeSharingContractAddress = _feeSharingContractAddress;
         poolFactoryAddress = _poolFactoryAddress;
 
-        __Ownable_init();
         __Pausable_init();
-        __AuthorityAware__init(_authorityAddress);
+
+        governance = TribalGovernance(_authorityAddress);
 
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
     }
@@ -299,12 +303,14 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     ///////////////////////////////////*/
 
     /** @dev Pauses the pool */
-    function pause() external onlyOwnerOrAdmin {
+    function pause() external {
+        require(governance.isAdmin(msg.sender), "not admin");
         _pause();
     }
 
     /** @dev Unpauses the pool */
-    function unpause() external onlyOwnerOrAdmin {
+    function unpause() external {
+        require(governance.isAdmin(msg.sender), "not admin");
         _unpause();
     }
 
@@ -312,7 +318,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      * - sets openedAt to current block timestamp
      * - enables deposits and withdrawals to tranche vaults
      */
-    function adminOpenPool() external onlyOwnerOrAdmin atStage(Stages.FLC_DEPOSITED) whenNotPaused {
+    function adminOpenPool() external atStage(Stages.FLC_DEPOSITED) whenNotPaused {
+        require(governance.isAdmin(msg.sender), "not admin");
         openedAt = uint64(block.timestamp);
         currentStage = Stages.OPEN;
 
@@ -329,7 +336,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     /** @notice Checks whether the pool was funded successfully or not.
      *  this function is expected to be called by *owner* once the funding period ends
      */
-    function adminTransitionToFundedState() external onlyOwnerOrAdmin atStage(Stages.OPEN) {
+    function adminTransitionToFundedState() external atStage(Stages.OPEN) {
+        require(governance.isAdmin(msg.sender), "not admin");
         require(block.timestamp >= openedAt + fundingPeriodSeconds, "Cannot accrue interest or declare failure before start time");
         if (collectedAssets >= minFundingCapacity) {
             _transitionToFundedStage();
@@ -338,7 +346,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         }
     }
 
-    function adminTransitionToDefaultedState() external onlyOwnerOrAdmin atStage(Stages.BORROWED) {
+    function adminTransitionToDefaultedState() external atStage(Stages.BORROWED) {
+        require(governance.isAdmin(msg.sender), "not admin");
         require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023"); // "LendingPool: maturityDate not reached"
         _transitionToDefaultedStage();
     }
@@ -459,7 +468,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderLockPlatformTokensByTranche(
         uint8 trancheId,
         uint platformTokens
-    ) external onlyLender atStage(Stages.OPEN) whenNotPaused {
+    ) external atStage(Stages.OPEN) whenNotPaused {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         require(
             platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
             "LP101" //"LendingPool: lock will lead to overboost"
@@ -483,7 +493,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderUnlockPlatformTokensByTranche(
         uint8 trancheId,
         uint platformTokens
-    ) external onlyLender atStages2(Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
+    ) external atStages2(Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         require(!s_rollOverSettings[msg.sender].platformTokens, "LP102"); // "LendingPool: tokens are locked for rollover"
         require(lenderRewardsByTrancheRedeemable(_msgSender(), trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
         require(IERC20(platformTokenContractAddress).totalSupply() > 0, "Unlock: Token Locking Disabled");
@@ -505,7 +516,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderRedeemRewardsByTranche(
         uint8 trancheId,
         uint toWithdraw
-    ) public onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
+    ) public atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
         if (toWithdraw == 0) {
             return;
@@ -529,7 +541,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      */
     function lenderRedeemRewards(
         uint[] calldata toWithdraws
-    ) external onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
+    ) external atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         require(!s_rollOverSettings[msg.sender].rewards, "LP105"); //"LendingPool: rewards are locked for rollover"
         require(toWithdraws.length == tranchesCount, "LP107"); //"LendingPool: wrong amount of tranches"
         for (uint8 i; i < toWithdraws.length; i++) {
@@ -673,7 +686,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  @param rewards whether the rewards should be rolled over
      *  @param platformTokens whether the platform tokens should be rolled over
      */
-    function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
+    function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         address lender = _msgSender();
         s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
         PoolTransfers.lenderEnableRollOver(this, principal, rewards, platformTokens, lender);
@@ -691,13 +705,15 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         address[] memory deadTrancheAddrs,
         uint256 lenderStartIndex,
         uint256 lenderEndIndex
-    ) external onlyOwnerOrAdmin atStage(Stages.OPEN) whenNotPaused {
+    ) external atStage(Stages.OPEN) whenNotPaused {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs, lenderStartIndex, lenderEndIndex);
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
      */
-    function lenderDisableRollOver() external onlyLender {
+    function lenderDisableRollOver() external {
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
         s_rollOverSettings[_msgSender()] = RollOverSetting(false, false, false, false);
     }
 

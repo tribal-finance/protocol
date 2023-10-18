@@ -245,7 +245,7 @@ library PoolCalculations {
         require(params.fundingPeriodSeconds > 0, "LP009"); // "LendingPool: fundingPeriodSeconds == 0"
         require(params.lendingTermSeconds > 0, "LP010"); // "LendingPool: lendingTermSeconds == 0"
         require(params.borrowerAddress != address(0), "LP011"); // "LendingPool: borrowerAddress empty"
-        require(Authority(_authorityAddress).isWhitelistedBorrower(params.borrowerAddress), "LP023");
+        require(TribalGovernance(_authorityAddress).isWhitelistedBorrower(params.borrowerAddress), "LP023");
         require(params.borrowerTotalInterestRateWad > 0, "LP012"); // "LendingPool: borrower interest rate = 0%"
         require(params.protocolFeeWad > 0, "LP013"); // "LendingPool: protocolFee == 0%"
         require(params.penaltyRateWad > 0, "LP014"); // "LendingPool: penaltyRate == 0"
