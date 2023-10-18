@@ -33,6 +33,7 @@ export const assertDefaultRatioWad = async(lendingPool: LendingPool) => {
         for(let i = 0; i < length; i++) {
             if(i == 0) {
                 expect(await trancheVaults[i].defaultRatioWad()).not.equals(0)
+                expect(await trancheVaults[i].isDefaulted()).equals(true);
             } else {
                 /**
                  * No Assets to Send: 
@@ -44,6 +45,7 @@ export const assertDefaultRatioWad = async(lendingPool: LendingPool) => {
                 // TL;DR, In multitranche scenaiors, 
                 // the defaultRatio WAD will likely be zero if there isn't enough available assets to send after covering the first tranche.
                 expect(await trancheVaults[i].defaultRatioWad()).equals(0)
+                expect(await trancheVaults[i].isDefaulted()).equals(false);
             }
         }
     } else {

@@ -728,6 +728,8 @@ describe("Defaulting", function () {
       const defaultRatio2 = await secondTrancheVault.defaultRatioWad();
       expect(defaultRatio2).to.eq(WAD(0));  // triggers the buggy 0 defaultRatioWad
       assertDefaultRatioWad(lendingPool)
+      expect(await firstTrancheVault.isDefaulted()).equals(true);
+      expect(await secondTrancheVault.isDefaulted()).equals(false);
     });
   });
 });
