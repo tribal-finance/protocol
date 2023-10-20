@@ -2,6 +2,9 @@
 
 pragma solidity 0.8.18;
 
+import "../governance/TribalGovernance.sol";
+import "../utils/Constants.sol";
+
 contract PoolStorage {
     // globalized
     mapping(bytes32 => string) private globalStringStorage;
@@ -25,8 +28,19 @@ contract PoolStorage {
 
     mapping(bytes32 => mapping(address => bytes)) mappingAddressToBytes;
 
+    TribalGovernance public governance;
+
+    constructor(TribalGovernance _governance) {
+        governance = _governance;
+    }
+
+    modifier canWrite() {
+        require(governance.hasRole(Constants.POOL_STORAGE_WRITER, msg.sender), "write forbidden");
+        _;
+    }
+
     // Global String Storage
-    function setStringGlobally(string memory label, string memory value) external {
+    function setStringGlobally(string memory label, string memory value) external canWrite {
         globalStringStorage[keccak256(abi.encode(label))] = value;
     }
 
@@ -35,7 +49,7 @@ contract PoolStorage {
     }
 
     // Global Bytes Storage
-    function setBytesGlobally(string memory label, bytes memory value) external {
+    function setBytesGlobally(string memory label, bytes memory value) external canWrite {
         globalBytesStorage[keccak256(abi.encode(label))] = value;
     }
 
@@ -44,7 +58,7 @@ contract PoolStorage {
     }
 
     // Global Uint Storage
-    function setUint256Globally(string memory label, uint256 value) external {
+    function setUint256Globally(string memory label, uint256 value) external canWrite {
         globalUintStorage[keccak256(abi.encode(label))] = value;
     }
 
@@ -53,7 +67,7 @@ contract PoolStorage {
     }
 
     // Global Int Storage
-    function setInt256Globally(string memory label, int256 value) external {
+    function setInt256Globally(string memory label, int256 value) external canWrite {
         globalIntStorage[keccak256(abi.encode(label))] = value;
     }
 
@@ -62,7 +76,7 @@ contract PoolStorage {
     }
 
     // Global Address Storage
-    function setAddressGlobally(string memory label, address value) external {
+    function setAddressGlobally(string memory label, address value) external canWrite {
         globalAddressStorage[keccak256(abi.encode(label))] = value;
     }
 
@@ -71,7 +85,7 @@ contract PoolStorage {
     }
 
     // Global Boolean Storage
-    function setBooleanGlobally(string memory label, bool value) external {
+    function setBooleanGlobally(string memory label, bool value) external canWrite {
         globalAooleanStorage[keccak256(abi.encode(label))] = value; // Note: Typo here, it should be `globalBooleanStorage`
     }
 
@@ -80,7 +94,7 @@ contract PoolStorage {
     }
 
     // Global Bytes32 Storage
-    function setBytes32Globally(string memory label, bytes32 value) external {
+    function setBytes32Globally(string memory label, bytes32 value) external canWrite {
         globalBytes32Storage[keccak256(abi.encode(label))] = value;
     }
 
@@ -89,7 +103,7 @@ contract PoolStorage {
     }
 
     // String Storage
-    function setString(uint256 instanceId, string memory label, string memory value) external {
+    function setString(uint256 instanceId, string memory label, string memory value) external canWrite {
         stringStorage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -98,7 +112,7 @@ contract PoolStorage {
     }
 
     // Bytes Storage
-    function setBytes(uint256 instanceId, string memory label, bytes memory value) external {
+    function setBytes(uint256 instanceId, string memory label, bytes memory value) external canWrite {
         bytesStorage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -107,7 +121,7 @@ contract PoolStorage {
     }
 
     // Uint Storage
-    function setUint256(uint256 instanceId, string memory label, uint256 value) external {
+    function setUint256(uint256 instanceId, string memory label, uint256 value) external canWrite {
         uintStorage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -116,7 +130,7 @@ contract PoolStorage {
     }
 
     // Int Storage
-    function setInt256(uint256 instanceId, string memory label, int256 value) external {
+    function setInt256(uint256 instanceId, string memory label, int256 value) external canWrite {
         intStorage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -125,7 +139,7 @@ contract PoolStorage {
     }
 
     // Address Storage
-    function setAddress(uint256 instanceId, string memory label, address value) external {
+    function setAddress(uint256 instanceId, string memory label, address value) external canWrite {
         addressStorage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -134,7 +148,7 @@ contract PoolStorage {
     }
 
     // Boolean Storage
-    function setBoolean(uint256 instanceId, string memory label, bool value) external {
+    function setBoolean(uint256 instanceId, string memory label, bool value) external canWrite {
         booleanStorage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -143,7 +157,7 @@ contract PoolStorage {
     }
 
     // Bytes32 Storage
-    function setBytes32(uint256 instanceId, string memory label, bytes32 value) external {
+    function setBytes32(uint256 instanceId, string memory label, bytes32 value) external canWrite {
         bytes32Storage[keccak256(abi.encode(instanceId, label))] = value;
     }
 
@@ -152,7 +166,7 @@ contract PoolStorage {
     }
 
     // complex localized types
-    function setArrayAddress(uint256 instanceId, string memory label, uint256 key, address value) external {
+    function setArrayAddress(uint256 instanceId, string memory label, uint256 key, address value) external canWrite {
         arrayAddressStorage[keccak256(abi.encode(instanceId, label))][key] = value;
     }
 
@@ -165,7 +179,7 @@ contract PoolStorage {
         string memory label,
         address key,
         bytes memory value
-    ) external {
+    ) external canWrite {
         mappingAddressToBytes[keccak256(abi.encode(instanceId, label))][key] = value;
     }
 
