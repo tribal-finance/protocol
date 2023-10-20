@@ -690,7 +690,7 @@ contract LendingPool is ILendingPool, PausableUpgradeable {
         require(governance.isWhitelistedLender(msg.sender), "not lender");
         address lender = _msgSender();
         s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
-        PoolTransfers.lenderEnableRollOver(this, principal, rewards, platformTokens, lender);
+        PoolTransfers.lenderEnableRollOver(this, lender);
     }
 
     /**

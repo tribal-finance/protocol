@@ -11,9 +11,6 @@ import "../vaults/TrancheVault.sol";
 library PoolTransfers {
     function lenderEnableRollOver(
         LendingPool lendingPool,
-        bool principal,
-        bool rewards,
-        bool platformTokens,
         address lender
     ) external {
         PoolFactory poolFactory = PoolFactory(lendingPool.poolFactoryAddress());
