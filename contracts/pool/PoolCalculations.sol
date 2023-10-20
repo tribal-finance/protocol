@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./LendingPool.sol";
 import "../vaults/TrancheVault.sol";
+import "../governance/TribalGovernance.sol";
 
 library PoolCalculations {
     uint constant WAD = 10 ** 18;

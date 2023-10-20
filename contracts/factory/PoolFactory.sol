@@ -4,10 +4,12 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
-import "../component/Component.sol";
+import "../components/Component.sol";
+import "../vaults/TrancheVault.sol";
 
 contract PoolFactory is Initializable {
     using Math for uint;
@@ -196,7 +198,8 @@ contract PoolFactory is Initializable {
             address(governance),
             address(this)
         );
-        Ownable(poolAddress).transferOwnership(msg.sender);
+        //Ownable(poolAddress).transferOwnership(msg.sender);
+        governance.grantRole(Constants.OWNER, msg.sender);
 
         PoolRecord memory record = PoolRecord(
             params.name,

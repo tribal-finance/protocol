@@ -2,8 +2,9 @@
 pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "../utils/Constants.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+import "../utils/Constants.sol";
 /**
  * @title Authority Whitelist smart contract
  * @notice this contract manages a whitelists for all the admins, borrowers and lenders

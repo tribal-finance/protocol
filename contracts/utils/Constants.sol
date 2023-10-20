@@ -4,6 +4,13 @@ pragma solidity 0.8.18;
 
 library Constants {
 
+    struct RollOverSetting {
+        bool enabled;
+        bool principal;
+        bool rewards;
+        bool platformTokens;
+    }
+
     bytes32 constant internal POOL_STORAGE_READER = keccak256("POOL_STORAGE_READER");
     bytes32 constant internal POOL_STORAGE_WRITER = keccak256("POOL_STORAGE_WRITER");
     bytes32 constant internal DEPLOYER = keccak256("DEPLOYER");
