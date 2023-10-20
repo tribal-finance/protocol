@@ -12,9 +12,6 @@ contract TransfersComponent is Component {
     constructor(uint256 _instanceId, PoolStorage _poolStorage) Component(_instanceId, _poolStorage) {}
 
     function lenderEnableRollOver(
-        bool principal,
-        bool rewards,
-        bool platformTokens,
         address lender
     ) external {
         // PoolFactory poolFactory = PoolFactory(lendingPool.poolFactoryAddress());
@@ -62,7 +59,6 @@ contract TransfersComponent is Component {
         LendingPool deadpool = LendingPool(
             poolStorage.getArrayAddress(deadInstanceId, "lendingPoolInstances", deadInstanceId)
         );
-        LendingPool pool = LendingPool(poolStorage.getArrayAddress(instanceId, "lendingPoolInstances", instanceId));
 
         for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
             // address lender = deadpool.lendersAt(i);
