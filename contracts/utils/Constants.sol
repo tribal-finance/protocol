@@ -11,6 +11,13 @@ library Constants {
         bool platformTokens;
     }
 
+    struct Rewardable {
+        uint stakedAssets;
+        uint lockedPlatformTokens;
+        uint redeemedRewards;
+        uint64 start;
+    }
+
     uint256 constant WAD = 10 ** 18;
     uint256 constant YEAR = 365 days;
 

@@ -25,6 +25,7 @@ library PoolCalculations {
         return result;
     }
 
+    // unused in contracts: don't migrate
     function poolBalanceThreshold(LendingPool lendingPool) public view returns (uint) {
         uint borrowedAssets = lendingPool.borrowedAssets();
         uint borrowerTotalInterestRateWad = lendingPool.borrowerTotalInterestRateWad();
@@ -40,6 +41,7 @@ library PoolCalculations {
         return firstLossAssets - interestGoDownAmount;
     }
 
+    // unused in contracts: don't migrate
     function poolBalance(
         LendingPool lendingPool
     ) public view returns (uint) {
@@ -54,6 +56,7 @@ library PoolCalculations {
         return positiveBalance - allLendersInterestByDate;
     }
 
+    // unused in contracts: don't migrate
     function borrowerPenaltyAmount(LendingPool lendingPool) public view returns (uint) {
         uint poolBalance = lendingPool.poolBalance();
         uint poolBalanceThreshold = lendingPool.poolBalanceThreshold();
@@ -79,6 +82,7 @@ library PoolCalculations {
         return penalty;
     }
 
+    // unused in contracts: don't migrate
     function borrowerExpectedInterest(
         uint collectedAssets,
         uint borrowerAdjustedInterestRateWad
@@ -86,6 +90,7 @@ library PoolCalculations {
         return (collectedAssets * borrowerAdjustedInterestRateWad) / WAD;
     }
 
+    // unused in contracts: don't migrate
     function borrowerOutstandingInterest(
         uint borrowerInterestRepaid,
         uint borrowerExpectedInterest
@@ -96,6 +101,7 @@ library PoolCalculations {
         return borrowerExpectedInterest - borrowerInterestRepaid;
     }
 
+    // unused in contracts: don't migrate
     function borrowerExcessSpread(
         LendingPool lendingPool
     ) public view returns (uint) {
@@ -111,6 +117,7 @@ library PoolCalculations {
         return borrowerInterestRepaid - allLendersInterest - fees;
     }
 
+    // unused in contracts: don't migrate
     function borrowerAdjustedInterestRateWad(
         uint borrowerTotalInterestRateWad,
         uint lendingTermSeconds
@@ -118,6 +125,7 @@ library PoolCalculations {
         return (borrowerTotalInterestRateWad * lendingTermSeconds) / YEAR;
     }
 
+    // used in contracts, migrate
     function lenderEffectiveAprByTrancheWad(
         LendingPool lendingPool,
         address lenderAddress,
