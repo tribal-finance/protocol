@@ -4,8 +4,56 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { LendingPool } from "../../typechain-types";
 import { Signer } from "ethers";
-import STAGES from "./stages";
+import STAGES, { STAGES_LOOKUP, STATE_MACHINE } from "./stages";
 
+export const assertDefaultRatioWad = async(lendingPool: LendingPool) => {
+    const stage = await lendingPool.currentStage();
+    const trancheVaults = []
+    const length = await lendingPool.tranchesCount();
+
+    for(let i = 0; i < length; i++) {
+        trancheVaults.push(await ethers.getContractAt("TrancheVault", await lendingPool.trancheVaultAddresses(i)))
+    }
+
+    const stablecoin = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
+
+    const availableAssets = await stablecoin.balanceOf(lendingPool.address);
+    let trancheDefaultRatioWads = []
+    for(let i = 0; i < length; i++) {
+        const assetsToSend = (await lendingPool.trancheCoveragesWads(i)).mul(availableAssets).div(ethers.constants.WeiPerEther)
+        let totalAssets = await trancheVaults[i].totalAssets();
+        if(totalAssets.eq(ethers.BigNumber.from(0))) {
+            totalAssets = ethers.BigNumber.from(1);
+        }
+        const trancheDefaultRatioWad = (assetsToSend.mul(ethers.utils.parseEther("1"))).div(totalAssets);
+        trancheDefaultRatioWads.push(trancheDefaultRatioWad);
+    }
+
+    if(stage === STAGES.DEFAULTED) {
+        for(let i = 0; i < length; i++) {
+            if(i == 0) {
+                expect(await trancheVaults[i].defaultRatioWad()).not.equals(0)
+                expect(await trancheVaults[i].isDefaulted()).equals(true);
+            } else {
+                /**
+                 * No Assets to Send: 
+                 * If assetsToSend is 0, 
+                 * it implies that there are no assets to be distributed to that tranche during default. 
+                 * This can happen if the trancheCoveragesWads[i] value is zero (i.e., that tranche does not have any coverage). 
+                 * In such a case, the default ratio is set to zero because the tranche isn't receiving any assets during default.
+                 */
+                // TL;DR, In multitranche scenaiors, 
+                // the defaultRatio WAD will likely be zero if there isn't enough available assets to send after covering the first tranche.
+                expect(await trancheVaults[i].defaultRatioWad()).equals(0)
+                expect(await trancheVaults[i].isDefaulted()).equals(false);
+            }
+        }
+    } else {
+        for(let i = 0; i < length; i++) {
+            expect(await trancheVaults[i].defaultRatioWad()).equals(0)
+        }
+    }
+}
 
 export const assertPoolViews = async (lendingPool: LendingPool, lender: Signer, failCase: number) => {
 
