@@ -11,6 +11,9 @@ library Constants {
         bool platformTokens;
     }
 
+    uint256 constant WAD = 10 ** 18;
+    uint256 constant YEAR = 365 days;
+
     bytes32 constant internal POOL_STORAGE_READER = keccak256("POOL_STORAGE_READER");
     bytes32 constant internal POOL_STORAGE_WRITER = keccak256("POOL_STORAGE_WRITER");
     bytes32 constant internal DEPLOYER = keccak256("DEPLOYER");
