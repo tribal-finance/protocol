@@ -1842,5 +1842,110 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0xAA4182eaAC2eb9366C8efCCC2ab84013A16dd397",
     "timestamp": 1698267048
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xa7dC9778D917769690D13b8783daa8A30176A0f9",
+    "timestamp": 1698269820
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xAa9cD0f9Aea85b443599C2F3337bDD033D520786",
+    "timestamp": 1698269820
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x5Fc2B20e53854e0873C3302EF9aAD576B5C64dB1",
+    "timestamp": 1698269820
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x4C7C1e897Fc67613bCEA0Fc59382655B793745F5",
+    "timestamp": 1698269964
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x20B52cADC9014982460ac86907C6FB3B3C7656F8",
+    "timestamp": 1698269964
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x40b950DC4a0FdA1dC19b417be8feF67cb081cD11",
+    "timestamp": 1698269964
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x1D6f376Cfea63df2BAe4a673B8cCF046e162Da80",
+    "timestamp": 1698270168
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x7Ac47D310037a09A9dA700222CE67Db26BCa47f9",
+    "timestamp": 1698270168
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x804dfd48EE6c23F82D4e4760cC568B7717493E98",
+    "timestamp": 1698270168
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xBe79478983412d0f8f5FbCAA55DB97C8dbf4544a",
+    "timestamp": 1698270348
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xc94Bd00CBcD343471eA54400f14FF5317e1e5DfC",
+    "timestamp": 1698270348
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x1FAF978b5431aD7Cd799454309Bb825E8ed5287a",
+    "timestamp": 1698270348
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xF568F8598f0AFbe117f658d7Ecd63595eB6DC895",
+    "timestamp": 1698270648
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xA702c1fF81A3458f39bd499CafDA30F6F5Fada87",
+    "timestamp": 1698270648
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x3CDcb3821913da788334BA5B3027233C133b7B62",
+    "timestamp": 1698270648
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0x3CB7e929405c668E9182912aE60AF225609467fC",
+    "timestamp": 1698270720
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x0701b11AbFe045c6610d4c81395A0F5600E49055",
+    "timestamp": 1698270720
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xA6bAfC50Ee93754af63Ba678EC2176dF9a6F17a3",
+    "timestamp": 1698270720
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xed5834F5049E6869cc308aea705265BE4481a4F6",
+    "timestamp": 1698271308
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x1816Fd071220B48F861e842a59C1eE60Ea02d421",
+    "timestamp": 1698271308
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0xD5Cb2f0940BEb63230f4c75188d419bcB274bfFF",
+    "timestamp": 1698271308
   }
 ]
