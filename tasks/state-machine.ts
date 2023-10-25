@@ -218,6 +218,11 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
             })}]`)
         }
 
+        if(currentStage === parseInt(desiredStage) && currentStage === 0) {
+            console.log("Pool in Initial Stage and deployed to: ", lendingPool.address);
+            return;
+        }
+
         const path = findPath(currentStage, parseInt(desiredStage));
         if (!path) {
             throw new Error(`Cannot transition from ${STAGES_LOOKUP[currentStage]} to ${STAGES_LOOKUP[desiredStage]}`)
