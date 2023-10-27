@@ -85,3 +85,27 @@ task("borrowerPenaltyAmount", "This reads the penalty amount for borrowers")
         console.log("Borrower Penalty Amount")
         console.log(await lendingPool.borrowerPenaltyAmount());
     });
+
+task("mintPlatformToken", "This mints tokens to the recipient")
+    .addParam("token", "address of the token contract")
+    .addParam("to", "address of the recipient")
+    .addParam("amount", "amount of tokens recipient will get")
+    .setAction(async (taskArgs, hre) => {
+        const {ethers} = hre;
+        const {parseEther, isAddress} = ethers.utils;
+        const { to, amount, token } = taskArgs;
+        const network = hre.network.name;
+
+        if (!isAddress(to)) {
+            throw new Error(`to is not a valid address ${to}`);
+        }
+
+        if (!isAddress(token)) {
+            throw new Error(`token is not a valid address ${token}`);
+        }
+
+        const platformToken = await ethers.getContractAt("PlatformToken", token);
+        await platformToken.mint(to, amount);
+        console.log("minited", amount, "to", to, "at", token);
+
+    });
