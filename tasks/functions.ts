@@ -80,7 +80,8 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
 
         const oldTimestamp = (await hre.ethers.provider.getBlock('latest')).timestamp;
         console.log(`Current block timestamp: ${new Date(oldTimestamp * 1000).toLocaleString()}`);
-
+        
+        
         console.log(`Resetting hardhat environment using forking with the provided Alchemy API key...`);
         await hre.network.provider.request({
             method: "hardhat_reset",
@@ -91,7 +92,16 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
             }]
         });
 
-        const seconds = 11 * 60 * 60;
+        let lendingPool: LendingPool = await ethers.getContractAt("LendingPool", poolAddress);
+
+        const penaltyAmountNow = await lendingPool.borrowerPenaltyAmount();
+        const borrowerExpectedInterestNow = await lendingPool.borrowerExpectedInterest();
+        const allLenderInterestByDateNow = await lendingPool.allLendersInterestByDate();
+        console.log("Borrower Penalty Amount Now:", penaltyAmountNow.toString());
+        console.log("Borrower Expected Interest Now:", borrowerExpectedInterestNow.toString());
+        console.log("All Lender Interest By Date Now:", allLenderInterestByDateNow.toString());
+
+        const seconds = 1100 * 60 * 60;
         console.log(`Increasing time by ${seconds} seconds...`);
         await hre.network.provider.send("evm_increaseTime", [seconds]);
 
@@ -107,10 +117,13 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
             throw new Error(`pool-address is not a valid address ${poolAddress}`);
         }
 
-        let lendingPool: LendingPool = !poolAddress ? await ethers.getContractAt("LendingPool", getMostCurrentContract("lendingPoolV1", network).contractAddress) : await ethers.getContractAt("LendingPool", poolAddress);
+        const penaltyAmountFinal = await lendingPool.borrowerPenaltyAmount();
+        const borrowerExpectedInterestFinal = await lendingPool.borrowerExpectedInterest();
+        const allLenderInterestByDateFinal = await lendingPool.allLendersInterestByDate();
+        console.log("Borrower Penalty Amount Final:", penaltyAmountFinal.toString());
+        console.log("Borrower Expected Interest Final:", borrowerExpectedInterestFinal.toString());
+        console.log("All Lender Interest By Date Final:", allLenderInterestByDateFinal.toString());
 
-        const penaltyAmount = await lendingPool.borrowerPenaltyAmount();
-        console.log("Borrower Penalty Amount:", penaltyAmount.toString());
     });
 
 
