@@ -1,5 +1,7 @@
 import { parse } from "dotenv";
 import { task } from "hardhat/config";
+import { LendingPool } from "../typechain-types";
+import { getMostCurrentContract } from "./io";
 
 
 task("encode-pool-initializer", "This creates the msg.data for a deploy pool transaction")
@@ -64,4 +66,22 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         const msgData = PoolFactory.interface.encodeFunctionData("deployPool", [LendingPoolParams, fundingSplitWads2D]);
 
         console.log(msgData);
+    });
+
+task("borrowerPenaltyAmount", "This reads the penalty amount for borrowers")
+    .addParam("poolAddress", "address of the pool")
+    .setAction(async (taskArgs, hre) => {
+        const {ethers} = hre;
+        const {parseEther, isAddress} = ethers.utils;
+        const { poolAddress } = taskArgs;
+        const network = hre.network.name;
+
+        if (poolAddress && !isAddress(poolAddress)) {
+            throw new Error(`pool-address is not a valid address ${poolAddress}`);
+        }
+
+        let lendingPool: LendingPool = !poolAddress ? await ethers.getContractAt("LendingPool", getMostCurrentContract("lendingPoolV1", network).contractAddress) : await ethers.getContractAt("LendingPool", poolAddress);
+
+        console.log("Borrower Penalty Amount")
+        console.log(await lendingPool.borrowerPenaltyAmount());
     });
