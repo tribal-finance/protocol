@@ -397,3 +397,27 @@ task("init-protocol", "deploys the lending protocol for production")
         }
 
     })
+
+
+// hardhat.config.js
+
+task('goerli', 'Restart Hardhat Network and fork Goerli at runtime')
+  .setAction(async (_, { network }) => {
+    
+    if (network.name !== "hardhat") {
+      throw new Error("This task should be run with the Hardhat Network.");
+    }
+
+    await network.provider.request({
+      method: "hardhat_reset",
+      params: [{
+        forking: {
+          jsonRpcUrl:`https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`, 
+        }
+      }]
+    });
+
+    console.log("Hardhat Network restarted and now forking Goerli.");
+  });
+
+// ... rest of your config

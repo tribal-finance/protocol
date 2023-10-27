@@ -9,7 +9,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
     .addParam("token", "Unused parameter (gigster keeps giving us surprises)")
     .addParam("stableCoinContractAddress", "The Ethereum address of the preferred stable coin")
     .addParam("platformTokenContractAddress", "The Ethereum address of the platform's token or tribal governance")
-    .addParam("minFundingCapacity", "The minimum funding capacity for the pool (standard fixed point number that will be scaled by e18)")    
+    .addParam("minFundingCapacity", "The minimum funding capacity for the pool (standard fixed point number that will be scaled by e18)")
     .addParam("maxFundingCapacity", "The maximum funding capacity for the pool (standard fixed point number that will be scaled by e18)")
     .addParam("fundingPeriodSeconds", "The funding period for the pool in seconds")
     .addParam("lendingTermSeconds", "The term of lending in seconds")
@@ -28,11 +28,11 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
     .addParam("trancheCoveragesWads", "The coverages for each tranche in wad format (comma-separated)")
     .addParam("fundingSplitWads", "The fundingSplitWads for each tranche")
     .setAction(async (taskArgs, hre) => {
-        const {ethers} = hre;
-        const {parseEther, parseUnits} = ethers.utils;
+        const { ethers } = hre;
+        const { parseEther, parseUnits } = ethers.utils;
 
         const LendingPoolParams = [
-            taskArgs.name, 
+            taskArgs.name,
             taskArgs.token,
             taskArgs.stableCoinContractAddress,
             taskArgs.platformTokenContractAddress,
@@ -57,7 +57,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
 
         const fundingSplitWads = taskArgs.fundingSplitWads.split(':');
         const fundingSplitWads2D = []
-        for(let i = 0; i < fundingSplitWads.length; i++) {
+        for (let i = 0; i < fundingSplitWads.length; i++) {
             const extrema = fundingSplitWads[i].split(',').map(parseEther);
             fundingSplitWads2D.push(extrema)
         }
@@ -68,31 +68,52 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         console.log(msgData);
     });
 
-task("borrowerPenaltyAmount", "This reads the penalty amount for borrowers")
+    task("borrowerPenaltyAmount", "This reads the penalty amount for borrowers")
     .addParam("poolAddress", "address of the pool")
     .setAction(async (taskArgs, hre) => {
-        const {ethers} = hre;
-        const {parseEther, isAddress} = ethers.utils;
+        const { ethers } = hre;
+        const { parseEther, isAddress } = ethers.utils;
         const { poolAddress } = taskArgs;
         const network = hre.network.name;
 
+        console.log(`Starting 'borrowerPenaltyAmount' task on ${network} network...`);
+
+        console.log(`Resetting hardhat environment using forking with the provided Alchemy API key...`);
+        await hre.network.provider.request({
+            method: "hardhat_reset",
+            params: [{
+                forking: {
+                    jsonRpcUrl: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+                }
+            }]
+        });
+
+        const seconds = 12 * 60 * 60;
+        console.log(`Increasing time by ${seconds} seconds...`);
+        await hre.network.provider.send("evm_increaseTime", [seconds]);
+
+        console.log(`Mining a new block...`);
+        await hre.network.provider.send("evm_mine");
+
         if (poolAddress && !isAddress(poolAddress)) {
+            console.error(`Error: pool-address is not a valid address ${poolAddress}`);
             throw new Error(`pool-address is not a valid address ${poolAddress}`);
         }
 
         let lendingPool: LendingPool = !poolAddress ? await ethers.getContractAt("LendingPool", getMostCurrentContract("lendingPoolV1", network).contractAddress) : await ethers.getContractAt("LendingPool", poolAddress);
 
-        console.log("Borrower Penalty Amount")
-        console.log(await lendingPool.borrowerPenaltyAmount());
+        const penaltyAmount = await lendingPool.borrowerPenaltyAmount();
+        console.log("Borrower Penalty Amount:", penaltyAmount.toString());
     });
+
 
 task("mintPlatformToken", "This mints tokens to the recipient")
     .addParam("token", "address of the token contract")
     .addParam("to", "address of the recipient")
     .addParam("amount", "amount of tokens recipient will get")
     .setAction(async (taskArgs, hre) => {
-        const {ethers} = hre;
-        const {parseEther, isAddress} = ethers.utils;
+        const { ethers } = hre;
+        const { parseEther, isAddress } = ethers.utils;
         const { to, amount, token } = taskArgs;
         const network = hre.network.name;
 
