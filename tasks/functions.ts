@@ -78,6 +78,9 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
 
         console.log(`Starting 'borrowerPenaltyAmount' task on ${network} network...`);
 
+        const oldTimestamp = (await hre.ethers.provider.getBlock('latest')).timestamp;
+        console.log(`Current block timestamp: ${new Date(oldTimestamp * 1000).toLocaleString()}`);
+
         console.log(`Resetting hardhat environment using forking with the provided Alchemy API key...`);
         await hre.network.provider.request({
             method: "hardhat_reset",
@@ -88,12 +91,16 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
             }]
         });
 
-        const seconds = 12 * 60 * 60;
+        const seconds = 11 * 60 * 60;
         console.log(`Increasing time by ${seconds} seconds...`);
         await hre.network.provider.send("evm_increaseTime", [seconds]);
 
         console.log(`Mining a new block...`);
         await hre.network.provider.send("evm_mine");
+
+        const newTimestamp = (await hre.ethers.provider.getBlock('latest')).timestamp;
+        console.log(`New block timestamp: ${new Date(newTimestamp * 1000).toLocaleString()}`);
+        console.log(`Time has been successfully increased by ${(newTimestamp - oldTimestamp)} seconds.`);
 
         if (poolAddress && !isAddress(poolAddress)) {
             console.error(`Error: pool-address is not a valid address ${poolAddress}`);
@@ -105,6 +112,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         const penaltyAmount = await lendingPool.borrowerPenaltyAmount();
         console.log("Borrower Penalty Amount:", penaltyAmount.toString());
     });
+
 
 
 task("mintPlatformToken", "This mints tokens to the recipient")
