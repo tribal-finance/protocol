@@ -11,11 +11,11 @@ npx hardhat encode-pool-initializer \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 80000 \
   --max-funding-capacity 100000 \
-  --funding-period-seconds 2592000 \
-  --lending-term-seconds 31557600 \
+  --funding-period-seconds 30 \
+  --lending-term-seconds 432000 \
   --first-loss-assets 5000 \
-  --repayment-recurrence-days 30 \
-  --grace-period-days 5 \
+  --repayment-recurrence-days 0 \
+  --grace-period-days 0 \
   --borrower-total-interest-rate-wad 0.15 \
   --borrower-address $BORROWER_ADDRESS \
   --protocol-fee-wad 0.1 \

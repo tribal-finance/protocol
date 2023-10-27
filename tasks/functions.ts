@@ -101,7 +101,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         console.log("Borrower Expected Interest Now:", borrowerExpectedInterestNow.toString());
         console.log("All Lender Interest By Date Now:", allLenderInterestByDateNow.toString());
 
-        const seconds = 1100 * 60 * 60;
+        const seconds = 43200000 * 2;
         console.log(`Increasing time by ${seconds} seconds...`);
         await hre.network.provider.send("evm_increaseTime", [seconds]);
 
@@ -125,8 +125,6 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         console.log("All Lender Interest By Date Final:", allLenderInterestByDateFinal.toString());
 
     });
-
-
 
 task("mintPlatformToken", "This mints tokens to the recipient")
     .addParam("token", "address of the token contract")
