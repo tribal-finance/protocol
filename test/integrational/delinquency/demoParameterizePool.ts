@@ -25,8 +25,9 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 import { pool } from "../../../typechain-types/contracts";
+import exp from "constants";
 
-describe("Full cycle sequential test", function () {
+describe("Run borrowerPenalty logic", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -105,10 +106,9 @@ describe("Full cycle sequential test", function () {
       lender2 = data.lenders[1];
     });
 
-    it("Run borrowerPenalty logic", async () => {
+    it("deploy pool", async () => {
       const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
     
-      // Start of previous given migration
       defaultParams.minFundingCapacity = ethers.utils.parseUnits("80000", 6);
       defaultParams.maxFundingCapacity = ethers.utils.parseUnits("100000", 6);
       defaultParams.fundingPeriodSeconds = 30;
@@ -133,5 +133,45 @@ describe("Full cycle sequential test", function () {
       lendingPool = await ethers.getContractAt("LendingPool", poolAddress);
 
     });
+
+    it("Set state to flc_deposited", async () => {
+      const firstloss = await lendingPool.firstLossAssets();
+      let tx = await usdc.connect(borrower).approve(lendingPool.address, firstloss);
+      tx = await lendingPool.connect(borrower).borrowerDepositFirstLossCapital();
+    })
+
+    it("Set state to open and fund", async () => {
+       await lendingPool.adminOpenPool();
+       const maxFundingCapacity = ((await lendingPool.maxFundingCapacity()).add(await lendingPool.minFundingCapacity())).div(2);
+       const Vault = await lendingPool.trancheVaultAddresses(0);
+       const vault = await ethers.getContractAt("TrancheVault", Vault);
+       const depositAmount = await vault.maxFundingCapacity();
+
+       await usdc.connect(lender1).approve(Vault, depositAmount);
+
+       await vault.connect(lender1).deposit(depositAmount, await lender1.getAddress());
+      })
+      
+      it("Set state to funded and enter borrow state", async () => {
+        const seconds = await lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [seconds.toNumber()]);
+
+        await lendingPool.adminTransitionToFundedState();
+        await lendingPool.connect(borrower).borrow();
+        expect(await lendingPool.currentStage()).equals(STAGES.BORROWED)
+      })
+
+      it("0 default penalty since the loan has just begun", async () => {
+        expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
+      })
+
+      it("Should have a non-zero default penalty since loan has completely matured and no payments have been made", async () => {
+        const seconds = await lendingPool.lendingTermSeconds();
+        await network.provider.send("evm_increaseTime", [seconds.toNumber()]);
+        await network.provider.send("evm_mine");
+
+        expect(await lendingPool.borrowerPenaltyAmount()).not.equals(0);
+
+      })
   });
 });
