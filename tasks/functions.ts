@@ -101,7 +101,7 @@ task("encode-pool-initializer", "This creates the msg.data for a deploy pool tra
         console.log("Borrower Expected Interest Now:", borrowerExpectedInterestNow.toString());
         console.log("All Lender Interest By Date Now:", allLenderInterestByDateNow.toString());
 
-        const seconds = 43200000 * 2;
+        const seconds = (await lendingPool.lendingTermSeconds()).toNumber();
         console.log(`Increasing time by ${seconds} seconds...`);
         await hre.network.provider.send("evm_increaseTime", [seconds]);
 
