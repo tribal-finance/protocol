@@ -113,7 +113,7 @@ describe("Run borrowerPenalty logic", function () {
       defaultParams.maxFundingCapacity = ethers.utils.parseUnits("100000", 6);
       defaultParams.fundingPeriodSeconds = 30;
       defaultParams.lendingTermSeconds = 43200; // This is half a day (12 hours) in seconds.
-      defaultParams.firstLossAssets = ethers.BigNumber.from(1);
+      defaultParams.firstLossAssets = ethers.BigNumber.from(219178082);
       defaultParams.repaymentRecurrenceDays = 1;
       defaultParams.gracePeriodDays = 0;
       defaultParams.borrowerTotalInterestRateWad = ethers.utils.parseUnits("1", 18);
@@ -167,11 +167,13 @@ describe("Run borrowerPenalty logic", function () {
 
       it("Should have a non-zero default penalty since loan has completely matured and no payments have been made", async () => {
         const seconds = await lendingPool.lendingTermSeconds();
-        await network.provider.send("evm_increaseTime", [seconds.toNumber()]);
+
+        console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
+        await network.provider.send("evm_increaseTime", [Math.floor(seconds.toNumber() * 1.1)]);
         await network.provider.send("evm_mine");
+        console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
 
         expect(await lendingPool.borrowerPenaltyAmount()).not.equals(0);
-
       })
   });
 });
