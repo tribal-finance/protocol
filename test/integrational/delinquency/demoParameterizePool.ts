@@ -112,9 +112,9 @@ describe("Run borrowerPenalty logic", function () {
       defaultParams.minFundingCapacity = ethers.utils.parseUnits("80000", 6);
       defaultParams.maxFundingCapacity = ethers.utils.parseUnits("100000", 6);
       defaultParams.fundingPeriodSeconds = 30;
-      defaultParams.lendingTermSeconds = 43200; // This is half a day (12 hours) in seconds.
-      defaultParams.firstLossAssets = ethers.BigNumber.from(219178082);
-      defaultParams.repaymentRecurrenceDays = 1;
+      defaultParams.lendingTermSeconds = 43200 * 2; // This is half a day (12 hours) in seconds.
+      defaultParams.firstLossAssets = ethers.utils.parseUnits("17000", 6);
+      defaultParams.repaymentRecurrenceDays = 0;
       defaultParams.gracePeriodDays = 0;
       defaultParams.borrowerTotalInterestRateWad = ethers.utils.parseUnits("1", 18);
       defaultParams.protocolFeeWad = ethers.utils.parseUnits("0.1", 18);
@@ -166,10 +166,38 @@ describe("Run borrowerPenalty logic", function () {
       })
 
       it("Should have a non-zero default penalty since loan has completely matured and no payments have been made", async () => {
-        const seconds = await lendingPool.lendingTermSeconds();
-
+        const seconds1 = await lendingPool.lendingTermSeconds();
+        const seconds2 = (await lendingPool.gracePeriodDays()).mul(60).mul(60).mul(24);
+        const seconds = seconds1.add(seconds2);
         console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
-        await network.provider.send("evm_increaseTime", [Math.floor(seconds.toNumber() * 1.1)]);
+        
+        await network.provider.send("evm_increaseTime", [Math.floor(seconds.toNumber() * 1.05)]);
+        await network.provider.send("evm_mine");
+        console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
+
+        expect(await lendingPool.borrowerPenaltyAmount()).not.equals(0);
+      })
+
+      it("Should have a non-zero default penalty since loan has completely matured and no payments have been made", async () => {
+        const seconds1 = await lendingPool.lendingTermSeconds();
+        const seconds2 = (await lendingPool.gracePeriodDays()).mul(60).mul(60).mul(24);
+        const seconds = seconds1.add(seconds2);
+        console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
+        
+        await network.provider.send("evm_increaseTime", [Math.floor(seconds.toNumber() * 2)]);
+        await network.provider.send("evm_mine");
+        console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
+
+        expect(await lendingPool.borrowerPenaltyAmount()).not.equals(0);
+      })
+
+      it("Should have a non-zero default penalty since loan has completely matured and no payments have been made", async () => {
+        const seconds1 = await lendingPool.lendingTermSeconds();
+        const seconds2 = (await lendingPool.gracePeriodDays()).mul(60).mul(60).mul(24);
+        const seconds = seconds1.add(seconds2);
+        console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
+        
+        await network.provider.send("evm_increaseTime", [Math.floor(seconds.toNumber() * 10)]);
         await network.provider.send("evm_mine");
         console.log(`timestamp: ${new Date(((await ethers.provider.getBlock('latest')).timestamp) * 1000).toLocaleString()}`);
 
