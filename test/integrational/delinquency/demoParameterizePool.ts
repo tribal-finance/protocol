@@ -112,7 +112,7 @@ describe("Run borrowerPenalty logic", function () {
       defaultParams.minFundingCapacity = ethers.utils.parseUnits("80000", 6);
       defaultParams.maxFundingCapacity = ethers.utils.parseUnits("100000", 6);
       defaultParams.fundingPeriodSeconds = 30;
-      defaultParams.lendingTermSeconds = 43200*2; // This is half a day (12 hours) in seconds.
+      defaultParams.lendingTermSeconds = 43200*2; // This is full a day (24 hours) in seconds.
       defaultParams.firstLossAssets = ethers.utils.parseUnits("17000", 6);
       defaultParams.repaymentRecurrenceDays = 0;
       defaultParams.gracePeriodDays = 0;
