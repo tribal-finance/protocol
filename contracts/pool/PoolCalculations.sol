@@ -4,7 +4,6 @@ pragma solidity ^0.8.18;
 import "./LendingPool.sol";
 import "../vaults/TrancheVault.sol";
 import "../authority/Authority.sol";
-import "hardhat/console.sol";
 
 library PoolCalculations {
     uint constant WAD = 10 ** 18;
@@ -28,33 +27,24 @@ library PoolCalculations {
 
     function poolBalanceThreshold(LendingPool lendingPool) public view returns (uint) {
         uint borrowedAssets = lendingPool.borrowedAssets();
-        console.log("pdt Borrowed assets is:", borrowedAssets);
 
         uint borrowerTotalInterestRateWad = lendingPool.borrowerTotalInterestRateWad();
-        console.log("pdt Borrower total interest rate (in WAD) is:", borrowerTotalInterestRateWad);
 
         uint repaymentRecurrenceDays = lendingPool.repaymentRecurrenceDays();
-        console.log("pdt Repayment recurrence days is:", repaymentRecurrenceDays);
 
         uint gracePeriodDays = lendingPool.gracePeriodDays();
-        console.log("pdt Grace period days is:", gracePeriodDays);
 
         uint firstLossAssets = lendingPool.firstLossAssets();
-        console.log("pdt First loss assets is:", firstLossAssets);
 
         uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
-        console.log("pdt Daily borrower interest amount is:", dailyBorrowerInterestAmount);
 
         uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
-        console.log("pdt Interest go-down amount is:", interestGoDownAmount);
 
         if (interestGoDownAmount > firstLossAssets) {
-            console.log("pdt Interest go-down amount is greater than first loss assets, returning 0");
             return 0;
         }
 
         uint threshold = firstLossAssets - interestGoDownAmount;
-        console.log("pdt Computed pool balance threshold is:", threshold);
 
         return threshold;
     }
@@ -73,46 +63,32 @@ library PoolCalculations {
 
     function borrowerPenaltyAmount(LendingPool lendingPool) public view returns (uint) {
         uint poolBalance = lendingPool.poolBalance();
-        console.log("Pool balance is:", poolBalance);
 
         uint poolBalanceThreshold = lendingPool.poolBalanceThreshold();
-        console.log("Pool balance threshold is:", poolBalanceThreshold);
 
         uint collectedAssets = lendingPool.collectedAssets();
-        console.log("Collected assets is:", collectedAssets);
 
         uint allLendersEffectiveAprWad = lendingPool.allLendersEffectiveAprWad();
-        console.log("All lenders effective APR (in WAD) is:", allLendersEffectiveAprWad);
 
         uint penaltyRateWad = lendingPool.penaltyRateWad();
-        console.log("Penalty rate (in WAD) is:", penaltyRateWad);
 
         if (poolBalance >= poolBalanceThreshold) {
-            console.log("Pool balance is greater than or equal to the threshold, returning 0");
-            console.log("Pool balance:", poolBalance);
-            console.log("Pool balance thresh:", poolBalanceThreshold);
             return 0;
         }
 
         uint dailyLendersInterestAmount = (collectedAssets * allLendersEffectiveAprWad) / WAD / 365;
-        console.log("Daily lenders interest amount is:", dailyLendersInterestAmount);
 
         uint balanceDifference = poolBalanceThreshold - poolBalance;
-        console.log("Balance difference is:", balanceDifference);
 
         uint daysDelinquent = balanceDifference / dailyLendersInterestAmount;
-        console.log("Days delinquent is:", daysDelinquent);
 
         if (daysDelinquent == 0) {
-            console.log("Days delinquent is 0, returning 0");
             return 0;
         }
 
         uint penaltyCoefficientWad = _wadPow(WAD + penaltyRateWad, daysDelinquent);
-        console.log("Penalty coefficient (in WAD) is:", penaltyCoefficientWad);
 
         uint penalty = (balanceDifference * penaltyCoefficientWad) / WAD - balanceDifference;
-        console.log("Penalty is:", penalty);
 
         return penalty;
     }
