@@ -71,18 +71,6 @@ describe("Run borrowerPenalty logic", function () {
       };
     }
 
-    /**
-     * pool settings:
-     * - lending term: 182.5 days ( 1/2 year )
-     * - lender annual yield: 10%
-     * - lender adjusted yield: 5%
-     * - borrower annual interest rate: 15%
-     * - borrower adjusted interest rate: 7.5%
-     * - funds collected: $10,000
-     * - lender 1 deposit: $8,000
-     * - lender 2 deposit: $2,000
-     */
-
     let usdc: ITestUSDC,
       platformToken: PlatformToken,
       lendingPool: LendingPool,
