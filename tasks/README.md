@@ -94,6 +94,21 @@ npx hardhat set-pool-state --stage your_stage_here --poolAddress 0xYourPoolAddre
 4. The task uses the Hardhat runtime environment (`hre`) to interact with Ethereum smart contracts.
 5. Always ensure you are interacting with the correct network and smart contract addresses.
 
+### Domain on Inputs
+- The smart contracts rely on the deployer to have a deep understanding on how the initial inputs affect a pool's lifecycle
+- Ensure the domain is understood for each input generated in the `encode-pool-deploy-staging.sh` or similar scripts that encode input parameters to the protocol
+
+#### Delinquency Input Domain
+The fastest way to get a pool into delinquent is to set the params in the following manner:
+Note: It takes 1 day to get the borrowerPenalty to be non-zero.
+
+```
+  --lending-term-seconds 86400 \
+  --repayment-recurrence-days 0 \
+  --grace-period-days 0 \
+```
+If first loss is too small, it can create a scenario where the borrowerPenalty is always 0 despite being delinquent. Caution and care must be exercised when configuring these values. Productions parameter input should be tested before the mainnet launch. Each state should be verified as working ahead of time
+
 ## Errors and Troubleshooting
 
 - `pool-address is not a valid address <ADDRESS>`: Check if the provided address is a valid Ethereum address.
