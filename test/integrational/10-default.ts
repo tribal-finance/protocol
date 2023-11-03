@@ -14,7 +14,7 @@ import {
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
-import { assertPoolViews } from "../helpers/view";
+import { assertDefaultRatioWad, assertPoolViews } from "../helpers/view";
 
 describe("Defaulting", function () {
   context("unitranche pool without payments", function () {
@@ -97,10 +97,13 @@ describe("Defaulting", function () {
           .lendingTermSeconds();
         await ethers.provider.send("evm_increaseTime", [toWait.toNumber()]);
         await ethers.provider.send("evm_mine", []);
-
+        await assertDefaultRatioWad(contracts.lendingPool)
+        
         await contracts.lendingPool
-          .connect(deployer)
-          .adminTransitionToDefaultedState();
+        .connect(deployer)
+        .adminTransitionToDefaultedState();
+        
+        await assertDefaultRatioWad(contracts.lendingPool);
 
         return contracts;
       };
@@ -120,7 +123,6 @@ describe("Defaulting", function () {
     it("sets the pool to defaulted stage", async function () {
       const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
       await assertPoolViews(lendingPool, lenders[0], 1000)
-
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
 
@@ -617,6 +619,7 @@ describe("Defaulting", function () {
         await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
         await network.provider.send("evm_mine");
         // Set pool to funded state
+
         await contracts.lendingPool
           .connect(deployer)
           .adminTransitionToFundedState();
@@ -676,7 +679,9 @@ describe("Defaulting", function () {
         );
 
       // move to defaulted state
+      await assertDefaultRatioWad(lendingPool);
       await lendingPool.connect(deployer).adminTransitionToDefaultedState();
+      await assertDefaultRatioWad(lendingPool); // triggers the buggy 0 defaultRatioWad
 
       // expect to be in defaulted state
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
@@ -721,7 +726,12 @@ describe("Defaulting", function () {
 
       // expect the defaultRatio for the second tranche to be 0
       const defaultRatio2 = await secondTrancheVault.defaultRatioWad();
-      expect(defaultRatio2).to.eq(WAD(0));
+      expect(defaultRatio2).to.eq(WAD(0));  // triggers the buggy 0 defaultRatioWad and strange maxWithdraw value
+      assertDefaultRatioWad(lendingPool)
+      expect(await firstTrancheVault.isDefaulted()).equals(true);
+      expect(await firstTrancheVault.maxWithdraw(await lender1.getAddress())).not.equals(0)
+      expect(await secondTrancheVault.isDefaulted()).equals(false);
+      expect(await secondTrancheVault.maxWithdraw(await lender1.getAddress())).equals(0)
     });
   });
 });
