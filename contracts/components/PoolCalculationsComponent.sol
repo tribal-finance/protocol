@@ -11,12 +11,14 @@ pragma solidity 0.8.18;
 contract PoolCalculationsComponent is Component {
     constructor(uint256 _instanceId, PoolStorage _poolStorage) Component(_instanceId, _poolStorage) {}
 
-    function lenderEffectiveAprByTrancheWad(
-        address lenderAddress,
-        uint8 trancheId
-    ) public view returns (uint) {
+    function lenderEffectiveAprByTrancheWad(address lenderAddress, uint8 trancheId) public view returns (uint) {
         // uint stakedAssets = lendingPool.lenderStakedTokensByTranche(lenderAddress, trancheId);
-        bytes memory rawData = poolStorage.getMappingUint256AddressToBytes(instanceId, "lenderStakedTokensByTranche", trancheId, lenderAddress);
+        bytes memory rawData = poolStorage.getMappingUint256AddressToBytes(
+            instanceId,
+            "lenderStakedTokensByTranche",
+            trancheId,
+            lenderAddress
+        );
         Constants.Rewardable memory rewardData = abi.decode(rawData, (Constants.Rewardable));
         uint256 stakedAssets = rewardData.stakedAssets;
         //uint lockedPlatformTokens = lendingPool.lenderPlatformTokensByTrancheLocked(lenderAddress, trancheId);
@@ -27,7 +29,7 @@ contract PoolCalculationsComponent is Component {
         // uint trancheAPRWad = lendingPool.trancheAPRsWads(trancheId);
         uint256 trancheAPRWad = poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", trancheId);
 
-       //uint trancheBoostedAPRWad = lendingPool.trancheBoostedAPRsWads(trancheId);
+        //uint trancheBoostedAPRWad = lendingPool.trancheBoostedAPRsWads(trancheId);
         uint256 trancheBoostedAPRWad = poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", trancheId);
 
         if (stakedAssets == 0) {
@@ -40,5 +42,136 @@ contract PoolCalculationsComponent is Component {
         uint unBoostedAssets = stakedAssets - boostedAssets;
         uint weightedAverage = (unBoostedAssets * trancheAPRWad + boostedAssets * trancheBoostedAPRWad) / stakedAssets;
         return weightedAverage;
+    }
+
+    function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        // uint fundedAt = lendingPool.fundedAt();
+        uint fundedAt = poolStorage.getUint256(instanceId, "fundedAt");
+        if (fundedAt == 0) {
+            return 0;
+        }
+
+        // uint lenderDepositedAssets = lendingPool.lenderDepositedAssetsByTranche(lenderAddress, trancheId);
+        bytes memory rawDataDeposited = poolStorage.getMappingUint256AddressToBytes(
+            instanceId,
+            "lenderDepositedAssetsByTranche",
+            trancheId,
+            lenderAddress
+        );
+        uint lenderDepositedAssets = abi.decode(rawDataDeposited, (uint));
+
+        // uint lenderEffectiveApr = lendingPool.lenderEffectiveAprByTrancheWad(lenderAddress, trancheId);
+        // Assuming that the APR calculation remains internal to the contract, otherwise you'd retrieve it similarly from storage.
+        uint lenderEffectiveApr = lenderEffectiveAprByTrancheWad(lenderAddress, trancheId);
+
+        // uint lendingTermSeconds = lendingPool.lendingTermSeconds();
+        uint lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+
+        uint secondsElapsed = block.timestamp - fundedAt;
+        if (secondsElapsed > lendingTermSeconds) {
+            secondsElapsed = lendingTermSeconds;
+        }
+
+        // Assuming YEAR and WAD are constants or stored values that can be retrieved or known at compile time.
+        return (lenderDepositedAssets * lenderEffectiveApr * secondsElapsed) / (Constants.YEAR * Constants.WAD);
+    }
+
+    function allLendersEffectiveAprWad(uint256 tranchesCount) public view returns (uint) {
+        uint weightedSum = 0;
+        uint totalStakedAssets = 0;
+
+        for (uint8 trancheId = 0; trancheId < tranchesCount; trancheId++) {
+            // Retrieve total staked assets by tranche from poolStorage
+            uint stakedAssets = poolStorage.getArrayUint256(instanceId, "s_totalStakedAssetsByTranche", trancheId);
+            totalStakedAssets += stakedAssets;
+
+            // Retrieve and calculate total locked platform tokens by tranche and tranche boost ratio
+            uint lockedPlatformTokens = poolStorage.getArrayUint256(
+                instanceId,
+                "s_totalLockedPlatformTokensByTranche",
+                trancheId
+            );
+            uint trancheBoostRatio = poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", trancheId);
+            uint boostedAssets = lockedPlatformTokens / trancheBoostRatio;
+            if (boostedAssets > stakedAssets) {
+                boostedAssets = stakedAssets;
+            }
+
+            uint unBoostedAssets = stakedAssets - boostedAssets;
+
+            // Retrieve tranche APRs and boosted APRs from poolStorage
+            uint trancheAPRWad = poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", trancheId);
+            uint trancheBoostedAPRWad = poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", trancheId);
+
+            weightedSum += unBoostedAssets * trancheAPRWad;
+            weightedSum += boostedAssets * trancheBoostedAPRWad;
+        }
+
+        if (totalStakedAssets == 0) {
+            return 0;
+        }
+
+        return weightedSum / totalStakedAssets;
+    }
+
+    function allLendersInterest() public view returns (uint256) {
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        uint256 allLendersAprWad = allLendersEffectiveAprWad(tranchesCount);
+        uint256 collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
+        uint256 lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+
+        // Make sure that WAD and YEAR are defined or retrieved correctly
+        // uint WAD = getWadValue(); // if WAD is not a global constant
+        // uint YEAR = getYearValue(); // if YEAR is not a global constant
+
+        return (((allLendersAprWad * collectedAssets) / Constants.WAD) * lendingTermSeconds) / Constants.YEAR;
+    }
+
+    function allLendersInterestByDate() public view returns (uint) {
+        uint256 fundedAt = poolStorage.getUint256(instanceId, "fundedAt");
+        uint256 lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+        if (fundedAt == 0 || block.timestamp <= fundedAt) {
+            return 0;
+        }
+        uint time = block.timestamp < fundedAt + lendingTermSeconds ? block.timestamp : fundedAt + lendingTermSeconds;
+        uint elapsedTime = time - fundedAt;
+
+        // Retrieve all lenders' interest from poolStorage
+        return (allLendersInterest() * elapsedTime) / lendingTermSeconds;
+    }
+
+    function trancheVaultContracts() public view returns (TrancheVault[] memory contracts) {
+        uint256 trancheCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        contracts = new TrancheVault[](trancheCount);
+
+        for (uint i = 0; i < trancheCount; ++i) {
+            address trancheVaultAddress = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            contracts[i] = TrancheVault(trancheVaultAddress);
+        }
+    }
+
+
+    function setInitializer(
+        Constants.LendingPoolParams calldata params
+    ) public {
+        poolStorage.setString(instanceId, "name", params.name);
+        poolStorage.setString(instanceId, "token", params.token);
+
+        // Tranche APRs, Boosted APRs, Boost Ratios, and Coverages are arrays of uint256
+        for (uint i = 0; i < params.trancheAPRsWads.length; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheAPRsWads", i, params.trancheAPRsWads[i]);
+        }
+
+        for (uint i = 0; i < params.trancheBoostedAPRsWads.length; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
+        }
+
+        for (uint i = 0; i < params.trancheBoostRatios.length; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheBoostRatios", i, params.trancheBoostRatios[i]);
+        }
+
+        for (uint i = 0; i < params.trancheCoveragesWads.length; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
+        }
     }
 }

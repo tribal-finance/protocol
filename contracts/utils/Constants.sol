@@ -18,6 +18,30 @@ library Constants {
         uint64 start;
     }
 
+    struct LendingPoolParams {
+        string name;
+        string token;
+        address stableCoinContractAddress;
+        address platformTokenContractAddress;
+        uint minFundingCapacity;
+        uint maxFundingCapacity;
+        uint64 fundingPeriodSeconds;
+        uint64 lendingTermSeconds;
+        address borrowerAddress;
+        uint firstLossAssets;
+        uint borrowerTotalInterestRateWad;
+        uint repaymentRecurrenceDays;
+        uint gracePeriodDays;
+        uint protocolFeeWad;
+        uint defaultPenalty;
+        uint penaltyRateWad;
+        uint8 tranchesCount;
+        uint[] trancheAPRsWads;
+        uint[] trancheBoostedAPRsWads;
+        uint[] trancheBoostRatios;
+        uint[] trancheCoveragesWads;
+    }
+    
     uint256 constant WAD = 10 ** 18;
     uint256 constant YEAR = 365 days;
 
