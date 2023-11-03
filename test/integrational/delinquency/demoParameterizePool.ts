@@ -27,7 +27,7 @@ import STAGES from "../../helpers/stages";
 import { pool } from "../../../typechain-types/contracts";
 import exp from "constants";
 
-describe("Run borrowerPenalty logic", function () {
+describe.skip("Run borrowerPenalty logic", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();

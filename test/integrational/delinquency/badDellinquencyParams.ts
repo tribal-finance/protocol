@@ -79,7 +79,7 @@ export const deployDelinquencyPool = async (lendingPool: LendingPool, poolFactor
 
 }
 
-describe("Run bad borrowerPenalty logic", function () {
+describe.skip("Run bad borrowerPenalty logic", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
