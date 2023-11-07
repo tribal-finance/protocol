@@ -30,15 +30,18 @@ export const deployComponentBundle = async (
     const components: Component[] = [];
 
     const PoolCalculationsComponent = await ethers.getContractFactory("PoolCalculationsComponent", deployer);
-    const poolCalculationsComponent = await PoolCalculationsComponent.deploy(0, ethers.constants.AddressZero);
+    const poolCalculationsComponent = await PoolCalculationsComponent.deploy();
+    await poolCalculationsComponent.initialize(0, ethers.constants.AddressZero);
     await poolCalculationsComponent.deployed();
 
     const PoolTransfersComponent = await ethers.getContractFactory("PoolTransfersComponent", deployer);
-    const poolTransfersComponent = await PoolTransfersComponent.deploy(0, ethers.constants.AddressZero);
+    const poolTransfersComponent = await PoolTransfersComponent.deploy();
+    await poolTransfersComponent.initialize(0, ethers.constants.AddressZero);
     await poolTransfersComponent.deployed();
 
     const PoolValidationComponent = await ethers.getContractFactory("PoolValidationComponent", deployer);
-    const poolValidationComponent = await PoolValidationComponent.deploy(0, ethers.constants.AddressZero);
+    const poolValidationComponent = await PoolValidationComponent.deploy();
+    await poolValidationComponent.initialize(0, ethers.constants.AddressZero);
     await poolValidationComponent.deployed();
 
     components.push(poolCalculationsComponent);

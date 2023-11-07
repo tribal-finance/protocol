@@ -93,7 +93,7 @@ contract PoolFactory is Initializable {
     function deployPool(
         LendingPool.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads
-    ) external returns (address[] memory) {
+    ) external returns (Component[] memory) {
         require(governance.isOwner(msg.sender), "not owner");
         // validate wad
         uint256 wadMax;
@@ -106,7 +106,7 @@ contract PoolFactory is Initializable {
         require(wadMax == 1e18, "LP024 - bad max wad");
         require(wadMin == 1e18, "LP027 - bad min wad");
 
-        address[] memory clonedPoolComponents = _clonePool();
+        Component[] memory clonedPoolComponents = _clonePool();
 
        // address[] memory trancheVaultAddresses = _deployTrancheVaults(
        //     params,
@@ -120,16 +120,16 @@ contract PoolFactory is Initializable {
         return clonedPoolComponents;
     }
 
-    function _clonePool() internal returns (address[] memory) {
+    function _clonePool() internal returns (Component[] memory) {
         require(governance.isOwner(msg.sender), "not owner");
         require(poolComponents.length > 0, "no pool components");
 
-        address[] memory clonedPoolComponents = new address[](poolComponents.length);
+        Component[] memory clonedPoolComponents = new Component[](poolComponents.length);
 
         for(uint256 i = 0; i < poolComponents.length; i++) {
             address impl = poolComponents[i];
-            clonedPoolComponents[i] = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
-            emit PoolCloned(clonedPoolComponents[i], impl);
+            clonedPoolComponents[i] = Component(Clones.cloneDeterministic(impl, bytes32(nonces[impl]++)));
+            emit PoolCloned(address(clonedPoolComponents[i]), impl);
         }
 
         return clonedPoolComponents;
