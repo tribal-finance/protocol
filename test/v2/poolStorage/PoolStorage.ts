@@ -35,4 +35,8 @@ describe("PoolStorage", async () => {
         poolStorage = deployment.poolStorage;
     })
 
+    it("check read write permissions for setBool", async () => {
+        
+    })
+
 })

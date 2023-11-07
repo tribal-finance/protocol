@@ -62,6 +62,10 @@ contract PoolFactory is Initializable {
         poolComponents = _components;
     }
 
+    function getPoolComponents() external view returns(address[] memory components) {
+        return poolComponents;
+    }
+
     function setFeeSharingContractAddress(address implementation) external {
         require(governance.isAdmin(msg.sender), "not admin");
         feeSharingContractAddress = implementation;
