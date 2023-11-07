@@ -10,6 +10,7 @@ import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
 import "../components/Component.sol";
 import "../vaults/TrancheVault.sol";
+import "../storage/PoolStorage.sol";
 
 contract PoolFactory is Initializable {
     using Math for uint;
@@ -38,6 +39,7 @@ contract PoolFactory is Initializable {
     address public feeSharingContractAddress;
 
     TribalGovernance public governance;
+    PoolStorage public poolStorage;
 
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
@@ -46,8 +48,9 @@ contract PoolFactory is Initializable {
     /// @notice used to gain function level access to systems by their instance id
     mapping(uint256 => Component[]) public componentBundles;
 
-    function initialize(address _governance) public initializer {
+    function initialize(address _governance, address _poolStorage) public initializer {
         governance = TribalGovernance(_governance);
+        poolStorage = PoolStorage(_poolStorage);
     }
 
     constructor() {

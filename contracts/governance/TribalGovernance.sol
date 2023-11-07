@@ -9,7 +9,7 @@ import "../utils/Constants.sol";
  * @title Authority Whitelist smart contract
  * @notice this contract manages a whitelists for all the admins, borrowers and lenders
  */
-contract TribalGovernance is AccessControl {
+contract TribalGovernance is AccessControl, Initializable {
 
     /**
      * @notice Restricts function execution to the deployer or admins
@@ -20,7 +20,7 @@ contract TribalGovernance is AccessControl {
         _;
     }
 
-    constructor(address _admin, address _owner) {
+    function initialize(address _admin, address _owner) public initializer {
         _grantRole(Constants.OWNER, _owner);
         _grantRole(Constants.ADMIN, _owner);
 
@@ -28,12 +28,13 @@ contract TribalGovernance is AccessControl {
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         _grantRole(Constants.ADMIN, _admin);    
-        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         _setRoleAdmin(Constants.PROTOCOL, Constants.ADMIN); // admin govern's protocol
         _setRoleAdmin(Constants.OWNER, Constants.PROTOCOL); // protocol govern's owners
+    }
 
-        
+    constructor() {
+        _disableInitializers();
     }
 
     function isWhitelistedBorrower(address _borrower) public view returns (bool) {
