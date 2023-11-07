@@ -8,13 +8,13 @@ import "../utils/Constants.sol";
 
 pragma solidity 0.8.18;
 
-contract TransfersComponent is Component {
+contract PoolTransfersComponent is Component {
     constructor(uint256 _instanceId, PoolStorage _poolStorage) Component(_instanceId, _poolStorage) {}
 
     function lenderEnableRollOver(
         address lender
     ) external {
-        // PoolFactory poolFactory = PoolFactory(lendingPool.poolFactoryAddress());
+       // PoolFactory poolFactory = PoolFactory(lendingPool.poolFactoryAddress());
         PoolFactory poolFactory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactoryAddress"));
         LendingPool pool = LendingPool(poolStorage.getArrayAddress(instanceId, "lendingPoolInstances", instanceId));
 
@@ -28,8 +28,11 @@ contract TransfersComponent is Component {
             vault.approveRollover(lender, staked);
         }
 
-        address[4] memory futureLenders = poolFactory.nextLenders();
-        IERC20 platformTokenContractAddress = IERC20(poolStorage.getAddress(instanceId, "platformTokenContractAddress"));
+
+        // TODO FINISH MIGRATING ROLLOVERS USING NEW v2 COMPONENT SYSTEM
+
+       // address[4] memory futureLenders = poolFactory.nextLenders();
+      /* IERC20 platformTokenContractAddress = IERC20(poolStorage.getAddress(instanceId, "platformTokenContractAddress"));
         for (uint256 i = 0; i < futureLenders.length; i++) {
             SafeERC20.safeApprove(platformTokenContractAddress, futureLenders[i], 0);
             // approve transfer of platform tokens
@@ -45,10 +48,10 @@ contract TransfersComponent is Component {
             // approve transfer of the stablecoin contract
             SafeERC20.safeApprove(
                 stableCoinContractAddress, // asume tranches.asset() == stablecoin address
-                futureLenders[i],
+                 futureLenders[i],
                 2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
             );
-        }
+        }*/
     }
 
     function executeRollover(uint256 deadInstanceId, uint256 lenderStartIndex, uint256 lenderEndIndex) external {

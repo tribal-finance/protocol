@@ -20,7 +20,6 @@ describe("PoolStorage", async () => {
 
     let borrower: SignerWithAddress;
 
-
     beforeEach(async () => {
         const deployment = await deployProtocol();
         const signers = await labeledSigners();

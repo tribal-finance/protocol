@@ -1,7 +1,8 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ethers, upgrades } from "hardhat";
-import { PoolStorage, TribalGovernance } from "../../../typechain-types";
+import { Component, PoolStorage, TribalGovernance } from "../../../typechain-types";
 import { ADMIN, BORROWER, DEPLOYER, LENDER } from "./constants";
+import { Sign } from "crypto";
 
 
 export const deployTribalGovernance = async(
@@ -18,11 +19,35 @@ export const deployPoolStorage = async(
     deployer: SignerWithAddress,
     governance: TribalGovernance
 ): Promise<PoolStorage> => {
-    const PoolStorage = await ethers.getContractFactory("PoolStorage");
+    const PoolStorage = await ethers.getContractFactory("PoolStorage", deployer);
     const poolStorage = await PoolStorage.deploy(governance.address);
     await poolStorage.deployed();
 
     return poolStorage;
+}
+
+export const deployComponentBundle = async (
+    deployer: SignerWithAddress,
+): Promise<Component[]> => {
+    const components: Component[] = [];
+
+    const PoolCalculationsComponent = await ethers.getContractFactory("PoolCalculationsComponent", deployer);
+    const poolCalculationsComponent = await PoolCalculationsComponent.deploy(0, ethers.constants.AddressZero);
+    await poolCalculationsComponent.deployed();
+
+    const PoolTransfersComponent = await ethers.getContractFactory("PoolTransfersComponent", deployer);
+    const poolTransfersComponent = await PoolTransfersComponent.deploy(0, ethers.constants.AddressZero);
+    await poolTransfersComponent.deployed();
+
+    const PoolValidationComponent = await ethers.getContractFactory("PoolValidationComponent", deployer);
+    const poolValidationComponent = await PoolValidationComponent.deploy(0, ethers.constants.AddressZero);
+    await poolValidationComponent.deployed();
+
+    components.push(poolCalculationsComponent);
+    components.push(poolTransfersComponent);
+    components.push(poolValidationComponent);
+
+    return components;
 }
 
 export const labeledSigners = async(): Promise<{deployer: SignerWithAddress, admin: SignerWithAddress, owner: SignerWithAddress, borrower: SignerWithAddress, lender1: SignerWithAddress, lender2: SignerWithAddress, lender3: SignerWithAddress, foundation: SignerWithAddress, signers: SignerWithAddress[]}> => {
@@ -50,6 +75,7 @@ export const deployProtocol = async (): Promise<{
 
     const governance: TribalGovernance = await deployTribalGovernance(deployer, owner, foundation);
     const poolStorage: PoolStorage = await deployPoolStorage(deployer, governance);
+    const components: Component[] = await deployComponentBundle(deployer);
 
     return {
         governance,

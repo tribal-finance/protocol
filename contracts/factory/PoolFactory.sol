@@ -21,8 +21,7 @@ contract PoolFactory is Initializable {
         address poolAddress;
         address firstTrancheVaultAddress;
         address secondTrancheVaultAddress;
-        address poolImplementationAddress;
-        address trancheVaultImplementationAddress;
+        address[] poolComponents;
     }
 
     uint private constant WAD = 10 ** 18;
@@ -31,8 +30,7 @@ contract PoolFactory is Initializable {
     event TrancheVaultCloned(address indexed addr, address implementationAddress);
     event PoolDeployed(address indexed deployer, PoolRecord record);
 
-    address public poolImplementationAddress;
-    address public trancheVaultImplementationAddress;
+    address[] public poolComponents;
 
     PoolRecord[] public poolRegistry;
 
@@ -59,15 +57,9 @@ contract PoolFactory is Initializable {
 
     /// @notice it should be expressed that updating implemetation will make nonces at prior implementation stale
     /// @dev sets implementation for future pool deployments
-    function setPoolImplementation(address implementation) external {
+    function setPoolComponents(address[] memory _components) external {
         require(governance.isAdmin(msg.sender), "not admin");
-        poolImplementationAddress = implementation;
-    }
-
-    /// @dev sets implementation for future tranche vault deployments
-    function setTrancheVaultImplementation(address implementation) external {
-        require(governance.isAdmin(msg.sender), "not admin");
-        trancheVaultImplementationAddress = implementation;
+        poolComponents = _components;
     }
 
     function setFeeSharingContractAddress(address implementation) external {
@@ -97,7 +89,7 @@ contract PoolFactory is Initializable {
     function deployPool(
         LendingPool.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads
-    ) external returns (address) {
+    ) external returns (address[] memory) {
         require(governance.isOwner(msg.sender), "not owner");
         // validate wad
         uint256 wadMax;
@@ -110,49 +102,34 @@ contract PoolFactory is Initializable {
         require(wadMax == 1e18, "LP024 - bad max wad");
         require(wadMin == 1e18, "LP027 - bad min wad");
 
-        address poolAddress = _clonePool();
+        address[] memory clonedPoolComponents = _clonePool();
 
-        address[] memory trancheVaultAddresses = _deployTrancheVaults(
-            params,
-            fundingSplitWads,
-            poolAddress,
-            msg.sender
-        );
+       // address[] memory trancheVaultAddresses = _deployTrancheVaults(
+       //     params,
+       //     fundingSplitWads,
+       //     poolAddress,
+       //     msg.sender
+       // );
 
-        initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
+        // initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
 
-        return poolAddress;
+        return clonedPoolComponents;
     }
 
-    function _clonePool() internal returns (address poolAddress) {
+    function _clonePool() internal returns (address[] memory) {
         require(governance.isOwner(msg.sender), "not owner");
-        address impl = poolImplementationAddress;
-        poolAddress = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
-        emit PoolCloned(poolAddress, poolImplementationAddress);
-    }
+        require(poolComponents.length > 0, "no pool components");
 
-    function nextLender() public view returns(address) {
-        return nextAddress(poolImplementationAddress);
-    }
+        address[] memory clonedPoolComponents = new address[](poolComponents.length);
 
-    function nextLenders() public view returns(address[4] memory lenders) {
-        address impl = poolImplementationAddress;
-        for(uint256 i = 0; i < lenders.length; i++) {
-            lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
+        for(uint256 i = 0; i < poolComponents.length; i++) {
+            address impl = poolComponents[i];
+            clonedPoolComponents[i] = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
+            emit PoolCloned(clonedPoolComponents[i], impl);
         }
-    }
 
-    function nextTranches() public view returns(address[8] memory lenders) {
-        address impl = trancheVaultImplementationAddress;
-        for(uint256 i = 0; i < lenders.length; i++) {
-            lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
-        }
+        return clonedPoolComponents;
     }
-
-    function nextAddress(address impl) public view returns(address) {
-        return Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + 1));
-    }
-
 
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
@@ -165,11 +142,11 @@ contract PoolFactory is Initializable {
         trancheVaultAddresses = new address[](params.tranchesCount);
 
         for (uint8 i; i < params.tranchesCount; ++i) {
-            address impl = trancheVaultImplementationAddress;
-            trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
+            //address impl = trancheVaultImplementationAddress;
+            //trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
 
-            emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
-            prevDeployedTranche[trancheVaultAddresses[i]] = true;
+            //emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
+            //prevDeployedTranche[trancheVaultAddresses[i]] = true;
 
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
@@ -210,8 +187,7 @@ contract PoolFactory is Initializable {
             poolAddress,
             trancheVaultAddresses[0],
             trancheVaultAddresses.length > 1 ? trancheVaultAddresses[1] : address(0),
-            poolImplementationAddress,
-            trancheVaultImplementationAddress
+            poolComponents
         );
         poolRegistry.push(record);
 
