@@ -4,7 +4,7 @@ import {
   DeployedContractsType,
   deployUnitranchePool,
 } from "../../../lib/pool_deployments";
-import { USDC, WAD } from "../../../test/helpers/conversion";
+import { USDC, WAD } from "../../../test/v1-legacy/helpers/conversion";
 
 dotenv.config({ path: `./.env.${network.name}` });
 

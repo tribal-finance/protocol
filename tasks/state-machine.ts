@@ -1,5 +1,5 @@
 import { task } from "hardhat/config";
-import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, Transition, findPath, isValidTransition, transitionToString, transitionsToString } from "../test/helpers/stages";
+import STAGES, { STAGES_LOOKUP, STAGES_LOOKUP_STR, Transition, findPath, isValidTransition, transitionToString, transitionsToString } from "../test/v1-legacy/helpers/stages";
 import { processLendingPoolParams, retryableRequest } from "./utils";
 import { Authority, LendingPool, PoolFactory } from "../typechain-types";
 import { getMostCurrentContract } from "./io";

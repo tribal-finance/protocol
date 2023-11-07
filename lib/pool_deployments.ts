@@ -23,8 +23,8 @@ import type {
   Authority,
 } from "../typechain-types";
 import { pool } from "../typechain-types/contracts";
-import { USDC_ADDRESS_6 } from "../test/helpers/usdc";
-import { USDC, WAD } from "../test/helpers/conversion";
+import { USDC_ADDRESS_6 } from "../test/v1-legacy/helpers/usdc";
+import { USDC, WAD } from "../test/v1-legacy/helpers/conversion";
 
 const { parseUnits } = ethers.utils;
 
