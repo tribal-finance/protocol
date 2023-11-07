@@ -1,14 +1,15 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { TribalGovernance } from "../../../typechain-types";
 import { deployProtocol, labeledSigners } from "../utils/deployments";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ADMIN, DEPLOYER, LENDER } from "../utils/constants";
+import { PoolStorage, TribalGovernance } from "../../../typechain-types";
 
 
-describe("TribalGovernance", async () => {
+describe("PoolStorage", async () => {
 
     let governance: TribalGovernance;
+    let poolStorage: PoolStorage;
 
     let deployer: SignerWithAddress;
     let admin: SignerWithAddress;
@@ -32,20 +33,7 @@ describe("TribalGovernance", async () => {
         lender3 = signers.lender3;
 
         governance = deployment.governance;
+        poolStorage = deployment.poolStorage;
     })
-    
-    it("success - deployer has DEPLOYER role", async() => {
-        expect(await governance.hasRole(DEPLOYER, deployer.address)).equals(true);
-    });
 
-    it("fail - foundation cannot set LENDER role", async() => {
-        expect(await governance.hasRole(ADMIN, foundation.address)).equals(true);
-        expect(await governance.hasRole(LENDER, lender1.address)).equals(false);
-        await expect(governance.connect(foundation).grantRole(LENDER, lender1.address)).to.be.reverted;
-        expect(await governance.hasRole(LENDER, lender1.address)).equals(false);
-    });
-
-    it("success - deployer does not have super user admin role", async () => {
-        expect(await governance.hasRole(ethers.constants.HashZero, deployer.address)).equals(false);
-    })
 })
