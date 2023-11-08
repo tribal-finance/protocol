@@ -2364,5 +2364,23 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0x2c6eEc18bF1637AC815A8632ea1fF591324cF866",
     "timestamp": 1698686628
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x3cF750d6F5F809D9cB6385274e1E34905D63E627",
+    "implementationAddress": "0x32bdaa1d07dc99c34ec4196e82fa5d011d66acdd",
+    "timestamp": 1699462956
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x6b1b526d744E6B1D349e5F1db64AcD812cE06337",
+    "implementationAddress": "0x5b89c15c7c853ac609bbcf265932fc3f1fb13b61",
+    "timestamp": 1699462968
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xa3ae928B393b58Dc132B333c60E9Ffb5EaC3A8F2",
+    "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
+    "timestamp": 1699462980
   }
 ]
