@@ -2382,5 +2382,41 @@
     "contractAddress": "0xa3ae928B393b58Dc132B333c60E9Ffb5EaC3A8F2",
     "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
     "timestamp": 1699462980
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x12E667661B25A471E035c4459Af5dFd6b019745f",
+    "implementationAddress": "0x32bdaa1d07dc99c34ec4196e82fa5d011d66acdd",
+    "timestamp": 1699896048
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x92B6C1f218CefB3038a091896A7B8631E2C132CD",
+    "implementationAddress": "0x5b89c15c7c853ac609bbcf265932fc3f1fb13b61",
+    "timestamp": 1699896060
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0x7764DADDDBce3904DdA16F52f59E7e03F2BCc5D4",
+    "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
+    "timestamp": 1699896084
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0xa0d3fd6513232f5Fd2Da1eb0caA07F21B5dB7043",
+    "implementationAddress": "0x32bdaa1d07dc99c34ec4196e82fa5d011d66acdd",
+    "timestamp": 1699896264
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0xB2f996724f0Fa96C6f0391392DEb85c6d986e367",
+    "implementationAddress": "0x5b89c15c7c853ac609bbcf265932fc3f1fb13b61",
+    "timestamp": 1699896276
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0xB20E059ef907c708629b1b7ca561Eb4f30b9Eaf7",
+    "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
+    "timestamp": 1699896288
   }
 ]
