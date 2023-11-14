@@ -43,7 +43,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         bool platformTokens;
     }
 
-    enum Stages {
+    enum Stages {                   // WARNING, DO NOT REORDER ENUM!!!
         INITIAL,                    // 0
         OPEN,                       // 1
         FUNDED,                     // 2
@@ -332,6 +332,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  this function is expected to be called by *owner* once the funding period ends
      */
     function adminTransitionToFundedState() external onlyOwnerOrAdmin atStage(Stages.OPEN) {
+        require(block.timestamp >= openedAt + fundingPeriodSeconds, "Cannot accrue interest or declare failure before start time");
         if (collectedAssets >= minFundingCapacity) {
             _transitionToFundedStage();
         } else {
@@ -608,13 +609,26 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         return s_trancheRewardables[trancheId][lenderAddress].redeemedRewards;
     }
 
-    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed)
+    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed). Special means this one is distinguished from the FE version and is only used within the SCs
      *  @param lenderAddress lender address
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
         uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        return willReward - hasRewarded;
+    }
+
+    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed) only use in FE
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderRewardsByTrancheRedeemableSpecial(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
+        uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        if(hasRewarded > willReward) {
+            return 0;
+        }
         return willReward - hasRewarded;
     }
 
@@ -809,7 +823,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */
     function borrowerPenaltyAmount() public view returns (uint) {
-        return PoolCalculations.borrowerPenaltyAmount(this);
+        if(currentStage > Stages.FLC_DEPOSITED) {
+            return PoolCalculations.borrowerPenaltyAmount(this);
+        }
     }
 
     /** @dev total interest to be paid by borrower = adjustedBorrowerAPR * collectedAssets

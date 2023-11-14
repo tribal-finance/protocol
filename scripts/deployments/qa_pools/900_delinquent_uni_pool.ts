@@ -124,6 +124,10 @@ async function main() {
   await tx.wait(WAIT_CONFIRMATIONS);
   console.log("deposited 100 USDC as custom lender");
 
+  // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+  const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
+  await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+  await network.provider.send("evm_mine");
   // 4. deposit move to funded stage
   tx = await lendingPool.connect(deployer).adminTransitionToFundedState();
   await tx.wait(WAIT_CONFIRMATIONS);

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
@@ -14,6 +14,7 @@ import {
 } from "../../lib/pool_deployments";
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
+import { assertDefaultRatioWad, assertPoolViews } from "../helpers/view";
 
 describe("Defaulting", function () {
   context("unitranche pool without payments", function () {
@@ -77,6 +78,11 @@ describe("Defaulting", function () {
           .connect(lender2)
           .deposit(toDeposit, await lender2.getAddress());
 
+
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await contracts.lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         // transition to funded state
         await contracts.lendingPool
           .connect(deployer)
@@ -91,10 +97,13 @@ describe("Defaulting", function () {
           .lendingTermSeconds();
         await ethers.provider.send("evm_increaseTime", [toWait.toNumber()]);
         await ethers.provider.send("evm_mine", []);
-
+        await assertDefaultRatioWad(contracts.lendingPool)
+        
         await contracts.lendingPool
-          .connect(deployer)
-          .adminTransitionToDefaultedState();
+        .connect(deployer)
+        .adminTransitionToDefaultedState();
+        
+        await assertDefaultRatioWad(contracts.lendingPool);
 
         return contracts;
       };
@@ -112,13 +121,19 @@ describe("Defaulting", function () {
     }
 
     it("sets the pool to defaulted stage", async function () {
-      const { lendingPool } = await loadFixture(uniPoolFixture);
-
+      const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
+      await assertPoolViews(lendingPool, lenders[0], 1000)
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
 
+    it("Assert lenderRewardsByTrancheRedeemable() doesn't revert before withdrawal", async () => {
+      const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
+
+      await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.not.be.reverted;
+    })
+
     it("sets default ratio on the first tranche to 0.15 ((2000-500)/10000)", async function () {
-      const { firstTrancheVault, lendingPool, usdc } = await loadFixture(
+      const { firstTrancheVault, lendingPool, lenders } = await loadFixture(
         uniPoolFixture
       );
       const totalTrancheInterest = await lendingPool.allLendersInterest();
@@ -127,10 +142,13 @@ describe("Defaulting", function () {
       expect(await firstTrancheVault.defaultRatioWad(), "Default Ratio").to.eq(
         WAD(0.15)
       );
+      await assertPoolViews(lendingPool, lenders[0], 1001)
+
     });
 
     it("sets maxWithdraw for first lender to 600 (4000 * 0.15)", async function () {
-      const { firstTrancheVault, lenders } = await loadFixture(uniPoolFixture);
+      const { firstTrancheVault, lenders, lendingPool } = await loadFixture(uniPoolFixture);
+      await assertPoolViews(lendingPool, lenders[0], 1002)
 
       expect(
         await firstTrancheVault.maxWithdraw(lenders[0].getAddress())
@@ -138,7 +156,7 @@ describe("Defaulting", function () {
     });
 
     it("allows first lender to withdraw 600", async function () {
-      const { firstTrancheVault, lenders, usdc } = await loadFixture(
+      const { firstTrancheVault, lenders, usdc, lendingPool } = await loadFixture(
         uniPoolFixture
       );
 
@@ -151,10 +169,13 @@ describe("Defaulting", function () {
 
       const balanceAfter = await usdc.balanceOf(lender1Address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
+
+      await assertPoolViews(lendingPool, lenders[0], 1003)
+
     });
 
     it("allows first lender to redeem 4000 tranche tokens for 600 USDC", async function () {
-      const { firstTrancheVault, lenders, usdc } = await loadFixture(
+      const { lendingPool, firstTrancheVault, lenders, usdc } = await loadFixture(
         uniPoolFixture
       );
 
@@ -167,6 +188,14 @@ describe("Defaulting", function () {
 
       const balanceAfter = await usdc.balanceOf(lender1Address);
       expect(balanceAfter.sub(balanceBefore)).to.eq(USDC(600));
+
+      await assertPoolViews(lendingPool, lenders[0], 1004)
+      // used to revert with panic code 17 (over/under flow)
+      await expect(lendingPool.lenderRewardsByTrancheRedeemableSpecial(await lenders[0].getAddress(), 0)).to.not.be.reverted;
+      
+      // we want to the og function to revert with panic 17
+      await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.be.reverted;
+
     });
 
     it("sets maxWithdraw for second lender to 900 (6000 * 0.15)", async function () {
@@ -202,8 +231,6 @@ describe("Defaulting", function () {
       const lastBalance = await usdc.balanceOf(lender2Address);
       expect(lastBalance).to.eq(balanceAfter);
     });
-
-    it("does not allow second lender to withdraw twice", async function () {});
 
     it("allows second lender to redeem 6000 tranche tokens for 900 USDC", async function () {
       const { firstTrancheVault, lenders, usdc } = await loadFixture(
@@ -284,6 +311,10 @@ describe("Defaulting", function () {
           .connect(lender2)
           .deposit(toDeposit, await lender2.getAddress());
 
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await contracts.lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         // transition to funded state
         await contracts.lendingPool
           .connect(deployer)
@@ -583,7 +614,12 @@ describe("Defaulting", function () {
           throw new Error("Second tranche vault not deployed");
         }
 
+        // wait a delay such that now > openedAt + fundingPeriodSeconds is true
+        const fundingPeriodSeconds = await contracts.lendingPool.fundingPeriodSeconds();
+        await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+        await network.provider.send("evm_mine");
         // Set pool to funded state
+
         await contracts.lendingPool
           .connect(deployer)
           .adminTransitionToFundedState();
@@ -643,7 +679,9 @@ describe("Defaulting", function () {
         );
 
       // move to defaulted state
+      await assertDefaultRatioWad(lendingPool);
       await lendingPool.connect(deployer).adminTransitionToDefaultedState();
+      await assertDefaultRatioWad(lendingPool); // triggers the buggy 0 defaultRatioWad
 
       // expect to be in defaulted state
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
@@ -688,7 +726,12 @@ describe("Defaulting", function () {
 
       // expect the defaultRatio for the second tranche to be 0
       const defaultRatio2 = await secondTrancheVault.defaultRatioWad();
-      expect(defaultRatio2).to.eq(WAD(0));
+      expect(defaultRatio2).to.eq(WAD(0));  // triggers the buggy 0 defaultRatioWad and strange maxWithdraw value
+      assertDefaultRatioWad(lendingPool)
+      expect(await firstTrancheVault.isDefaulted()).equals(true);
+      expect(await firstTrancheVault.maxWithdraw(await lender1.getAddress())).not.equals(0)
+      expect(await secondTrancheVault.isDefaulted()).equals(false);
+      expect(await secondTrancheVault.maxWithdraw(await lender1.getAddress())).equals(0)
     });
   });
 });
