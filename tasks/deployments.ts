@@ -520,6 +520,64 @@ task("prod-init-protocol", "deploys the lending protocol for production")
             console.log("Set feeSharing address in poolFactory")
         }))
 
+        deploySequence.push("Deploy lending pool so factory can clone it", () => retryableRequest(async () => {
+            const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
+            const poolCalculations = await PoolCalculations.deploy();
+            await poolCalculations.deployed();
+
+            const PoolTransfers = await ethers.getContractFactory("PoolTransfers");
+            const poolTransfers = await PoolTransfers.deploy();
+            await poolTransfers.deployed();
+
+            const LendingPool = await ethers.getContractFactory("LendingPool", {
+                libraries: {
+                    PoolCalculations: poolCalculations.address,
+                    PoolTransfers: poolTransfers.address
+                }
+            });
+
+            const lp = await LendingPool.deploy();
+            console.log(`LendingPool implementation deployed to ${lp.address}`);
+            secureDeploymentChecksum.push(lp.deployTransaction.data);
+
+            const Factory = getMostCurrentContract("poolFactory", network);
+            const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+
+            const tx = await factory.setPoolImplementation(lp.address);
+            console.log("implementation address is set on poolFactory");
+            secureDeploymentChecksum.push(tx.data);
+
+            writeToDeploymentsFile({
+                contractName: "lendingPoolV1-clonable",
+                contractAddress: lp.address,
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+            }, network)
+        }))
+
+        deploySequence.push("Deploy Tranche Vault and set implementation within pool factory", () => retryableRequest(async () => {
+            const TrancheVault = await ethers.getContractFactory("TrancheVault");
+            const tv = await TrancheVault.deploy();
+            await tv.deployed();
+
+            secureDeploymentChecksum.push(tv.deployTransaction.data);
+
+            console.log(`TrancheVault implementation deployed to ${tv.address}`);
+
+            writeToDeploymentsFile({
+                contractName: "trancheVaultV1-clonable",
+                contractAddress: tv.address,
+                timestamp: (await ethers.provider.getBlock(ethers.provider.getBlockNumber())).timestamp
+            }, network)
+
+            const Factory = getMostCurrentContract("poolFactory", network);
+            const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+
+            const tx = await factory.setTrancheVaultImplementation(tv.address);
+            console.log("implementation address is set on poolFactory");
+            secureDeploymentChecksum.push(tx.data);
+
+        }))
+
         deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {
             const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
             const authority = await ethers.getContractAt("Authority", authorityAddress);
@@ -560,6 +618,26 @@ task("prod-init-protocol", "deploys the lending protocol for production")
                 constructorArguments: [],
             });
             console.log("verified feeSharing implementation")
+        }))
+
+        deploySequence.push("Verify LendingPool implementation (clonable)", () => retryableRequest(async () => {
+            const pool = getMostCurrentContract("lendingPoolV1-clonable", network).contractAddress;
+
+            await hre.run("verify:verify", {
+                address: pool,
+                constructorArguments: [],
+            });
+            console.log("verified Lending Pool implementation")
+        }))
+
+        deploySequence.push("Verify TrancheVault implementation (clonable)", () => retryableRequest(async () => {
+            const tv = getMostCurrentContract("trancheVaultV1-clonable", network).contractAddress;
+
+            await hre.run("verify:verify", {
+                address: tv,
+                constructorArguments: [],
+            });
+            console.log("verified Lending Pool implementation")
         }))
 
         console.log("Select where to begin deployment")

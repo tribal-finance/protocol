@@ -2418,5 +2418,61 @@
     "contractAddress": "0xB20E059ef907c708629b1b7ca561Eb4f30b9Eaf7",
     "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
     "timestamp": 1699896288
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0xc596a293dcCF256FfF68E935e2820c1CF80F727c",
+    "implementationAddress": "0x32bdaa1d07dc99c34ec4196e82fa5d011d66acdd",
+    "timestamp": 1699918956
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0x2B3FBe4f8C7705228bBa65AF3AcbAe4e65EDA873",
+    "implementationAddress": "0x5b89c15c7c853ac609bbcf265932fc3f1fb13b61",
+    "timestamp": 1699918968
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0x541B68Fd5C73f7d49eBD34C1d89BC5390CFB747A",
+    "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
+    "timestamp": 1699918992
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0xE18d1295BCFAdb7eB4291e274F0627fCC9e943f5",
+    "timestamp": 1699919016
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0xd190672F1954060d381f7ae57aFbdD40c9355f3f",
+    "timestamp": 1699919028
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x16d4B5895f403E001BfCbEe0C034813d94d750A2",
+    "implementationAddress": "0x32bdaa1d07dc99c34ec4196e82fa5d011d66acdd",
+    "timestamp": 1699921068
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0xDDAa991116a8386C708b6dC45CC4Ebdf16c7C3D6",
+    "implementationAddress": "0x5b89c15c7c853ac609bbcf265932fc3f1fb13b61",
+    "timestamp": 1699921080
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0x085ccAa66C67C3C3850fB6808dd333877796D454",
+    "implementationAddress": "0x9760f905a07b0c7a17a55afa0e2a5ae2abfb2344",
+    "timestamp": 1699921104
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0x59eC390eB72252EcB0aA565fE36932A332730458",
+    "timestamp": 1699921140
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0x7e018D69398D03638eFE5e42F121CB7008d0C595",
+    "timestamp": 1699921152
   }
 ]
