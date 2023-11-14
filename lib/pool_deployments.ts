@@ -46,7 +46,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   gracePeriodDays: 5,
   borrowerTotalInterestRateWad: WAD(0.15),
   protocolFeeWad: WAD(0.1),
-  defaultPenalty: 0,
+  defaultPenalty: ethers.BigNumber.from(0),
   penaltyRateWad: WAD(0.02),
   tranchesCount: 1,
   trancheAPRsWads: [WAD(0.1)],

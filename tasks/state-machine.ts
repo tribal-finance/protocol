@@ -75,6 +75,12 @@ const moveFromFLCDepositedToOpen = async (params: TransitionalParams): Promise<v
 
 const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> => {
     const minFundingCapacity = await params.lendingPool.minFundingCapacity();
+    const maxFundingCapacity = await params.lendingPool.maxFundingCapacity();
+    const averageFundingCapacity = (minFundingCapacity.add(maxFundingCapacity)).div(2);
+    const PRECISION = params.ethers.BigNumber.from("1000000000000000000");
+    const scaledAverage = averageFundingCapacity.mul(PRECISION);
+    const normalizedAverage = scaledAverage.div(maxFundingCapacity);
+
     const vaultCount = await params.lendingPool.tranchesCount();
     const stablecoinAddress = await params.lendingPool.stableCoinContractAddress();
     const stablecoin = await params.ethers.getContractAt("IERC20", stablecoinAddress);
@@ -92,17 +98,23 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
         console.log("Funding vault:", i);
         const Vault = await params.lendingPool.trancheVaultAddresses(i);
         const vault = await params.ethers.getContractAt("TrancheVault", Vault);
-        const vMinFunding = await vault.minFundingCapacity();
-        console.log("min funding capacity", vMinFunding);
-        const currentVaultFunding = await vault.totalAssets();
-        console.log("currentVaultFunding", currentVaultFunding);
-        const requiredFunding = vMinFunding.sub(currentVaultFunding);
-        if(requiredFunding.eq(0)) {
-            console.log("vault",i,"is funded, skipping...")
+        const vMaxFunding = await vault.maxFundingCapacity();
+        const depositAmount = vMaxFunding.mul(normalizedAverage).div(PRECISION);
+        
+        if(depositAmount.eq(0)) {
+            console.log("No deposit needed for vault",i,", skipping...")
             continue;
         }
-        await (await stablecoin.connect(params.lender1).approve(Vault, requiredFunding)).wait();
-        console.log("requested required funding", requiredFunding);
+    
+        await (await stablecoin.connect(params.lender1).approve(Vault, depositAmount)).wait();
+        console.log("Depositing", depositAmount.toString(), "into vault", i);
+    
+       // if(requiredFunding.eq(0)) {
+       //     console.log("vault",i,"is funded, skipping...")
+       //     continue;
+       // }
+       // await (await stablecoin.connect(params.lender1).approve(Vault, requiredFunding)).wait();
+       // console.log("requested required funding", requiredFunding);
 
         // MAKE SURE LENDER1 IS WHITELISTED IF THEY ARE NOT ALREADY
         if(!(await params.authority.isWhitelistedLender(params.lender1.address))) {
@@ -112,7 +124,7 @@ const moveFromOpenToFunded = async (params: TransitionalParams): Promise<void> =
             console.log("lender1 already whitelisted")
         }
 
-        await (await vault.connect(params.lender1).deposit(vMinFunding, params.lender1.address)).wait();
+        await (await vault.connect(params.lender1).deposit(depositAmount, params.lender1.address)).wait();
         const currCap = await params.lendingPool.collectedAssets();
         if(currCap.gte(minFundingCapacity)) {
             break;
@@ -194,7 +206,7 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         }
 
         let poolFactory: PoolFactory = !poolFactoryAddress ? await ethers.getContractAt("PoolFactory", getMostCurrentContract("poolFactory", network).contractAddress) : await ethers.getContractAt("PoolFactory", poolFactoryAddress);
-
+        console.log("using poolfactory at:", poolFactory.address);
         if (!poolAddress) {
             // require lendingPoolParams to not be null
             console.log("No pool-address provided, deploying new pool...")
@@ -216,6 +228,11 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
             throw new Error(`stage: ${stage} is not an element of [${Object.keys(STAGES).map((value, index) => {
                 return (index != 0 ? " " : "") + value.toLowerCase();
             })}]`)
+        }
+
+        if(currentStage === parseInt(desiredStage) && currentStage === 0) {
+            console.log("Pool in Initial Stage and deployed to: ", lendingPool.address);
+            return;
         }
 
         const path = findPath(currentStage, parseInt(desiredStage));

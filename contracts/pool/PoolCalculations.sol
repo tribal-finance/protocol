@@ -27,22 +27,29 @@ library PoolCalculations {
 
     function poolBalanceThreshold(LendingPool lendingPool) public view returns (uint) {
         uint borrowedAssets = lendingPool.borrowedAssets();
+
         uint borrowerTotalInterestRateWad = lendingPool.borrowerTotalInterestRateWad();
+
         uint repaymentRecurrenceDays = lendingPool.repaymentRecurrenceDays();
+
         uint gracePeriodDays = lendingPool.gracePeriodDays();
+
         uint firstLossAssets = lendingPool.firstLossAssets();
 
         uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / WAD / 365;
+
         uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
+
         if (interestGoDownAmount > firstLossAssets) {
             return 0;
         }
-        return firstLossAssets - interestGoDownAmount;
+
+        uint threshold = firstLossAssets - interestGoDownAmount;
+
+        return threshold;
     }
 
-    function poolBalance(
-        LendingPool lendingPool
-    ) public view returns (uint) {
+    function poolBalance(LendingPool lendingPool) public view returns (uint) {
         uint firstLossAssets = lendingPool.firstLossAssets();
         uint borrowerInterestRepaid = lendingPool.borrowerInterestRepaid();
         uint allLendersInterestByDate = lendingPool.allLendersInterestByDate();
@@ -56,9 +63,13 @@ library PoolCalculations {
 
     function borrowerPenaltyAmount(LendingPool lendingPool) public view returns (uint) {
         uint poolBalance = lendingPool.poolBalance();
+
         uint poolBalanceThreshold = lendingPool.poolBalanceThreshold();
+
         uint collectedAssets = lendingPool.collectedAssets();
+
         uint allLendersEffectiveAprWad = lendingPool.allLendersEffectiveAprWad();
+
         uint penaltyRateWad = lendingPool.penaltyRateWad();
 
         if (poolBalance >= poolBalanceThreshold) {
@@ -66,7 +77,9 @@ library PoolCalculations {
         }
 
         uint dailyLendersInterestAmount = (collectedAssets * allLendersEffectiveAprWad) / WAD / 365;
+
         uint balanceDifference = poolBalanceThreshold - poolBalance;
+
         uint daysDelinquent = balanceDifference / dailyLendersInterestAmount;
 
         if (daysDelinquent == 0) {
@@ -76,6 +89,7 @@ library PoolCalculations {
         uint penaltyCoefficientWad = _wadPow(WAD + penaltyRateWad, daysDelinquent);
 
         uint penalty = (balanceDifference * penaltyCoefficientWad) / WAD - balanceDifference;
+
         return penalty;
     }
 
@@ -96,9 +110,7 @@ library PoolCalculations {
         return borrowerExpectedInterest - borrowerInterestRepaid;
     }
 
-    function borrowerExcessSpread(
-        LendingPool lendingPool
-    ) public view returns (uint) {
+    function borrowerExcessSpread(LendingPool lendingPool) public view returns (uint) {
         uint borrowerInterestRepaid = lendingPool.borrowerInterestRepaid();
         uint allLendersInterest = lendingPool.allLendersInterest();
         uint borrowerExpectedInterest = lendingPool.borrowerExpectedInterest();
@@ -143,7 +155,7 @@ library PoolCalculations {
 
     function lenderRewardsByTrancheGeneratedByDate(
         LendingPool lendingPool,
-        address lenderAddress, 
+        address lenderAddress,
         uint8 trancheId
     ) public view returns (uint) {
         uint fundedAt = lendingPool.fundedAt();
@@ -276,7 +288,7 @@ library PoolCalculations {
     }
 
     function validateWad(uint256[] memory ints) external pure {
-        for(uint256 i = 0; i < ints.length; i++) {
+        for (uint256 i = 0; i < ints.length; i++) {
             require(ints[i] <= 1e18, "LP024 - bad wad");
         }
     }
