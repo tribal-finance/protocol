@@ -581,9 +581,19 @@ task("prod-init-protocol", "deploys the lending protocol for production")
         deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {
             const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
             const authority = await ethers.getContractAt("Authority", authorityAddress);
-            const tx = await authority.transferOwnership(owner);
-            secureDeploymentChecksum.push(tx.data);
-            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner}`);
+            await authority.transferOwnership(owner);
+            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${authority.address}`);
+
+            const Factory = getMostCurrentContract("poolFactory", network);
+            const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
+            await factory.transferOwnership(owner);
+            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${factory.address}`);
+
+            const FeeSharing = getMostCurrentContract("feeSharing", network);
+            const feeSharing = await ethers.getContractAt("FeeSharing", FeeSharing.contractAddress);
+            await feeSharing.transferOwnership(owner);
+            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${feeSharing.address}`);
+
         }))
 
         deploySequence.push("Verifies authority implementation", () => retryableRequest(async () => {

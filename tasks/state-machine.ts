@@ -206,7 +206,7 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
         }
 
         let poolFactory: PoolFactory = !poolFactoryAddress ? await ethers.getContractAt("PoolFactory", getMostCurrentContract("poolFactory", network).contractAddress) : await ethers.getContractAt("PoolFactory", poolFactoryAddress);
-
+        console.log("using poolfactory at:", poolFactory.address);
         if (!poolAddress) {
             // require lendingPoolParams to not be null
             console.log("No pool-address provided, deploying new pool...")
