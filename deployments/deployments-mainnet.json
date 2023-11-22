@@ -26,5 +26,10 @@
     "contractName": "trancheVaultV1-clonable",
     "contractAddress": "0xf20Ee5A67beB4A8631f28eE8aD94276Db6F161E9",
     "timestamp": 1699991075
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x2B3a2582fd8a1419c394b351111a955AB6fa78D6",
+    "timestamp": 1700500907
   }
 ]

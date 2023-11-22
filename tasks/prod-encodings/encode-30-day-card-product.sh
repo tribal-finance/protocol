@@ -1,19 +1,19 @@
 #!/bin/bash
 
-export USDC_ADDRESS_6="0x07865c6E87B9F70255377e024ace6630C1Eaa37F"
-export BORROWER_ADDRESS="0x8DfA5E23c8bd7911ea7A31b180b1572B5858300B"
-export PLATFORM_TOKEN_ADDRESS="0x0f81CdC8c06CF924B829E9FDA1f616fA716322F2"
+export USDC_ADDRESS_6="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+export BORROWER_ADDRESS="0xb748289127A08AFe00948594Bf431FF138C9e9d4"
+export PLATFORM_TOKEN_ADDRESS="0x2B3a2582fd8a1419c394b351111a955AB6fa78D6"
 
 npx hardhat encode-pool-initializer \
   --name "30 Day Card Product" \
-  --token "TPT" \
+  --token "TPT-1" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 40000 \
   --max-funding-capacity 50000 \
-  --funding-period-seconds 1036800 \
+  --funding-period-seconds 14400 \
   --lending-term-seconds 2592000 \
-  --first-loss-assets 5000 \
+  --first-loss-assets 500 \
   --repayment-recurrence-days 30 \
   --grace-period-days 5 \
   --borrower-total-interest-rate-wad 0.1 \
