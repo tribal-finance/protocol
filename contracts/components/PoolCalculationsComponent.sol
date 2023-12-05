@@ -12,7 +12,7 @@ pragma solidity 0.8.18;
 contract PoolCalculationsComponent is Component {
 
     function initialize(uint256 _instanceId, PoolStorage _poolStorage) public initializer {
-        _initialize(_instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT, _poolStorage);
+        super.initialize(_instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT, _poolStorage);
     }
 
     function lenderEffectiveAprByTrancheWad(address lenderAddress, uint8 trancheId) public view returns (uint) {

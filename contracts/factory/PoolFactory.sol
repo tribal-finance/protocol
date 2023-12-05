@@ -45,6 +45,7 @@ contract PoolFactory is Initializable {
 
     /// @notice used to gain function level access to systems by their instance id
     mapping(uint256 => Component[]) public componentBundles;
+    uint256 public bundleCount;
 
     function initialize(address _governance, address _poolStorage) public initializer {
         governance = TribalGovernance(_governance);
@@ -107,6 +108,13 @@ contract PoolFactory is Initializable {
         require(wadMin == 1e18, "LP027 - bad min wad");
 
         Component[] memory clonedPoolComponents = _clonePool();
+
+        for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
+            Component c = clonedPoolComponents[i];
+            c.initialize(bundleCount, bytes32(i+1), poolStorage);
+        }
+        componentBundles[bundleCount] = clonedPoolComponents;
+        bundleCount++;
 
        // address[] memory trancheVaultAddresses = _deployTrancheVaults(
        //     params,
@@ -196,5 +204,9 @@ contract PoolFactory is Initializable {
         poolRegistry.push(record);
 
         emit PoolDeployed(msg.sender, record);
+    }
+
+    function getComponent(uint256 _instanceId, bytes32 _identifier) public view returns(address) {
+        return address(componentBundles[_instanceId][uint256(_identifier)]);
     }
 }
