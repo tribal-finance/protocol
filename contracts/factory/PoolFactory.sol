@@ -92,7 +92,7 @@ contract PoolFactory is Initializable {
      * . See {LendingPool-initialize}
      */
     function deployPool(
-        LendingPool.LendingPoolParams calldata params,
+        Constants.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads
     ) external returns (Component[] memory) {
         require(governance.isOwner(msg.sender), "not owner");
@@ -108,13 +108,13 @@ contract PoolFactory is Initializable {
         require(wadMin == 1e18, "LP027 - bad min wad");
 
         Component[] memory clonedPoolComponents = _clonePool();
+        bundleCount++;
 
         for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
             Component c = clonedPoolComponents[i];
             c.initialize(bundleCount, bytes32(i+1), poolStorage);
         }
-        componentBundles[bundleCount] = clonedPoolComponents;
-        bundleCount++;
+        componentBundles[bundleCount-1] = clonedPoolComponents;
 
        // address[] memory trancheVaultAddresses = _deployTrancheVaults(
        //     params,
@@ -208,5 +208,9 @@ contract PoolFactory is Initializable {
 
     function getComponent(uint256 _instanceId, bytes32 _identifier) public view returns(address) {
         return address(componentBundles[_instanceId][uint256(_identifier)]);
+    }
+
+    function getBundle(uint256 _instanceId) public view returns(Component[] memory) {
+        return componentBundles[_instanceId];
     }
 }
