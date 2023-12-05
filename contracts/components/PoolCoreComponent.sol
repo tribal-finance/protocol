@@ -5,6 +5,7 @@ import "./Component.sol";
 import "./PoolValidationComponent.sol";
 import "../storage/PoolStorage.sol";
 import "../utils/Constants.sol";
+import "../utils/Operations.sol";
 import "../utils/Identifiers.sol";
 
 pragma solidity 0.8.18;
@@ -129,7 +130,6 @@ function initialize(
     address _authorityAddress,
     address _poolFactoryAddress
 ) external initializer {
-    
 
     PoolValidationComponent pvc =  PoolValidationComponent(PoolFactory(_poolFactoryAddress).getComponent(instanceId, Identifiers.POOL_VALIDATION_COMPONENT));
 
@@ -140,7 +140,7 @@ function initialize(
         _authorityAddress
     );
 
-    //PoolCalculations.validateWad(params.trancheCoveragesWads);
+    Operations.validateWad(params.trancheCoveragesWads);
 
     // Store parameters in poolStorage
     poolStorage.setString(instanceId, "name", params.name);
@@ -159,7 +159,7 @@ function initialize(
     poolStorage.setUint256(instanceId, "protocolFeeWad", params.protocolFeeWad);
     poolStorage.setUint256(instanceId, "defaultPenalty", params.defaultPenalty);
     poolStorage.setUint256(instanceId, "penaltyRateWad", params.penaltyRateWad);
-    //poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
+    poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
     //poolStorage.setUintArray(instanceId, "trancheAPRsWads", params.trancheAPRsWads);
     //poolStorage.setUintArray(instanceId, "trancheBoostedAPRsWads", params.trancheBoostedAPRsWads);
     //poolStorage.setUintArray(instanceId, "trancheBoostRatios", params.trancheBoostRatios);
