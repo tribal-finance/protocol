@@ -112,7 +112,7 @@ contract PoolFactory is Initializable {
 
         for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
             Component c = clonedPoolComponents[i];
-            c.initialize(bundleCount, bytes32(i+1), poolStorage);
+            c.initialize(bundleCount, poolStorage);
         }
         componentBundles[bundleCount-1] = clonedPoolComponents;
 
@@ -207,7 +207,16 @@ contract PoolFactory is Initializable {
     }
 
     function getComponent(uint256 _instanceId, bytes32 _identifier) public view returns(address) {
-        return address(componentBundles[_instanceId][uint256(_identifier)]);
+        Component[] memory comps = componentBundles[_instanceId];
+        // TODO: optimize into constant time function by presorting ids in accending order
+        // you can do this by ensuring all cloned components are cloned in the order of their identifier
+        for(uint256 i = 0; i < comps.length; i++) {
+            Component c = comps[i];
+            if(c.identifer() == _identifier) {
+                return address(c);
+            }
+        }
+        return address(0);
     }
 
     function getBundle(uint256 _instanceId) public view returns(Component[] memory) {
