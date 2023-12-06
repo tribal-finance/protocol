@@ -20,17 +20,21 @@ contract TribalGovernance is AccessControl, Initializable {
         _;
     }
 
-    function initialize(address _admin, address _owner) public initializer {
+    function initialize(address _admin, address _owner, address[] memory protocol) public initializer {
         _grantRole(Constants.OWNER, _owner);
-        _grantRole(Constants.ADMIN, _owner);
-
+        _grantRole(Constants.ADMIN, _admin);
         _grantRole(Constants.DEPLOYER, msg.sender);
+
+        for(uint256 i = 0; i < protocol.length; i++) {
+            _grantRole(Constants.PROTOCOL, protocol[i]);
+        }
+
         _revokeRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        _grantRole(Constants.ADMIN, _admin);    
-
         _setRoleAdmin(Constants.PROTOCOL, Constants.ADMIN); // admin govern's protocol
-        _setRoleAdmin(Constants.OWNER, Constants.PROTOCOL); // protocol govern's owners
+        _setRoleAdmin(Constants.BORROWER, Constants.ADMIN); // admin govern's borrower
+        _setRoleAdmin(Constants.POOL_STORAGE_READER, Constants.PROTOCOL); // protocol govern's readers
+        _setRoleAdmin(Constants.POOL_STORAGE_WRITER, Constants.PROTOCOL); // protocol govern's writers
     }
 
     constructor() {
