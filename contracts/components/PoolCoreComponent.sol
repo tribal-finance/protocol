@@ -4,6 +4,7 @@ import "./Component.sol";
 
 import "./PoolValidationComponent.sol";
 import "../storage/PoolStorage.sol";
+import "../factory/PoolFactory.sol";
 import "../utils/Constants.sol";
 import "../utils/Operations.sol";
 import "../utils/Identifiers.sol";
@@ -125,7 +126,7 @@ contract PoolCoreComponent is Component {
     ///////////////////////////////////*/
 
     function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
-        _initialize(_instanceId, Identifiers.POOL_TRANSFERS_COMPONENT, _poolStorage);
+        _initialize(_instanceId, Identifiers.POOL_CORE_COMPONENT, _poolStorage);
     }
 
     function initializeFromParams(
@@ -135,9 +136,7 @@ contract PoolCoreComponent is Component {
         address _authorityAddress,
         address _poolFactoryAddress
     ) external initializer {
-
-        TribalGovernance governance = TribalGovernance(_authorityAddress);
-        require(governance.isAdmin(msg.sender), "Sender must be admin");
+        require(msg.sender == _poolFactoryAddress, "Sender must be poolFactory");
 
         PoolValidationComponent pvc = PoolValidationComponent(
             PoolFactory(_poolFactoryAddress).getComponent(instanceId, Identifiers.POOL_VALIDATION_COMPONENT)
