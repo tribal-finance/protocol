@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ethers, upgrades } from "hardhat";
 import { Component, FeeSharing, PoolFactory, PoolStorage, TribalGovernance } from "../../../typechain-types";
-import { ADMIN, BORROWER, DEPLOYER, LENDER } from "./constants";
+import { ADMIN, BORROWER, DEPLOYER, LENDER, POOL_STORAGE_READER, POOL_STORAGE_WRITER } from "./constants";
 import { getNextAddresses } from "./helpers";
 
 
@@ -117,6 +117,8 @@ export const deployProtocol = async (): Promise<{
 
     const protocol = await getNextAddresses(deployer, 10);
 
+    protocol.push(admin.address);
+
     const governance: TribalGovernance = await deployTribalGovernance(deployer, admin, owner, protocol);
     const poolStorage: PoolStorage = await deployPoolStorage(deployer, governance);
     const components: Component[] = await deployComponentBundle(deployer);
@@ -127,6 +129,10 @@ export const deployProtocol = async (): Promise<{
 
     await poolFactory.connect(admin).setPoolComponents(components.map(c => c.address))
     await governance.connect(admin).grantRole(BORROWER, borrower.address);
+
+    // specific logic for making testing easier
+    await governance.connect(admin).grantRole(POOL_STORAGE_READER, admin.address);
+    await governance.connect(admin).grantRole(POOL_STORAGE_WRITER, admin.address);
 
     return {
         governance,

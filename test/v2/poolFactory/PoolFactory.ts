@@ -7,7 +7,7 @@ import { Component, PoolFactory, PoolStorage, TribalGovernance } from "../../../
 import { getComponentBundleImplementation } from "../utils/helpers";
 import exp from "constants";
 
-const {hexZeroPad, formatBytes32String} = ethers.utils;
+const { hexZeroPad, formatBytes32String } = ethers.utils;
 
 
 describe("PoolFactory", async () => {
@@ -47,14 +47,14 @@ describe("PoolFactory", async () => {
     it("success - implementation bundle has been given real deployed implementations", async () => {
         const poolComponentBundleImpl = await poolFactory.getPoolComponents();
         expect(poolComponentBundleImpl.length).not.equals(0);
-        for(let i = 0; i < poolComponentBundleImpl.length; i++) {
+        for (let i = 0; i < poolComponentBundleImpl.length; i++) {
             expect(poolComponentBundleImpl[i]).not.equals(ethers.constants.AddressZero);
         }
     })
 
     it("success - implmentation values are null", async () => {
         const components: Component[] = await getComponentBundleImplementation(poolFactory);
-        for(let i = 0; i < components.length; i++) {
+        for (let i = 0; i < components.length; i++) {
             expect(await components[i].instanceId()).equals(0);
             expect(await components[i].poolStorage()).equals(ethers.constants.AddressZero);
         }
@@ -74,8 +74,8 @@ describe("PoolFactory", async () => {
         expect(await poolFactory.deploymentCounter()).equals(2);
 
         const deploymentCounter = await poolFactory.deploymentCounter();
-        for(let i = 0; i < deploymentCounter.toNumber(); i++) {
-            for(let j = 1; j < 5; j++) {
+        for (let i = 0; i < deploymentCounter.toNumber(); i++) {
+            for (let j = 1; j < 5; j++) {
                 const componentKey = hexZeroPad(`0x0${j}`, 32);
                 const compAddr = await poolFactory.componentRegistry(i, componentKey);
                 const component: Component = await ethers.getContractAt("Component", compAddr);
@@ -84,4 +84,53 @@ describe("PoolFactory", async () => {
             }
         }
     })
+
+    it("success - values are initialized correctly after deployment", async () => {
+        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+        defaultParams.borrowerAddress = borrower.address;
+        defaultParams.stableCoinContractAddress = ethers.Wallet.createRandom().address;
+        defaultParams.platformTokenContractAddress = ethers.Wallet.createRandom().address;
+
+        const instanceId = 0;
+
+        expect(await poolStorage.getString(instanceId, "name")).equals("");
+        expect(await poolStorage.getString(instanceId, "token")).equals("");
+        expect(await poolStorage.getAddress(instanceId, "stableCoinContractAddress")).equals(ethers.constants.AddressZero);
+        expect(await poolStorage.getAddress(instanceId, "platformTokenContractAddress")).equals(ethers.constants.AddressZero);
+        expect(await poolStorage.getAddress(instanceId, "borrowerAddress")).equals(ethers.constants.AddressZero);
+        expect(await poolStorage.getUint256(instanceId, "minFundingCapacity")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "maxFundingCapacity")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "fundingPeriodSeconds")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "lendingTermSeconds")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "firstLossAssets")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "repaymentRecurrenceDays")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "gracePeriodDays")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "protocolFeeWad")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "defaultPenalty")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "penaltyRateWad")).equals(0);
+        expect(await poolStorage.getUint256(instanceId, "tranchesCount")).equals(0);
+
+        // Deploy the pool using the factory
+        await poolFactory.connect(owner).deployPool(defaultParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
+
+        expect(await poolStorage.getString(instanceId, "name")).equals(defaultParams.name);
+        expect(await poolStorage.getString(instanceId, "token")).equals(defaultParams.token);
+        expect(await poolStorage.getAddress(instanceId, "stableCoinContractAddress")).equals(defaultParams.stableCoinContractAddress);
+        expect(await poolStorage.getAddress(instanceId, "platformTokenContractAddress")).equals(defaultParams.platformTokenContractAddress);
+        expect(await poolStorage.getAddress(instanceId, "borrowerAddress")).equals(defaultParams.borrowerAddress);
+        expect(await poolStorage.getUint256(instanceId, "minFundingCapacity")).equals(defaultParams.minFundingCapacity);
+        expect(await poolStorage.getUint256(instanceId, "maxFundingCapacity")).equals(defaultParams.maxFundingCapacity);
+        expect(await poolStorage.getUint256(instanceId, "fundingPeriodSeconds")).equals(defaultParams.fundingPeriodSeconds);
+        expect(await poolStorage.getUint256(instanceId, "lendingTermSeconds")).equals(defaultParams.lendingTermSeconds);
+        expect(await poolStorage.getUint256(instanceId, "firstLossAssets")).equals(defaultParams.firstLossAssets);
+        expect(await poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad")).equals(defaultParams.borrowerTotalInterestRateWad);
+        expect(await poolStorage.getUint256(instanceId, "repaymentRecurrenceDays")).equals(defaultParams.repaymentRecurrenceDays);
+        expect(await poolStorage.getUint256(instanceId, "gracePeriodDays")).equals(defaultParams.gracePeriodDays);
+        expect(await poolStorage.getUint256(instanceId, "protocolFeeWad")).equals(defaultParams.protocolFeeWad);
+        expect(await poolStorage.getUint256(instanceId, "defaultPenalty")).equals(defaultParams.defaultPenalty);
+        expect(await poolStorage.getUint256(instanceId, "penaltyRateWad")).equals(defaultParams.penaltyRateWad);
+        expect(await poolStorage.getUint256(instanceId, "tranchesCount")).equals(defaultParams.tranchesCount);
+    });
+
 })
