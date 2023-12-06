@@ -1,15 +1,17 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ethers, upgrades } from "hardhat";
-import { Component, PoolFactory, PoolStorage, TribalGovernance } from "../../../typechain-types";
+import { Component, FeeSharing, PoolFactory, PoolStorage, TribalGovernance } from "../../../typechain-types";
 import { ADMIN, BORROWER, DEPLOYER, LENDER } from "./constants";
+import { getNextAddresses } from "./helpers";
 
 
 export const deployTribalGovernance = async (
     deployer: SignerWithAddress,
+    admin: SignerWithAddress,
     owner: SignerWithAddress,
-    foundation: SignerWithAddress
+    protocol: string[]
 ): Promise<TribalGovernance> => {
-    const TribalGovernanceProxy = await upgrades.deployProxy(await ethers.getContractFactory("TribalGovernance", deployer), [foundation.address, owner.address], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
+    const TribalGovernanceProxy = await upgrades.deployProxy(await ethers.getContractFactory("TribalGovernance", deployer), [admin.address, owner.address, protocol], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
     return await ethers.getContractAt("TribalGovernance", TribalGovernanceProxy.address);
 }
 
@@ -22,6 +24,27 @@ export const deployPoolStorage = async (
     await poolStorage.deployed();
 
     return poolStorage;
+}
+
+export const deployFeeSharing = async (
+    deployer: SignerWithAddress,
+    governance: string,
+    stableCoinContractAddress: string,
+    beneficiaries: string[],
+    feeSplitWads: Number[]
+): Promise<FeeSharing> => {
+    const FeeSharing = await ethers.getContractFactory("FeeSharing");
+
+    const params = [
+        governance,
+        stableCoinContractAddress,
+        beneficiaries,
+        feeSplitWads,
+    ];
+    const feeSharing = await upgrades.deployProxy(FeeSharing, params);
+    await feeSharing.deployed();
+
+    return await ethers.getContractAt("FeeSharing", feeSharing.address);
 }
 
 export const deployComponentBundle = async (
@@ -41,9 +64,14 @@ export const deployComponentBundle = async (
     const poolValidationComponent = await PoolValidationComponent.deploy();
     await poolValidationComponent.deployed();
 
+    const PoolCoreComponent = await ethers.getContractFactory("PoolCoreComponent", deployer);
+    const poolCoreComponent = await PoolCoreComponent.deploy();
+    await poolCoreComponent.deployed();
+
     components.push(poolCalculationsComponent);
     components.push(poolTransfersComponent);
     components.push(poolValidationComponent);
+    components.push(poolCoreComponent);
 
     return components;
 }
@@ -82,17 +110,23 @@ export const labeledSigners = async (): Promise<{ deployer: SignerWithAddress, a
 export const deployProtocol = async (): Promise<{
     governance: TribalGovernance
     poolStorage: PoolStorage,
-    poolFactory: PoolFactory
+    poolFactory: PoolFactory,
 }> => {
 
     const { deployer, admin, owner, borrower, lender1, lender2, lender3, foundation, signers } = await labeledSigners();
 
-    const governance: TribalGovernance = await deployTribalGovernance(deployer, owner, foundation);
+    const protocol = await getNextAddresses(deployer, 10);
+
+    const governance: TribalGovernance = await deployTribalGovernance(deployer, admin, owner, protocol);
     const poolStorage: PoolStorage = await deployPoolStorage(deployer, governance);
     const components: Component[] = await deployComponentBundle(deployer);
     const poolFactory: PoolFactory = await deployPoolFactory(deployer, governance, poolStorage);
 
-    await poolFactory.connect(foundation).setPoolComponents(components.map(c => c.address))
+    // TODO replace with mock deployment
+    await poolFactory.connect(admin).setFeeSharingContractAddress(ethers.Wallet.createRandom().address);
+
+    await poolFactory.connect(admin).setPoolComponents(components.map(c => c.address))
+    await governance.connect(admin).grantRole(BORROWER, borrower.address);
 
     return {
         governance,

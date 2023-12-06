@@ -38,10 +38,10 @@ describe("TribalGovernance", async () => {
         expect(await governance.hasRole(DEPLOYER, deployer.address)).equals(true);
     });
 
-    it("fail - foundation cannot set LENDER role", async() => {
-        expect(await governance.hasRole(ADMIN, foundation.address)).equals(true);
+    it("fail - admin cannot set LENDER role", async() => {
+        expect(await governance.hasRole(ADMIN, admin.address)).equals(true);
         expect(await governance.hasRole(LENDER, lender1.address)).equals(false);
-        await expect(governance.connect(foundation).grantRole(LENDER, lender1.address)).to.be.reverted;
+        await expect(governance.connect(admin).grantRole(LENDER, lender1.address)).to.be.reverted;
         expect(await governance.hasRole(LENDER, lender1.address)).equals(false);
     });
 
