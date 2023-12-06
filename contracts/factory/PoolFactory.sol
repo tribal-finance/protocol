@@ -15,8 +15,6 @@ import "../storage/PoolStorage.sol";
 import "../utils/Identifiers.sol";
 import "../utils/Constants.sol";
 
-import "hardhat/console.sol";
-
 contract PoolFactory is Initializable {
     using Math for uint;
 
@@ -121,8 +119,7 @@ contract PoolFactory is Initializable {
             governance.grantRole(Constants.POOL_STORAGE_WRITER, address(c));
 
             bytes32 cID = c.identifer();
-            console.log(uint256(cID));
-
+            
             componentRegistry[deploymentCounter][cID] = address(c);
         }
 
