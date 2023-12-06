@@ -9,8 +9,11 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
 import "../components/Component.sol";
+import "../components/PoolCoreComponent.sol";
 import "../vaults/TrancheVault.sol";
 import "../storage/PoolStorage.sol";
+import "../utils/Identifiers.sol";
+import "../utils/Constants.sol";
 
 contract PoolFactory is Initializable {
     using Math for uint;
@@ -23,8 +26,6 @@ contract PoolFactory is Initializable {
         address secondTrancheVaultAddress;
         address[] poolComponents;
     }
-
-    uint private constant WAD = 10 ** 18;
 
     event PoolCloned(address indexed addr, address implementationAddress);
     event TrancheVaultCloned(address indexed addr, address implementationAddress);
@@ -110,9 +111,17 @@ contract PoolFactory is Initializable {
         Component[] memory clonedPoolComponents = _clonePool();
         bundleCount++;
 
+        address[] memory trancheVaultAddresses = new address[](params.tranchesCount);
+        
+
         for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
             Component c = clonedPoolComponents[i];
             c.initialize(bundleCount, poolStorage);
+
+            // this is kind of sloppy and makes pool factory less modular
+            if(c.identifer() == Identifiers.POOL_CORE_COMPONENT) {
+                PoolCoreComponent(address(c)).initializeFromParams(params, trancheVaultAddresses, feeSharingContractAddress, address(governance), address(this));
+            }
         }
         componentBundles[bundleCount-1] = clonedPoolComponents;
 
@@ -163,8 +172,8 @@ contract PoolFactory is Initializable {
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
-                params.minFundingCapacity.mulDiv(fundingSplitWads[i][1], WAD),
-                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], WAD),
+                params.minFundingCapacity.mulDiv(fundingSplitWads[i][1], Constants.WAD),
+                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], Constants.WAD),
                 string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
                 string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
                 params.stableCoinContractAddress,
