@@ -9,6 +9,8 @@ import "../utils/Constants.sol";
 import "../utils/Operations.sol";
 import "../utils/Identifiers.sol";
 
+import "hardhat/console.sol";
+
 pragma solidity 0.8.18;
 
 contract PoolCoreComponent is Component {
@@ -135,12 +137,16 @@ contract PoolCoreComponent is Component {
         address _feeSharingContractAddress,
         address _authorityAddress,
         address _poolFactoryAddress
-    ) external initializer {
+    ) external {
         require(msg.sender == _poolFactoryAddress, "Sender must be poolFactory");
 
+        console.log("A");
         PoolValidationComponent pvc = PoolValidationComponent(
-            PoolFactory(_poolFactoryAddress).getComponent(instanceId, Identifiers.POOL_VALIDATION_COMPONENT)
+            PoolFactory(_poolFactoryAddress).componentRegistry(instanceId, Identifiers.POOL_VALIDATION_COMPONENT)
         );
+        console.log("B");
+
+        console.logAddress(address(pvc));
 
         pvc.validateInitParams(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
 

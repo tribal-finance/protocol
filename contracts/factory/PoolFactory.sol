@@ -15,6 +15,8 @@ import "../storage/PoolStorage.sol";
 import "../utils/Identifiers.sol";
 import "../utils/Constants.sol";
 
+import "hardhat/console.sol";
+
 contract PoolFactory is Initializable {
     using Math for uint;
 
@@ -45,8 +47,8 @@ contract PoolFactory is Initializable {
     mapping(address => bool) public prevDeployedTranche;
 
     /// @notice used to gain function level access to systems by their instance id
-    mapping(uint256 => Component[]) public componentBundles;
-    uint256 public bundleCount;
+    mapping(uint256 => mapping(bytes32 => address)) public componentRegistry;
+    uint256 public deploymentCounter;
 
     function initialize(address _governance, address _poolStorage) public initializer {
         governance = TribalGovernance(_governance);
@@ -109,21 +111,22 @@ contract PoolFactory is Initializable {
         require(wadMin == 1e18, "LP027 - bad min wad");
 
         Component[] memory clonedPoolComponents = _clonePool();
-        bundleCount++;
 
         address[] memory trancheVaultAddresses = new address[](params.tranchesCount);
         
 
         for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
             Component c = clonedPoolComponents[i];
-            c.initialize(bundleCount, poolStorage);
+            c.initialize(deploymentCounter, poolStorage);
+            governance.grantRole(Constants.POOL_STORAGE_WRITER, address(c));
 
-            // this is kind of sloppy and makes pool factory less modular
-            if(c.identifer() == Identifiers.POOL_CORE_COMPONENT) {
-                PoolCoreComponent(address(c)).initializeFromParams(params, trancheVaultAddresses, feeSharingContractAddress, address(governance), address(this));
-            }
+            bytes32 cID = c.identifer();
+            console.log(uint256(cID));
+
+            componentRegistry[deploymentCounter][cID] = address(c);
         }
-        componentBundles[bundleCount-1] = clonedPoolComponents;
+
+        PoolCoreComponent(address(componentRegistry[deploymentCounter][Identifiers.POOL_CORE_COMPONENT])).initializeFromParams(params, trancheVaultAddresses, feeSharingContractAddress, address(governance), address(this));
 
        // address[] memory trancheVaultAddresses = _deployTrancheVaults(
        //     params,
@@ -133,7 +136,8 @@ contract PoolFactory is Initializable {
        // );
 
         // initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
-
+        
+        deploymentCounter++;
         return clonedPoolComponents;
     }
 
@@ -213,22 +217,5 @@ contract PoolFactory is Initializable {
         poolRegistry.push(record);
 
         emit PoolDeployed(msg.sender, record);
-    }
-
-    function getComponent(uint256 _instanceId, bytes32 _identifier) public view returns(address) {
-        Component[] memory comps = componentBundles[_instanceId];
-        // TODO: optimize into constant time function by presorting ids in accending order
-        // you can do this by ensuring all cloned components are cloned in the order of their identifier
-        for(uint256 i = 0; i < comps.length; i++) {
-            Component c = comps[i];
-            if(c.identifer() == _identifier) {
-                return address(c);
-            }
-        }
-        return address(0);
-    }
-
-    function getBundle(uint256 _instanceId) public view returns(Component[] memory) {
-        return componentBundles[_instanceId];
     }
 }

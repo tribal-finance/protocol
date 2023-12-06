@@ -7,6 +7,8 @@ import { Component, PoolFactory, PoolStorage, TribalGovernance } from "../../../
 import { getComponentBundleImplementation } from "../utils/helpers";
 import exp from "constants";
 
+const {hexZeroPad, formatBytes32String} = ethers.utils;
+
 
 describe("PoolFactory", async () => {
 
@@ -35,6 +37,7 @@ describe("PoolFactory", async () => {
         lender1 = signers.lender1;
         lender2 = signers.lender2;
         lender3 = signers.lender3;
+        borrower = signers.borrower;
 
         governance = deployment.governance;
         poolStorage = deployment.poolStorage;
@@ -59,22 +62,26 @@ describe("PoolFactory", async () => {
 
     it("success - cloned values aren't null", async () => {
         const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
-        defaultParams.borrowerAddress = (await ethers.getSigners())[0].address
-        defaultParams.stableCoinContractAddress = (await ethers.getSigners())[0].address
-        defaultParams.platformTokenContractAddress = (await ethers.getSigners())[0].address
+        defaultParams.borrowerAddress = borrower.address
+        defaultParams.stableCoinContractAddress = ethers.Wallet.createRandom().address
+        defaultParams.platformTokenContractAddress = ethers.Wallet.createRandom().address
 
-        expect(await poolFactory.bundleCount()).equals(0);
+        expect(await poolFactory.deploymentCounter()).equals(0);
 
-        await poolFactory.connect(owner).deployPool(DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT)
-        await poolFactory.connect(owner).deployPool(DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT)
+        await poolFactory.connect(owner).deployPool(defaultParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT)
+        await poolFactory.connect(owner).deployPool(defaultParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT)
 
-        expect(await poolFactory.bundleCount()).equals(2);
+        expect(await poolFactory.deploymentCounter()).equals(2);
 
-        const bundle = await poolFactory.getBundle(0);
-        for(let i = 0; i < bundle.length; i++) {
-            const component: Component = await ethers.getContractAt("Component", bundle[i]);
-            expect(await component.instanceId()).not.equals(0);
-            expect(await component.poolStorage()).not.equals(ethers.constants.AddressZero);
+        const deploymentCounter = await poolFactory.deploymentCounter();
+        for(let i = 0; i < deploymentCounter.toNumber(); i++) {
+            for(let j = 1; j < 5; j++) {
+                const componentKey = hexZeroPad(`0x0${j}`, 32);
+                const compAddr = await poolFactory.componentRegistry(i, componentKey);
+                const component: Component = await ethers.getContractAt("Component", compAddr);
+                expect(await component.identifer()).not.hexEqual("0x00")
+                expect(await component.poolStorage()).not.equals(ethers.constants.AddressZero);
+            }
         }
     })
 })
