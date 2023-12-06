@@ -11,8 +11,8 @@ pragma solidity 0.8.18;
 
 contract PoolValidationComponent is Component {
 
-    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public initializer {
-        super.initialize(_instanceId, Identifiers.POOL_VALIDATION_COMPONENT, _poolStorage);
+    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
+        _initialize(_instanceId, Identifiers.POOL_VALIDATION_COMPONENT, _poolStorage);
     }
 
     function validateInitParams(

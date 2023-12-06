@@ -10,9 +10,11 @@ abstract contract Component is Initializable {
     bytes32 public identifer;
     PoolStorage public poolStorage;
 
-    function initialize(uint256 _instanceId, bytes32 _identifier, PoolStorage _poolStorage) public {
+    function _initialize(uint256 _instanceId, bytes32 _identifier, PoolStorage _poolStorage) internal {
         instanceId = _instanceId;
         identifer = _identifier;
         poolStorage = _poolStorage;
     }
+
+    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public virtual;
 }
