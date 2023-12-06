@@ -11,8 +11,8 @@ pragma solidity 0.8.18;
 
 contract PoolTransfersComponent is Component {
     
-    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public initializer {
-        super.initialize(_instanceId, Identifiers.POOL_TRANSFERS_COMPONENT, _poolStorage);
+    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
+        _initialize(_instanceId, Identifiers.POOL_TRANSFERS_COMPONENT, _poolStorage);
     }
 
     function lenderEnableRollOver(

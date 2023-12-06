@@ -11,6 +11,7 @@ import "../utils/Identifiers.sol";
 pragma solidity 0.8.18;
 
 contract PoolCoreComponent is Component {
+
     /*///////////////////////////////////
        MODIFIERS
     ///////////////////////////////////*/
@@ -119,64 +120,67 @@ contract PoolCoreComponent is Component {
     event BorrowerRepayPrincipal(address indexed borrower, uint amount);
     event BorrowerWithdrawFirstLossCapital(address indexed borrower, uint amount);
 
-        /*///////////////////////////////////
+    /*///////////////////////////////////
        INITIALIZATION
     ///////////////////////////////////*/
 
-function initialize(
-    Constants.LendingPoolParams calldata params,
-    address[] calldata _trancheVaultAddresses,
-    address _feeSharingContractAddress,
-    address _authorityAddress,
-    address _poolFactoryAddress
-) external initializer {
+    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
+        _initialize(_instanceId, Identifiers.POOL_TRANSFERS_COMPONENT, _poolStorage);
+    }
 
-    PoolValidationComponent pvc =  PoolValidationComponent(PoolFactory(_poolFactoryAddress).getComponent(instanceId, Identifiers.POOL_VALIDATION_COMPONENT));
+    function initializeFromParams(
+        Constants.LendingPoolParams calldata params,
+        address[] calldata _trancheVaultAddresses,
+        address _feeSharingContractAddress,
+        address _authorityAddress,
+        address _poolFactoryAddress
+    ) external initializer {
 
-    pvc.validateInitParams(
-        params,
-        _trancheVaultAddresses,
-        _feeSharingContractAddress,
-        _authorityAddress
-    );
+        TribalGovernance governance = TribalGovernance(_authorityAddress);
+        require(governance.isAdmin(msg.sender), "Sender must be admin");
 
-    Operations.validateWad(params.trancheCoveragesWads);
+        PoolValidationComponent pvc = PoolValidationComponent(
+            PoolFactory(_poolFactoryAddress).getComponent(instanceId, Identifiers.POOL_VALIDATION_COMPONENT)
+        );
 
-    // Store parameters in poolStorage
-    poolStorage.setString(instanceId, "name", params.name);
-    poolStorage.setString(instanceId, "token", params.token);
-    poolStorage.setAddress(instanceId, "stableCoinContractAddress", params.stableCoinContractAddress);
-    poolStorage.setAddress(instanceId, "platformTokenContractAddress", params.platformTokenContractAddress);
-    poolStorage.setUint256(instanceId, "minFundingCapacity", params.minFundingCapacity);
-    poolStorage.setUint256(instanceId, "maxFundingCapacity", params.maxFundingCapacity);
-    poolStorage.setUint256(instanceId, "fundingPeriodSeconds", params.fundingPeriodSeconds);
-    poolStorage.setUint256(instanceId, "lendingTermSeconds", params.lendingTermSeconds);
-    poolStorage.setAddress(instanceId, "borrowerAddress", params.borrowerAddress);
-    poolStorage.setUint256(instanceId, "firstLossAssets", params.firstLossAssets);
-    poolStorage.setUint256(instanceId, "borrowerTotalInterestRateWad", params.borrowerTotalInterestRateWad);
-    poolStorage.setUint256(instanceId, "repaymentRecurrenceDays", params.repaymentRecurrenceDays);
-    poolStorage.setUint256(instanceId, "gracePeriodDays", params.gracePeriodDays);
-    poolStorage.setUint256(instanceId, "protocolFeeWad", params.protocolFeeWad);
-    poolStorage.setUint256(instanceId, "defaultPenalty", params.defaultPenalty);
-    poolStorage.setUint256(instanceId, "penaltyRateWad", params.penaltyRateWad);
-    poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
-    //poolStorage.setUintArray(instanceId, "trancheAPRsWads", params.trancheAPRsWads);
-    //poolStorage.setUintArray(instanceId, "trancheBoostedAPRsWads", params.trancheBoostedAPRsWads);
-    //poolStorage.setUintArray(instanceId, "trancheBoostRatios", params.trancheBoostRatios);
-    //poolStorage.setUintArray(instanceId, "trancheCoveragesWads", params.trancheCoveragesWads);
+        pvc.validateInitParams(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
 
-    // Store other parameters in poolStorage
-    //poolStorage.setAddressArray(instanceId, "trancheVaultAddresses", _trancheVaultAddresses);
-    poolStorage.setAddress(instanceId, "feeSharingContractAddress", _feeSharingContractAddress);
-    poolStorage.setAddress(instanceId, "poolFactoryAddress", _poolFactoryAddress);
+        Operations.validateWad(params.trancheCoveragesWads);
 
-    // Initialize Pausable
-    // __Pausable_init();
+        // Store parameters in poolStorage
+        poolStorage.setString(instanceId, "name", params.name);
+        poolStorage.setString(instanceId, "token", params.token);
+        poolStorage.setAddress(instanceId, "stableCoinContractAddress", params.stableCoinContractAddress);
+        poolStorage.setAddress(instanceId, "platformTokenContractAddress", params.platformTokenContractAddress);
+        poolStorage.setUint256(instanceId, "minFundingCapacity", params.minFundingCapacity);
+        poolStorage.setUint256(instanceId, "maxFundingCapacity", params.maxFundingCapacity);
+        poolStorage.setUint256(instanceId, "fundingPeriodSeconds", params.fundingPeriodSeconds);
+        poolStorage.setUint256(instanceId, "lendingTermSeconds", params.lendingTermSeconds);
+        poolStorage.setAddress(instanceId, "borrowerAddress", params.borrowerAddress);
+        poolStorage.setUint256(instanceId, "firstLossAssets", params.firstLossAssets);
+        poolStorage.setUint256(instanceId, "borrowerTotalInterestRateWad", params.borrowerTotalInterestRateWad);
+        poolStorage.setUint256(instanceId, "repaymentRecurrenceDays", params.repaymentRecurrenceDays);
+        poolStorage.setUint256(instanceId, "gracePeriodDays", params.gracePeriodDays);
+        poolStorage.setUint256(instanceId, "protocolFeeWad", params.protocolFeeWad);
+        poolStorage.setUint256(instanceId, "defaultPenalty", params.defaultPenalty);
+        poolStorage.setUint256(instanceId, "penaltyRateWad", params.penaltyRateWad);
+        poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
+        //poolStorage.setUintArray(instanceId, "trancheAPRsWads", params.trancheAPRsWads);
+        //poolStorage.setUintArray(instanceId, "trancheBoostedAPRsWads", params.trancheBoostedAPRsWads);
+        //poolStorage.setUintArray(instanceId, "trancheBoostRatios", params.trancheBoostRatios);
+        //poolStorage.setUintArray(instanceId, "trancheCoveragesWads", params.trancheCoveragesWads);
 
-    // Set governance
-    poolStorage.setAddress(instanceId, "governance", _authorityAddress);
+        // Store other parameters in poolStorage
+        //poolStorage.setAddressArray(instanceId, "trancheVaultAddresses", _trancheVaultAddresses);
+        poolStorage.setAddress(instanceId, "feeSharingContractAddress", _feeSharingContractAddress);
+        poolStorage.setAddress(instanceId, "poolFactoryAddress", _poolFactoryAddress);
 
-    emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
-}
+        // Initialize Pausable
+        // __Pausable_init();
 
+        // Set governance
+        poolStorage.setAddress(instanceId, "governance", _authorityAddress);
+
+        emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
+    }
 }
