@@ -68,6 +68,11 @@ contract PoolCoreComponent is Component {
         _;
     }
 
+    modifier whenNotPaused() {
+        require(poolStorage.getBoolean(instanceId, "paused"), "contract paused");
+        _;
+    }
+
     function _atStages3(Constants.Stages _stage1, Constants.Stages _stage2, Constants.Stages _stage3) internal view {
         Constants.Stages currentStage = Constants.Stages(poolStorage.getUint256(instanceId, "currentStage"));
         require(
@@ -75,6 +80,7 @@ contract PoolCoreComponent is Component {
             "LP004" // "LendingPool: not at correct stage"
         );
     }
+
 
     /*///////////////////////////////////
        EVENTS
@@ -87,7 +93,7 @@ contract PoolCoreComponent is Component {
         address _feeSharingContractAddress,
         address _authorityAddress
     );
-    event PoolOpen(uint64 openedAt);
+    event PoolOpen(uint256 openedAt);
     event PoolFunded(uint64 fundedAt, uint collectedAssets);
     event PoolFundingFailed(uint64 fundingFailedAt);
     event PoolRepaid(uint64 repaidAt);
@@ -195,5 +201,47 @@ contract PoolCoreComponent is Component {
         poolStorage.setAddress(instanceId, "governance", _authorityAddress);
 
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
+    }
+
+
+    /*///////////////////////////////////
+       ADMIN FUNCTIONS
+    ///////////////////////////////////*/
+    /** @dev Pauses the pool */
+    function pause() external {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isAdmin(msg.sender), "not admin");
+        poolStorage.setBoolean(instanceId, "paused", true);
+    }
+
+    /** @dev Unpauses the pool */
+    function unpause() external {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isAdmin(msg.sender), "not admin");
+        poolStorage.setBoolean(instanceId, "paused", false);
+    }
+
+
+    /** @notice Marks the pool as opened. This function has to be called by *owner* when
+     * - sets openedAt to current block timestamp
+     * - enables deposits and withdrawals to tranche vaults
+     */
+    function adminOpenPool() external atStage(Constants.Stages.FLC_DEPOSITED) whenNotPaused {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isAdmin(msg.sender), "not admin");
+        uint256 openedAt = uint256(block.timestamp);
+        poolStorage.setUint256(instanceId, "openedAt", openedAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.OPEN));
+
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+
+        for (uint i; i < tranchesCount; i++) {
+            address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            TrancheVault vault = TrancheVault(tranche);
+            vault.enableDeposits();
+            vault.enableWithdrawals();
+        }
+
+        emit PoolOpen(openedAt);
     }
 }
