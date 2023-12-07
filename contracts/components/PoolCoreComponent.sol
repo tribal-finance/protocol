@@ -257,7 +257,7 @@ contract PoolCoreComponent is Component {
         if (collectedAssets >= minFundingCapacity) {
             _transitionToFundedStage();
         } else {
-            poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FUNDING_FAILED));
+            _transitionToFundingFailedStage();
         }
     }
 
