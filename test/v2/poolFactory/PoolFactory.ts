@@ -111,6 +111,13 @@ describe("PoolFactory", async () => {
         expect(await poolStorage.getUint256(instanceId, "penaltyRateWad")).equals(0);
         expect(await poolStorage.getUint256(instanceId, "tranchesCount")).equals(0);
 
+        for(let i = 0; i < defaultParams.tranchesCount; i++) {
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", i)).equals(0);
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", i)).equals(0);
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", i)).equals(0);
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheCoveragesWads", i)).equals(0);
+        }
+
         // Deploy the pool using the factory
         await poolFactory.connect(owner).deployPool(defaultParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
 
@@ -131,6 +138,13 @@ describe("PoolFactory", async () => {
         expect(await poolStorage.getUint256(instanceId, "defaultPenalty")).equals(defaultParams.defaultPenalty);
         expect(await poolStorage.getUint256(instanceId, "penaltyRateWad")).equals(defaultParams.penaltyRateWad);
         expect(await poolStorage.getUint256(instanceId, "tranchesCount")).equals(defaultParams.tranchesCount);
+
+        for(let i = 0; i < defaultParams.tranchesCount; i++) {
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", i)).equals(defaultParams.trancheAPRsWads[i]);
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", i)).equals(defaultParams.trancheBoostedAPRsWads[i]);
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", i)).equals(defaultParams.trancheBoostRatios[i]);
+            expect(await poolStorage.getArrayUint256(instanceId, "trancheCoveragesWads", i)).equals(defaultParams.trancheCoveragesWads[i]);
+        }
     });
 
 })

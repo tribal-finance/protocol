@@ -164,13 +164,27 @@ contract PoolCoreComponent is Component {
         poolStorage.setUint256(instanceId, "defaultPenalty", params.defaultPenalty);
         poolStorage.setUint256(instanceId, "penaltyRateWad", params.penaltyRateWad);
         poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
-        //poolStorage.setUintArray(instanceId, "trancheAPRsWads", params.trancheAPRsWads);
-        //poolStorage.setUintArray(instanceId, "trancheBoostedAPRsWads", params.trancheBoostedAPRsWads);
-        //poolStorage.setUintArray(instanceId, "trancheBoostRatios", params.trancheBoostRatios);
-        //poolStorage.setUintArray(instanceId, "trancheCoveragesWads", params.trancheCoveragesWads);
 
-        // Store other parameters in poolStorage
-        //poolStorage.setAddressArray(instanceId, "trancheVaultAddresses", _trancheVaultAddresses);
+        for(uint256 i = 0; i < params.tranchesCount; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheAPRsWads", i, params.trancheAPRsWads[i]);
+        }
+
+        for(uint256 i = 0; i < params.tranchesCount; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
+        }
+
+        for(uint256 i = 0; i < params.tranchesCount; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheBoostRatios", i, params.trancheBoostRatios[i]);
+        }
+
+        for(uint256 i = 0; i < params.tranchesCount; i++) {
+            poolStorage.setArrayUint256(instanceId, "trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
+        }
+
+        for(uint256 i = 0; i < params.tranchesCount; i++) {
+            poolStorage.setArrayAddress(instanceId, "trancheVaultAddresses", i, _trancheVaultAddresses[i]);
+        }
+
         poolStorage.setAddress(instanceId, "feeSharingContractAddress", _feeSharingContractAddress);
         poolStorage.setAddress(instanceId, "poolFactoryAddress", _poolFactoryAddress);
 
