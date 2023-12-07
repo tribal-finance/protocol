@@ -359,4 +359,18 @@ contract PoolCoreComponent is Component {
             emit LenderWithdrawInterest(lender, trancheId, rewards);
         }
     }
+
+    function _claimInterestForAllLenders() internal {
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        uint256 lenderCount = poolStorage.getUint256(instanceId, "lenderCount");
+
+        for (uint256 i = 0; i < tranchesCount; i++) {
+            address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            TrancheVault vault = TrancheVault(tranche);   
+            for (uint j; j < lenderCount; j++) {
+                address lender = poolStorage.getArrayAddress(instanceId, "s_lenders", j);
+                _claimTrancheInterestForLender(lender, vault.id());
+            }
+        }
+    }
 }
