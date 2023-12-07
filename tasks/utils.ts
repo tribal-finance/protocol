@@ -28,6 +28,8 @@ export function getNumber(maxLength: number): number {
 export async function processLendingPoolParams(ethers: any, factory: PoolFactory, lendingPoolParams: string, network: string) {
     const signers = await ethers.getSigners();
 
+    lendingPoolParams = lendingPoolParams.trim();
+
     const tx = await signers[0].sendTransaction({
         to: factory.address,
         data: lendingPoolParams
