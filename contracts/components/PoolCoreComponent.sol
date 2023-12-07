@@ -3,6 +3,8 @@
 import "./Component.sol";
 
 import "./PoolValidationComponent.sol";
+import "./PoolCalculationsComponent.sol";
+import "./PoolTransfersComponent.sol";
 import "../storage/PoolStorage.sol";
 import "../factory/PoolFactory.sol";
 import "../utils/Constants.sol";
@@ -342,5 +344,19 @@ contract PoolCoreComponent is Component {
         poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FLC_WITHDRAWN));
         address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
         emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
+    }
+
+    function _claimTrancheInterestForLender(address lender, uint8 trancheId) internal {
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT));
+        uint rewards = pcc.lenderRewardsByTrancheRedeemable(lender, trancheId);
+        if (rewards > 0) {
+            Constants.Rewardable memory rewardable = abi.decode(poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lender), (Constants.Rewardable));
+            rewardable.redeemedRewards += rewards;
+            poolStorage.setMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lender, abi.encode(rewardable));
+            PoolTransfersComponent ptc = PoolTransfersComponent(factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT));
+            ptc.doTransferOut(lender, rewards);
+            emit LenderWithdrawInterest(lender, trancheId, rewards);
+        }
     }
 }
