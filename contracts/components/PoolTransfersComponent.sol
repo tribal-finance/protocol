@@ -3,9 +3,13 @@
 import "./Component.sol";
 
 import "../vaults/TrancheVault.sol";
+import "../factory/PoolFactory.sol";
 import "../storage/PoolStorage.sol";
 import "../utils/Constants.sol";
 import "../utils/Identifiers.sol";
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 pragma solidity 0.8.18;
 
@@ -15,6 +19,7 @@ contract PoolTransfersComponent is Component {
         _initialize(_instanceId, Identifiers.POOL_TRANSFERS_COMPONENT, _poolStorage);
     }
 
+/*
     function lenderEnableRollOver(
         address lender
     ) external {
@@ -55,7 +60,6 @@ contract PoolTransfersComponent is Component {
                  futureLenders[i],
                 2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
             );
-        }*/
     }
 
     function executeRollover(uint256 deadInstanceId, uint256 lenderStartIndex, uint256 lenderEndIndex) external {
@@ -115,5 +119,11 @@ contract PoolTransfersComponent is Component {
             //SafeERC20.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
             SafeERC20.safeTransferFrom(platoken, address(deadpool), address(this), platokens);
         }
+    }
+        }*/
+
+
+    function doTransferOut(address _to, uint256 _amount) public {
+        SafeERC20.safeTransfer(IERC20(poolStorage.getAddress(instanceId, "stableCoinContractAddress")), _to, _amount);
     }
 }
