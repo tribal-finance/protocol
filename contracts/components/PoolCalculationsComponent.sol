@@ -178,4 +178,23 @@ contract PoolCalculationsComponent is Component {
             poolStorage.setArrayUint256(instanceId, "trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
         }
     }
+
+    /** @notice Returns amount of stablecoin rewards that has been withdrawn by the lender.
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderRewardsByTrancheRedeemed(address lenderAddress, uint8 trancheId) public view returns (uint256) {
+        Constants.Rewardable memory rewardable = abi.decode(poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress), (Constants.Rewardable));
+        return rewardable.redeemedRewards;
+    }
+
+    /** @notice Returns amount of stablecoin rewards that can be withdrawn by the lender. (generated - redeemed). Special means this one is distinguished from the FE version and is only used within the SCs
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderRewardsByTrancheRedeemable(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
+        uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
+        return willReward - hasRewarded;
+    }
 }
