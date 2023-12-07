@@ -94,7 +94,7 @@ contract PoolCoreComponent is Component {
     event PoolOpen(uint256 openedAt);
     event PoolFunded(uint256 fundedAt, uint collectedAssets);
     event PoolFundingFailed(uint256 fundingFailedAt);
-    event PoolRepaid(uint64 repaidAt);
+    event PoolRepaid(uint256 repaidAt);
     event PoolDefaulted(uint64 defaultedAt);
     event PoolFirstLossCapitalWithdrawn(uint64 flcWithdrawntAt);
 
@@ -306,5 +306,33 @@ contract PoolCoreComponent is Component {
             vault.enableWithdrawals();
         }
         emit PoolFundingFailed(fundingFailedAt);
+    }
+
+    function _transitionToFlcDepositedStage(uint flcAssets) internal whenNotPaused {
+        uint256 flcDepositedAt = block.timestamp;
+        poolStorage.setUint256(instanceId, "flcDepositedAt", flcDepositedAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FLC_DEPOSITED));
+
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        emit BorrowerDepositFirstLossCapital(borrowerAddress, flcAssets);
+    }
+
+    function _transitionToBorrowedStage(uint amountToBorrow) internal whenNotPaused {
+        uint256 borrowedAt = block.timestamp;
+        poolStorage.setUint256(instanceId, "borrowedAt", borrowedAt);
+        poolStorage.setUint256(instanceId, "borrowedAssets", amountToBorrow);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.BORROWED));
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+
+        emit BorrowerBorrow(borrowerAddress, amountToBorrow);
+    }
+
+    function _transitionToPrincipalRepaidStage(uint repaidPrincipal) internal whenNotPaused {
+        uint256 repaidAt = block.timestamp;
+        poolStorage.setUint256(instanceId, "repaidAt", repaidAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.REPAID));
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        emit BorrowerRepayPrincipal(borrowerAddress, repaidPrincipal);
+        emit PoolRepaid(repaidAt);
     }
 }
