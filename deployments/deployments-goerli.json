@@ -2502,5 +2502,20 @@
     "contractName": "trancheVaultV1-clonable",
     "contractAddress": "0xaF796b05DFD935545dfcd9DF7EeE3A207431b51C",
     "timestamp": 1699982460
+  },
+  {
+    "contractName": "lendingPoolV1",
+    "contractAddress": "0xF0eD4C74F799c79737c186b7A078Ec3b5bF37dD9",
+    "timestamp": 1701973104
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x6f0e6f84377aAF5533c8638Ba7E05D99353e99c8",
+    "timestamp": 1701973104
+  },
+  {
+    "contractName": "trancheVaultV1",
+    "contractAddress": "0x045CcF61800D31e3794879B1Cd5847C13964B1d7",
+    "timestamp": 1701973104
   }
 ]

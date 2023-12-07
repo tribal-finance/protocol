@@ -39,7 +39,7 @@ const config: HardhatUserConfig = {
       },
     },
     goerli: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      url: process.env.GOERLI_API_KEY,
       chainId: 5,
       accounts: [
         process.env.GOERLI_DEPLOYER_KEY!,
