@@ -335,4 +335,12 @@ contract PoolCoreComponent is Component {
         emit BorrowerRepayPrincipal(borrowerAddress, repaidPrincipal);
         emit PoolRepaid(repaidAt);
     }
+
+    function _transitionToFlcWithdrawnStage(uint flcAssets) internal whenNotPaused {
+        uint256 flcWithdrawntAt = block.timestamp;
+        poolStorage.setUint256(instanceId, "flcWithdrawntAt", flcWithdrawntAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FLC_WITHDRAWN));
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        emit BorrowerWithdrawFirstLossCapital(borrowerAddress, flcAssets);
+    }
 }
