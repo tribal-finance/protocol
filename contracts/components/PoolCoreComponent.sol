@@ -12,7 +12,6 @@ import "../utils/Identifiers.sol";
 pragma solidity 0.8.18;
 
 contract PoolCoreComponent is Component {
-
     /*///////////////////////////////////
        MODIFIERS
     ///////////////////////////////////*/
@@ -81,7 +80,6 @@ contract PoolCoreComponent is Component {
         );
     }
 
-
     /*///////////////////////////////////
        EVENTS
     ///////////////////////////////////*/
@@ -94,8 +92,8 @@ contract PoolCoreComponent is Component {
         address _authorityAddress
     );
     event PoolOpen(uint256 openedAt);
-    event PoolFunded(uint64 fundedAt, uint collectedAssets);
-    event PoolFundingFailed(uint64 fundingFailedAt);
+    event PoolFunded(uint256 fundedAt, uint collectedAssets);
+    event PoolFundingFailed(uint256 fundingFailedAt);
     event PoolRepaid(uint64 repaidAt);
     event PoolDefaulted(uint64 defaultedAt);
     event PoolFirstLossCapitalWithdrawn(uint64 flcWithdrawntAt);
@@ -171,38 +169,34 @@ contract PoolCoreComponent is Component {
         poolStorage.setUint256(instanceId, "penaltyRateWad", params.penaltyRateWad);
         poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
 
-        for(uint256 i = 0; i < params.tranchesCount; i++) {
+        for (uint256 i = 0; i < params.tranchesCount; i++) {
             poolStorage.setArrayUint256(instanceId, "trancheAPRsWads", i, params.trancheAPRsWads[i]);
         }
 
-        for(uint256 i = 0; i < params.tranchesCount; i++) {
+        for (uint256 i = 0; i < params.tranchesCount; i++) {
             poolStorage.setArrayUint256(instanceId, "trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
         }
 
-        for(uint256 i = 0; i < params.tranchesCount; i++) {
+        for (uint256 i = 0; i < params.tranchesCount; i++) {
             poolStorage.setArrayUint256(instanceId, "trancheBoostRatios", i, params.trancheBoostRatios[i]);
         }
 
-        for(uint256 i = 0; i < params.tranchesCount; i++) {
+        for (uint256 i = 0; i < params.tranchesCount; i++) {
             poolStorage.setArrayUint256(instanceId, "trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
         }
 
-        for(uint256 i = 0; i < params.tranchesCount; i++) {
+        for (uint256 i = 0; i < params.tranchesCount; i++) {
             poolStorage.setArrayAddress(instanceId, "trancheVaultAddresses", i, _trancheVaultAddresses[i]);
         }
 
         poolStorage.setAddress(instanceId, "feeSharingContractAddress", _feeSharingContractAddress);
         poolStorage.setAddress(instanceId, "poolFactoryAddress", _poolFactoryAddress);
 
-        // Initialize Pausable
-        // __Pausable_init();
-
         // Set governance
         poolStorage.setAddress(instanceId, "governance", _authorityAddress);
 
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
     }
-
 
     /*///////////////////////////////////
        ADMIN FUNCTIONS
@@ -220,7 +214,6 @@ contract PoolCoreComponent is Component {
         require(governance.isAdmin(msg.sender), "not admin");
         poolStorage.setBoolean(instanceId, "paused", false);
     }
-
 
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
      * - sets openedAt to current block timestamp
@@ -243,5 +236,75 @@ contract PoolCoreComponent is Component {
         }
 
         emit PoolOpen(openedAt);
+    }
+
+    /** @notice Checks whether the pool was funded successfully or not.
+     *  this function is expected to be called by *owner* once the funding period ends
+     */
+    function adminTransitionToFundedState() external atStage(Constants.Stages.OPEN) {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isAdmin(msg.sender), "not admin");
+
+        uint256 openedAt = poolStorage.getUint256(instanceId, "openedAt");
+        uint256 fundingPeriodSeconds = poolStorage.getUint256(instanceId, "fundingPeriodSeconds");
+        require(
+            block.timestamp >= openedAt + fundingPeriodSeconds,
+            "Cannot accrue interest or declare failure before start time"
+        );
+
+        uint256 collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
+        uint256 minFundingCapacity = poolStorage.getUint256(instanceId, "minFundingCapacity");
+        if (collectedAssets >= minFundingCapacity) {
+            _transitionToFundedStage();
+        } else {
+            poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FUNDING_FAILED));
+        }
+    }
+
+    function adminTransitionToDefaultedState(uint256 _instanceId) external {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isAdmin(msg.sender), "not admin");
+        uint256 fundedAt = poolStorage.getUint256(_instanceId, "fundedAt");
+        uint256 lendingTermSeconds = poolStorage.getUint256(_instanceId, "lendingTermSeconds");
+        require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023"); 
+
+        poolStorage.setUint256(_instanceId, "currentStage", uint256(Constants.Stages.DEFAULTED));
+    }
+
+    function _transitionToFundedStage() internal whenNotPaused {
+        uint256 fundedAt = block.timestamp;
+        poolStorage.setUint256(instanceId, "fundedAt", fundedAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FUNDED));
+
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+
+        for (uint i; i < tranchesCount; i++) {
+            address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            TrancheVault vault = TrancheVault(tranche);
+            
+            vault.disableDeposits();
+            vault.disableWithdrawals();
+            vault.sendAssetsToPool(vault.totalAssets());
+        }
+
+        uint256 collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
+        emit PoolFunded(fundedAt, collectedAssets);
+    }
+
+    function _transitionToFundingFailedStage() internal whenNotPaused {
+        uint256 fundingFailedAt = block.timestamp;
+        
+        poolStorage.setUint256(instanceId, "fundingFailedAt", fundingFailedAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FUNDING_FAILED));
+        
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+
+        for (uint i; i < tranchesCount; i++) {
+            address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            TrancheVault vault = TrancheVault(tranche);    
+            vault.disableDeposits();
+            vault.enableWithdrawals();
+        }
+        emit PoolFundingFailed(fundingFailedAt);
     }
 }
