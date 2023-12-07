@@ -5,16 +5,16 @@ export BORROWER_ADDRESS="0xb748289127A08AFe00948594Bf431FF138C9e9d4"
 export PLATFORM_TOKEN_ADDRESS="0x2B3a2582fd8a1419c394b351111a955AB6fa78D6"
 
 npx hardhat encode-pool-initializer \
-  --name "30 Day Card Product" \
+  --name "10 Day Card Product" \
   --token "TPT-1" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 40000 \
   --max-funding-capacity 50000 \
   --funding-period-seconds 14400 \
-  --lending-term-seconds 2592000 \
+  --lending-term-seconds 864000 \
   --first-loss-assets 500 \
-  --repayment-recurrence-days 30 \
+  --repayment-recurrence-days 5 \
   --grace-period-days 5 \
   --borrower-total-interest-rate-wad 0.1 \
   --borrower-address $BORROWER_ADDRESS \

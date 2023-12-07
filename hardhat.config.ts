@@ -59,12 +59,12 @@ const config: HardhatUserConfig = {
       ],
     },
 
-    mainnet: {
-      url: process.env.MAINNET_FORK_ALCHEMY_URL,
-      accounts: [
-        process.env.MAINNET_DEPLOYER_KEY!,
-      ]
-    },
+   // mainnet: {
+   //   url: process.env.MAINNET_FORK_ALCHEMY_URL,
+   //   accounts: [
+   //     process.env.MAINNET_DEPLOYER_KEY!,
+   //   ]
+   // },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
