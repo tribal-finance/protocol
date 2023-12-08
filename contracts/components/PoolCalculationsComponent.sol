@@ -14,6 +14,28 @@ contract PoolCalculationsComponent is Component {
         _initialize(_instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT, _poolStorage);
     }
 
+    /** @notice Returns amount of stablecoins to be paid for the lender by the end of the pool term.
+     *  `lenderAPR * lenderDepositedAssets * lendingTermSeconds / YEAR`
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderTotalExpectedRewardsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        uint256 lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+
+        return
+            pcc.lenderTotalExpectedRewardsByTranche(
+                pcc.lenderDepositedAssetsByTranche(lenderAddress, trancheId),
+                pcc.lenderEffectiveAprByTrancheWad(lenderAddress, trancheId),
+                lendingTermSeconds
+            );
+    }
+
     function lenderEffectiveAprByTrancheWad(address lenderAddress, uint8 trancheId) public view returns (uint) {
         // uint stakedAssets = lendingPool.lenderStakedTokensByTranche(lenderAddress, trancheId);
         bytes memory rawData = poolStorage.getMappingUint256AddressToBytes(
@@ -221,5 +243,16 @@ contract PoolCalculationsComponent is Component {
 
         uint maxLockablePlatformTokens = r.stakedAssets * trancheBoostRatio;
         return maxLockablePlatformTokens - r.lockedPlatformTokens;
+    }
+
+    function lenderDepositedAssetsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        // Fetching Rewardable struct for the given trancheId and lenderAddress from poolStorage
+        Constants.Rewardable memory r = abi.decode(
+            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress),
+            (Constants.Rewardable)
+        );
+
+        // Returning the stakedAssets from the Rewardable struct
+        return r.stakedAssets;
     }
 }
