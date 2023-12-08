@@ -197,4 +197,12 @@ contract PoolCalculationsComponent is Component {
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
         return willReward - hasRewarded;
     }
+
+    function lenderTotalExpectedRewardsByTranche(
+        uint lenderDepositedAssets,
+        uint lenderEffectiveApr,
+        uint lendingTermSeconds
+    ) public pure returns (uint256) {
+        return (lenderDepositedAssets * lenderEffectiveApr * lendingTermSeconds) / (Constants.YEAR * Constants.WAD);
+    }
 }
