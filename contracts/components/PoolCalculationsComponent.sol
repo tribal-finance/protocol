@@ -10,7 +10,6 @@ import "../utils/Identifiers.sol";
 pragma solidity 0.8.18;
 
 contract PoolCalculationsComponent is Component {
-
     function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
         _initialize(_instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT, _poolStorage);
     }
@@ -90,7 +89,7 @@ contract PoolCalculationsComponent is Component {
             totalStakedAssets += stakedAssets;
 
             // Retrieve and calculate total locked platform tokens by tranche and tranche boost ratio
-            uint lockedPlatformTokens = poolStorage.getArrayUint256(
+            uint256 lockedPlatformTokens = poolStorage.getArrayUint256(
                 instanceId,
                 "s_totalLockedPlatformTokensByTranche",
                 trancheId
@@ -154,10 +153,7 @@ contract PoolCalculationsComponent is Component {
         }
     }
 
-
-    function setInitializer(
-        Constants.LendingPoolParams calldata params
-    ) public {
+    function setInitializer(Constants.LendingPoolParams calldata params) public {
         poolStorage.setString(instanceId, "name", params.name);
         poolStorage.setString(instanceId, "token", params.token);
 
@@ -184,7 +180,10 @@ contract PoolCalculationsComponent is Component {
      *  @param trancheId tranche id
      */
     function lenderRewardsByTrancheRedeemed(address lenderAddress, uint8 trancheId) public view returns (uint256) {
-        Constants.Rewardable memory rewardable = abi.decode(poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress), (Constants.Rewardable));
+        Constants.Rewardable memory rewardable = abi.decode(
+            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress),
+            (Constants.Rewardable)
+        );
         return rewardable.redeemedRewards;
     }
 
@@ -204,5 +203,23 @@ contract PoolCalculationsComponent is Component {
         uint lendingTermSeconds
     ) public pure returns (uint256) {
         return (lenderDepositedAssets * lenderEffectiveApr * lendingTermSeconds) / (Constants.YEAR * Constants.WAD);
+    }
+
+    /** @notice Returns amount of platform tokens that lender can lock in order to boost their APR
+     *  @param lenderAddress lender address
+     *  @param trancheId tranche id
+     */
+    function lenderPlatformTokensByTrancheLockable(address lenderAddress, uint8 trancheId) public view returns (uint) {
+        // Fetching Rewardable struct from poolStorage
+        Constants.Rewardable memory r = abi.decode(
+            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress),
+            (Constants.Rewardable)
+        );
+
+        // Fetching trancheBoostRatio for the given trancheId from poolStorage
+        uint trancheBoostRatio = poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", trancheId);
+
+        uint maxLockablePlatformTokens = r.stakedAssets * trancheBoostRatio;
+        return maxLockablePlatformTokens - r.lockedPlatformTokens;
     }
 }

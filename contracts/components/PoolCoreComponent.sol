@@ -466,12 +466,13 @@ contract PoolCoreComponent is Component {
             abi.encode(r)
         );
 
-        uint256 totalLockedTokens = poolStorage.getUint256(
+        uint256 totalLockedTokens = poolStorage.getArrayUint256(
             instanceId,
             "s_totalLockedPlatformTokensByTranche",
             trancheId
         ) + platformTokens;
-        poolStorage.setUint256(instanceId, "s_totalLockedPlatformTokensByTranche", trancheId, totalLockedTokens);
+
+        poolStorage.setArrayUint256(instanceId, "s_totalLockedPlatformTokensByTranche", trancheId, totalLockedTokens);
 
         SafeERC20.safeTransferFrom(platformTokenContractAddress, msg.sender, address(this), platformTokens);
 
