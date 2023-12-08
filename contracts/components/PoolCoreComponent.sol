@@ -480,6 +480,56 @@ contract PoolCoreComponent is Component {
         _emitLenderTrancheRewardsChange(msg.sender, trancheId);
     }
 
+    function lenderUnlockPlatformTokensByTranche(
+        uint8 trancheId,
+        uint platformTokens
+    ) external atStages2(Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN) whenNotPaused {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
+
+        // Check for roll-over settings
+        Constants.RollOverSetting memory settings = abi.decode(poolStorage.getMappingAddressToBytes(
+            instanceId,
+            "s_rollOverSettings",
+            msg.sender
+        ), (Constants.RollOverSetting));
+
+        require(!settings.platformTokens, "LP102"); // "LendingPool: tokens are locked for rollover"
+
+        // Check for redeemable rewards
+        require(pcc.lenderRewardsByTrancheRedeemable(msg.sender, trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
+
+        IERC20 platformTokenContract = IERC20(poolStorage.getAddress(instanceId, "platformTokenContractAddress"));
+        require(platformTokenContract.totalSupply() > 0, "Unlock: Token Locking Disabled");
+
+        // Fetching Rewardable struct from poolStorage
+        Constants.Rewardable memory r = abi.decode(
+            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, msg.sender),
+            (Constants.Rewardable)
+        );
+
+        require(r.lockedPlatformTokens >= platformTokens, "LP104"); // "LendingPool: not enough locked tokens"
+        r.lockedPlatformTokens -= platformTokens;
+        poolStorage.setMappingUint256AddressToBytes(
+            instanceId,
+            "s_trancheRewardables",
+            trancheId,
+            msg.sender,
+            abi.encode(r)
+        );
+
+        SafeERC20.safeTransfer(platformTokenContract, msg.sender, platformTokens);
+
+        emit LenderUnlockPlatformTokens(msg.sender, trancheId, platformTokens);
+    }
+
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
         PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
 
