@@ -485,7 +485,7 @@ contract PoolCoreComponent is Component {
         uint platformTokens
     ) external atStages2(Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN) whenNotPaused {
         TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
-        
+
         PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
 
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
@@ -495,11 +495,10 @@ contract PoolCoreComponent is Component {
         require(governance.isWhitelistedLender(msg.sender), "not lender");
 
         // Check for roll-over settings
-        Constants.RollOverSetting memory settings = abi.decode(poolStorage.getMappingAddressToBytes(
-            instanceId,
-            "s_rollOverSettings",
-            msg.sender
-        ), (Constants.RollOverSetting));
+        Constants.RollOverSetting memory settings = abi.decode(
+            poolStorage.getMappingAddressToBytes(instanceId, "s_rollOverSettings", msg.sender),
+            (Constants.RollOverSetting)
+        );
 
         require(!settings.platformTokens, "LP102"); // "LendingPool: tokens are locked for rollover"
 
@@ -528,6 +527,129 @@ contract PoolCoreComponent is Component {
         SafeERC20.safeTransfer(platformTokenContract, msg.sender, platformTokens);
 
         emit LenderUnlockPlatformTokens(msg.sender, trancheId, platformTokens);
+    }
+
+    /** @notice Redeem currently available rewards for a tranche
+     *  @param trancheId tranche id
+     *  @param toWithdraw amount of rewards to withdraw
+     */
+    function lenderRedeemRewardsByTranche(
+        uint8 trancheId,
+        uint toWithdraw
+    )
+        public
+        atStages3(Constants.Stages.BORROWED, Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN)
+        whenNotPaused
+    {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
+
+        // Decoding roll-over settings from poolStorage
+        Constants.RollOverSetting memory settings = abi.decode(
+            poolStorage.getMappingAddressToBytes(instanceId, "s_rollOverSettings", msg.sender),
+            (Constants.RollOverSetting)
+        );
+        require(!settings.rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
+
+        if (toWithdraw == 0) {
+            return;
+        }
+
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        uint maxWithdraw = pcc.lenderRewardsByTrancheRedeemable(msg.sender, trancheId);
+        require(toWithdraw <= maxWithdraw, "LP106"); // "LendingPool: amount to withdraw is too big"
+
+        // Fetching and updating Rewardable struct from poolStorage
+        Constants.Rewardable memory r = abi.decode(
+            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, msg.sender),
+            (Constants.Rewardable)
+        );
+        r.redeemedRewards += toWithdraw;
+        poolStorage.setMappingUint256AddressToBytes(
+            instanceId,
+            "s_trancheRewardables",
+            trancheId,
+            msg.sender,
+            abi.encode(r)
+        );
+
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContractAddress"));
+        SafeERC20.safeTransfer(stableCoinContract, msg.sender, toWithdraw);
+
+        emit LenderWithdrawInterest(msg.sender, trancheId, toWithdraw);
+        _emitLenderTrancheRewardsChange(msg.sender, trancheId);
+    }
+
+    /** @notice Redeem currently available rewards for two tranches
+     *  @param toWithdraws amount of rewards to withdraw accross all tranches
+     */
+    function lenderRedeemRewards(
+        uint[] calldata toWithdraws
+    )
+        external
+        atStages3(Constants.Stages.BORROWED, Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN)
+        whenNotPaused
+    {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
+
+        // Decoding roll-over settings from poolStorage
+        Constants.RollOverSetting memory settings = abi.decode(
+            poolStorage.getMappingAddressToBytes(instanceId, "s_rollOverSettings", msg.sender),
+            (Constants.RollOverSetting)
+        );
+        require(!settings.rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
+
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        require(toWithdraws.length == tranchesCount, "LP107"); // "LendingPool: wrong amount of tranches"
+
+        for (uint8 i; i < toWithdraws.length; i++) {
+            lenderRedeemRewardsByTranche(i, toWithdraws[i]);
+        }
+    }
+
+    /*///////////////////////////////////
+       Rollover settings
+    ///////////////////////////////////*/
+    /** @notice marks the intent of the lender to roll over their capital to the upcoming pool (called by older pool)
+     *  if you opt to roll over you will not be able to withdraw stablecoins / platform tokens from the pool
+     *  @param principal whether the principal should be rolled over
+     *  @param rewards whether the rewards should be rolled over
+     *  @param platformTokens whether the platform tokens should be rolled over
+     */
+    function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
+
+        address lender = msg.sender;
+
+        // Creating the RollOverSetting struct and encoding it for storage
+        Constants.RollOverSetting memory newSetting = Constants.RollOverSetting(
+            true,
+            principal,
+            rewards,
+            platformTokens
+        );
+        poolStorage.setMappingAddressToBytes(instanceId, "s_rollOverSettings", lender, abi.encode(newSetting));
+
+        //PoolTransfers.lenderEnableRollOver(this, lender);
+    }
+
+    /** @notice cancels lenders intent to roll over the funds to the next pool.
+     */
+    function lenderDisableRollOver() external {
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
+
+        address lender = msg.sender;
+
+        // Creating a disabled RollOverSetting struct and encoding it for storage
+        Constants.RollOverSetting memory disabledSetting = Constants.RollOverSetting(false, false, false, false);
+        poolStorage.setMappingAddressToBytes(instanceId, "s_rollOverSettings", lender, abi.encode(disabledSetting));
     }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
