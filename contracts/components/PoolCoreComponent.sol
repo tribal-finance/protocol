@@ -97,7 +97,7 @@ contract PoolCoreComponent is Component {
     event PoolFunded(uint256 fundedAt, uint collectedAssets);
     event PoolFundingFailed(uint256 fundingFailedAt);
     event PoolRepaid(uint256 repaidAt);
-    event PoolDefaulted(uint64 defaultedAt);
+    event PoolDefaulted(uint256 defaultedAt);
     event PoolFirstLossCapitalWithdrawn(uint64 flcWithdrawntAt);
 
     // Lender //
@@ -268,7 +268,7 @@ contract PoolCoreComponent is Component {
         require(governance.isAdmin(msg.sender), "not admin");
         uint256 fundedAt = poolStorage.getUint256(_instanceId, "fundedAt");
         uint256 lendingTermSeconds = poolStorage.getUint256(_instanceId, "lendingTermSeconds");
-        require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023"); 
+        require(block.timestamp >= fundedAt + lendingTermSeconds, "LP023");
 
         poolStorage.setUint256(_instanceId, "currentStage", uint256(Constants.Stages.DEFAULTED));
     }
@@ -283,7 +283,7 @@ contract PoolCoreComponent is Component {
         for (uint i; i < tranchesCount; i++) {
             address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
             TrancheVault vault = TrancheVault(tranche);
-            
+
             vault.disableDeposits();
             vault.disableWithdrawals();
             vault.sendAssetsToPool(vault.totalAssets());
@@ -295,15 +295,15 @@ contract PoolCoreComponent is Component {
 
     function _transitionToFundingFailedStage() internal whenNotPaused {
         uint256 fundingFailedAt = block.timestamp;
-        
+
         poolStorage.setUint256(instanceId, "fundingFailedAt", fundingFailedAt);
         poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.FUNDING_FAILED));
-        
+
         uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
 
         for (uint i; i < tranchesCount; i++) {
             address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
-            TrancheVault vault = TrancheVault(tranche);    
+            TrancheVault vault = TrancheVault(tranche);
             vault.disableDeposits();
             vault.enableWithdrawals();
         }
@@ -348,13 +348,26 @@ contract PoolCoreComponent is Component {
 
     function _claimTrancheInterestForLender(address lender, uint8 trancheId) internal {
         PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
-        PoolCalculationsComponent pcc = PoolCalculationsComponent(factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT));
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
         uint256 rewards = pcc.lenderRewardsByTrancheRedeemable(lender, trancheId);
         if (rewards > 0) {
-            Constants.Rewardable memory rewardable = abi.decode(poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lender), (Constants.Rewardable));
+            Constants.Rewardable memory rewardable = abi.decode(
+                poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lender),
+                (Constants.Rewardable)
+            );
             rewardable.redeemedRewards += rewards;
-            poolStorage.setMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lender, abi.encode(rewardable));
-            PoolTransfersComponent ptc = PoolTransfersComponent(factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT));
+            poolStorage.setMappingUint256AddressToBytes(
+                instanceId,
+                "s_trancheRewardables",
+                trancheId,
+                lender,
+                abi.encode(rewardable)
+            );
+            PoolTransfersComponent ptc = PoolTransfersComponent(
+                factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+            );
             ptc.doTransferOut(lender, rewards);
             emit LenderWithdrawInterest(lender, trancheId, rewards);
         }
@@ -366,11 +379,119 @@ contract PoolCoreComponent is Component {
 
         for (uint256 i = 0; i < tranchesCount; i++) {
             address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
-            TrancheVault vault = TrancheVault(tranche);   
+            TrancheVault vault = TrancheVault(tranche);
             for (uint j; j < lenderCount; j++) {
                 address lender = poolStorage.getArrayAddress(instanceId, "s_lenders", j);
                 _claimTrancheInterestForLender(lender, vault.id());
             }
         }
+    }
+
+    /**
+     * @notice Transitions the pool to the defaulted state and pays out remaining assets to the tranche vaults
+     * @dev This function is expected to be called by *owner* after the maturity date has passed and principal has not been repaid
+     */
+    function _transitionToDefaultedStage() internal whenNotPaused {
+        uint256 defaultedAt = block.timestamp;
+        poolStorage.setUint256(instanceId, "defaultedAt", defaultedAt);
+        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.DEFAULTED));
+
+        _claimInterestForAllLenders();
+
+        // TODO: Update repaid interest to be the total interest paid to lenders
+        // TODO: Decide if protocol fees should be paid in event of default
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContractAddress"));
+        uint availableAssets = stableCoinContract.balanceOf(address(this));
+
+        uint256 trancheCount = poolStorage.getUint256(instanceId, "trancheCount");
+        for (uint i = 0; i < trancheCount; i++) {
+            address trancheVaultAddress = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            TrancheVault tv = TrancheVault(trancheVaultAddress);
+            uint256 trancheCoverageWad = poolStorage.getArrayUint256(instanceId, "trancheCoveragesWads", i);
+            uint assetsToSend = (trancheCoverageWad * availableAssets) / Constants.WAD;
+            uint trancheDefaultRatioWad = (assetsToSend * Constants.WAD) / tv.totalAssets();
+
+            if (assetsToSend > 0) {
+                SafeERC20.safeTransfer(stableCoinContract, address(tv), assetsToSend);
+            }
+            availableAssets -= assetsToSend;
+            tv.setDefaultRatioWad(trancheDefaultRatioWad);
+            tv.enableWithdrawals();
+        }
+
+        emit PoolDefaulted(poolStorage.getUint256(instanceId, "defaultedAt"));
+    }
+
+    /*///////////////////////////////////
+      Lender (please also see onTrancheDeposit() and onTrancheWithdraw())
+      Error group: 1
+    ///////////////////////////////////*/
+
+    /** @notice Lock platform tokens in order to get APR boost
+     *  @param trancheId tranche id
+     *  @param platformTokens amount of PLATFORM tokens to lock
+     */
+    function lenderLockPlatformTokensByTranche(
+        uint8 trancheId,
+        uint platformTokens
+    ) external atStage(Constants.Stages.OPEN) whenNotPaused {
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        IERC20 platformTokenContractAddress = IERC20(
+            poolStorage.getAddress(instanceId, "platformTokenContractAddress")
+        );
+
+        require(governance.isWhitelistedLender(msg.sender), "not lender");
+        require(
+            platformTokens <= pcc.lenderPlatformTokensByTrancheLockable(msg.sender, trancheId),
+            "LP101" // "LendingPool: lock will lead to overboost"
+        );
+        require(platformTokenContractAddress.totalSupply() > 0, "Lock: Token Locking Disabled");
+
+        // Using poolStorage for state management
+        Constants.Rewardable memory r = abi.decode(
+            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, msg.sender),
+            (Constants.Rewardable)
+        );
+        r.lockedPlatformTokens += platformTokens;
+        poolStorage.setMappingUint256AddressToBytes(
+            instanceId,
+            "s_trancheRewardables",
+            trancheId,
+            msg.sender,
+            abi.encode(r)
+        );
+
+        uint256 totalLockedTokens = poolStorage.getUint256(
+            instanceId,
+            "s_totalLockedPlatformTokensByTranche",
+            trancheId
+        ) + platformTokens;
+        poolStorage.setUint256(instanceId, "s_totalLockedPlatformTokensByTranche", trancheId, totalLockedTokens);
+
+        SafeERC20.safeTransferFrom(platformTokenContractAddress, msg.sender, address(this), platformTokens);
+
+        emit LenderLockPlatformTokens(msg.sender, trancheId, platformTokens);
+        _emitLenderTrancheRewardsChange(msg.sender, trancheId);
+    }
+
+    function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        emit LenderTrancheRewardsChange(
+            lenderAddress,
+            trancheId,
+            pcc.lenderEffectiveAprByTrancheWad(lenderAddress, trancheId),
+            pcc.lenderTotalExpectedRewardsByTranche(lenderAddress, trancheId),
+            pcc.lenderRewardsByTrancheRedeemed(lenderAddress, trancheId)
+        );
     }
 }
