@@ -813,6 +813,27 @@ contract PoolCoreComponent is Component {
         uint amount
     ) external authTrancheVault(trancheId) {
         // TODO implement with new logic
+        /**
+         * 
+         * 
+         *         // 1. find / create the rewardable
+        Rewardable storage rewardable = s_trancheRewardables[trancheId][depositorAddress];
+
+        // 2. add lender to the lenders set
+        s_lenders.add(depositorAddress);
+
+        // 3. add to the staked assets
+        rewardable.stakedAssets += amount;
+        collectedAssets += amount;
+        s_totalStakedAssetsByTranche[trancheId] += amount;
+
+        // 4. set the start of the rewardable
+        rewardable.start = uint64(block.timestamp);
+
+        emit LenderDeposit(depositorAddress, trancheId, amount);
+        _emitLenderTrancheRewardsChange(depositorAddress, trancheId);
+         * 
+         */
     }
 
     function onTrancheWithdraw(
@@ -821,5 +842,28 @@ contract PoolCoreComponent is Component {
         uint amount
     ) external authTrancheVault(trancheId) whenNotPaused {
         // TODO implement with new logic
+
+
+        /***
+         *      require(!s_rollOverSettings[depositorAddress].principal, "LP301"); // "LendingPool: principal locked for rollover"
+
+        if (currentStage == Stages.REPAID || currentStage == Stages.FLC_WITHDRAWN) {
+            emit LenderWithdraw(depositorAddress, trancheId, amount);
+        } else {
+            Rewardable storage rewardable = s_trancheRewardables[trancheId][depositorAddress];
+
+            assert(rewardable.stakedAssets >= amount);
+
+            rewardable.stakedAssets -= amount;
+            collectedAssets -= amount;
+            s_totalStakedAssetsByTranche[trancheId] -= amount;
+
+            if (rewardable.stakedAssets == 0) {
+                s_lenders.remove(depositorAddress);
+            }
+            emit LenderWithdraw(depositorAddress, trancheId, amount);
+            _emitLenderTrancheRewardsChange(depositorAddress, trancheId);
+        }
+         */
     }
 }
