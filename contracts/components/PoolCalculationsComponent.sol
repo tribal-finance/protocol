@@ -359,4 +359,17 @@ contract PoolCalculationsComponent is Component {
                 borrowerExpectedInterest()
             );
     }
+
+    function borrowerExcessSpread() public view returns (uint) {
+        uint borrowerInterestRepaid = poolStorage.getUint256(instanceId, "borrowerInterestRepaid");
+        uint allLendersInterest = allLendersInterest();
+        uint borrowerExpectedInterest = borrowerExpectedInterest();
+        uint protocolFeeWad = poolStorage.getUint256(instanceId, "protocolFeeWad");
+
+        if (borrowerOutstandingInterest(borrowerInterestRepaid, borrowerExpectedInterest) > 0) {
+            return 0;
+        }
+        uint fees = (borrowerExpectedInterest * protocolFeeWad) / Constants.WAD;
+        return borrowerInterestRepaid - allLendersInterest - fees;
+    }
 }

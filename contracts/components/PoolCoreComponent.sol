@@ -709,7 +709,6 @@ contract PoolCoreComponent is Component {
      *  If the pool is delinquent, the minimum payment is penalty + whatever interest that needs to be paid to bring the pool back to healthy state
      */
     function borrowerPayInterest(uint assets) external onlyPoolBorrower whenNotPaused {
-
         PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
@@ -752,5 +751,59 @@ contract PoolCoreComponent is Component {
         address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
 
         emit BorrowerPayInterest(borrowerAddress, assets, assetsForLenders, assetsToSendToFeeSharing);
+    }
+
+    /** @notice Repay principal
+     *  can be called only after all interest is paid
+     *  can be called only after all penalties are paid
+     */
+    function borrowerRepayPrincipal() external onlyPoolBorrower atStage(Constants.Stages.BORROWED) whenNotPaused {
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        require(pcc.borrowerOutstandingInterest() == 0, "LP203"); // "LendingPool: interest must be paid before repaying principal"
+        require(pcc.borrowerPenaltyAmount() == 0, "LP204"); // "LendingPool: penalty must be paid before repaying principal"
+
+        uint256 borrowedAssets = poolStorage.getUint256(instanceId, "borrowedAssets");
+        _transitionToPrincipalRepaidStage(borrowedAssets);
+
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContract"));
+        SafeERC20.safeTransferFrom(stableCoinContract, msg.sender, address(this), borrowedAssets);
+
+        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        for (uint i = 0; i < tranchesCount; ++i) {
+            address trancheVaultAddress = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            TrancheVault tv = TrancheVault(trancheVaultAddress);
+            uint256 tvTotalAssets = tv.totalAssets();
+            SafeERC20.safeTransfer(stableCoinContract, address(tv), tvTotalAssets);
+            tv.enableWithdrawals();
+        }
+    }
+
+    /** @notice Withdraw first loss capital and excess spread
+     *  can be called only after principal is repaid
+     */
+    function borrowerWithdrawFirstLossCapitalAndExcessSpread()
+        external
+        onlyPoolBorrower
+        atStage(Constants.Stages.REPAID)
+        whenNotPaused
+    {
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        uint256 firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
+        uint256 excessSpread = pcc.borrowerExcessSpread();
+        uint256 assetsToSend = firstLossAssets + excessSpread;
+
+        _transitionToFlcWithdrawnStage(assetsToSend);
+
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContract"));
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        SafeERC20.safeTransfer(stableCoinContract, borrowerAddress, assetsToSend);
     }
 }
