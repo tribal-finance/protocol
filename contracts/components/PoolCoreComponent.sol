@@ -806,4 +806,20 @@ contract PoolCoreComponent is Component {
         address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
         SafeERC20.safeTransfer(stableCoinContract, borrowerAddress, assetsToSend);
     }
+
+    function onTrancheDeposit(
+        uint8 trancheId,
+        address depositorAddress,
+        uint amount
+    ) external authTrancheVault(trancheId) {
+        // TODO implement with new logic
+    }
+
+    function onTrancheWithdraw(
+        uint8 trancheId,
+        address depositorAddress,
+        uint amount
+    ) external authTrancheVault(trancheId) whenNotPaused {
+        // TODO implement with new logic
+    }
 }
