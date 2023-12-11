@@ -139,6 +139,62 @@ contract PoolCalculationsComponent is Component {
         return weightedSum / totalStakedAssets;
     }
 
+    function allLendersEffectiveAprWad() public view returns (uint256) {
+        return allLendersEffectiveAprWad(poolStorage.getUint256(instanceId, "tranchesCount"));
+    }
+
+    function poolBalance() public view returns (uint) {
+        uint firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
+        uint borrowerInterestRepaid = poolStorage.getUint256(instanceId, "borrowerInterestRepaid");
+        uint allLendersInterestByDate = allLendersInterestByDate();
+
+        uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
+        if (allLendersInterestByDate > positiveBalance) {
+            return 0;
+        }
+        return positiveBalance - allLendersInterestByDate;
+    }
+
+    function poolBalanceThreshold() public view returns (uint) {
+        uint borrowedAssets = poolStorage.getUint256(instanceId, "borrowedAssets");
+        uint borrowerTotalInterestRateWad = poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad");
+        uint repaymentRecurrenceDays = poolStorage.getUint256(instanceId, "repaymentRecurrenceDays");
+        uint gracePeriodDays = poolStorage.getUint256(instanceId, "gracePeriodDays");
+        uint firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
+
+        uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / Constants.WAD / 365;
+        uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
+        if (interestGoDownAmount > firstLossAssets) {
+            return 0;
+        }
+        return firstLossAssets - interestGoDownAmount;
+    }
+
+    function borrowerPenaltyAmount() public view returns (uint) {
+        uint poolBalance = poolBalance();
+        uint poolBalanceThreshold = poolBalanceThreshold();
+        uint collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
+        uint allLendersEffectiveAprWad = allLendersEffectiveAprWad();
+        uint penaltyRateWad = poolStorage.getUint256(instanceId, "penaltyRateWad");
+
+        if (poolBalance >= poolBalanceThreshold) {
+            return 0;
+        }
+
+        uint dailyLendersInterestAmount = (collectedAssets * allLendersEffectiveAprWad) / Constants.WAD / 365;
+        uint balanceDifference = poolBalanceThreshold - poolBalance;
+        uint daysDelinquent = balanceDifference / dailyLendersInterestAmount;
+
+        if (daysDelinquent == 0) {
+            return 0;
+        }
+
+        uint penaltyCoefficientWad = Operations.wadPow(Constants.WAD + penaltyRateWad, daysDelinquent);
+
+        uint penalty = (balanceDifference * penaltyCoefficientWad) / Constants.WAD - balanceDifference;
+        return penalty;
+    }
+
     function allLendersInterest() public view returns (uint256) {
         uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
         uint256 allLendersAprWad = allLendersEffectiveAprWad(tranchesCount);
@@ -254,5 +310,53 @@ contract PoolCalculationsComponent is Component {
 
         // Returning the stakedAssets from the Rewardable struct
         return r.stakedAssets;
+    }
+
+    function borrowerAdjustedInterestRateWad(
+        uint borrowerTotalInterestRateWad,
+        uint lendingTermSeconds
+    ) public pure returns (uint adj) {
+        return (borrowerTotalInterestRateWad * lendingTermSeconds) / Constants.YEAR;
+    }
+
+    function borrowerAdjustedInterestRateWad() public view returns (uint adj) {
+        return
+            borrowerAdjustedInterestRateWad(
+                poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad"),
+                poolStorage.getUint256(instanceId, "lendingTermSeconds")
+            );
+    }
+
+    function borrowerExpectedInterest(
+        uint collectedAssets,
+        uint borrowerAdjustedInterestRateWad
+    ) public pure returns (uint) {
+        return (collectedAssets * borrowerAdjustedInterestRateWad) / Constants.WAD;
+    }
+
+    function borrowerExpectedInterest() public view returns (uint256) {
+        return
+            borrowerExpectedInterest(
+                poolStorage.getUint256(instanceId, "collectedAssets"),
+                borrowerAdjustedInterestRateWad()
+            );
+    }
+
+    function borrowerOutstandingInterest(
+        uint borrowerInterestRepaid,
+        uint borrowerExpectedInterest
+    ) public pure returns (uint) {
+        if (borrowerInterestRepaid > borrowerExpectedInterest) {
+            return 0;
+        }
+        return borrowerExpectedInterest - borrowerInterestRepaid;
+    }
+
+    function borrowerOutstandingInterest() public view returns (uint) {
+        return
+            borrowerOutstandingInterest(
+                poolStorage.getUint256(instanceId, "borrowerInterestRepaid"),
+                borrowerExpectedInterest()
+            );
     }
 }
