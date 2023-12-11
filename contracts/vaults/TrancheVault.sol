@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
 import "../governance/TribalGovernance.sol";
-import "../pool/LendingPool.sol";
 import "../factory/PoolFactory.sol";
 
 contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable {
@@ -151,9 +150,9 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable 
     }
 
     modifier onlyDeadTranche() {
-        LendingPool pool = LendingPool(s_poolAddress);
-        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
-        require(factory.prevDeployedTranche(msg.sender), "Vault: onlyDeadTranche");
+     //   LendingPool pool = LendingPool(s_poolAddress);
+     //   PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
+     //   require(factory.prevDeployedTranche(msg.sender), "Vault: onlyDeadTranche");
         _;
     }
 
@@ -418,7 +417,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable 
         // slither-disable-next-line reentrancy-no-eth
         SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(asset()), caller, address(this), assets);
         _mint(receiver, shares);
-        LendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
+        //LendingPool(poolAddress()).onTrancheDeposit(id(), receiver, assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -439,7 +438,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable 
 
         _burn(owner, shares);
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), receiver, assets);
-        LendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
+        //LendingPool(poolAddress()).onTrancheWithdraw(id(), owner, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }

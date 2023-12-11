@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../governance/TribalGovernance.sol";
-import "../pool/LendingPool.sol";
 import "../components/Component.sol";
 import "../components/PoolCoreComponent.sol";
 import "../vaults/TrancheVault.sol";
@@ -153,6 +152,7 @@ contract PoolFactory is Initializable {
         return clonedPoolComponents;
     }
 
+/*
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads,
@@ -185,7 +185,10 @@ contract PoolFactory is Initializable {
             governance.grantRole(Constants.OWNER, ownerAddress);
         }
     }
+*/
 
+
+/*
     function initializePoolAndCreatePoolRecord(
         address poolAddress,
         LendingPool.LendingPoolParams calldata params,
@@ -215,4 +218,5 @@ contract PoolFactory is Initializable {
 
         emit PoolDeployed(msg.sender, record);
     }
+    */
 }
