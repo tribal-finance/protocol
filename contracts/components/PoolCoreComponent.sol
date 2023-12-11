@@ -667,4 +667,90 @@ contract PoolCoreComponent is Component {
             pcc.lenderRewardsByTrancheRedeemed(lenderAddress, trancheId)
         );
     }
+
+    /*///////////////////////////////////
+       Borrower functions
+       Error group: 2
+    ///////////////////////////////////*/
+    /** @notice Deposits first loss capital into the pool
+     *  should be called by the borrower before the pool can start
+     */
+    function borrowerDepositFirstLossCapital()
+        external
+        onlyPoolBorrower
+        atStage(Constants.Stages.INITIAL)
+        whenNotPaused
+    {
+        uint256 firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
+        _transitionToFlcDepositedStage(firstLossAssets);
+        address stableCoinContract = poolStorage.getAddress(instanceId, "stableCoinContract");
+        SafeERC20.safeTransferFrom(IERC20(stableCoinContract), msg.sender, address(this), firstLossAssets);
+    }
+
+    function borrow() external onlyPoolBorrower atStage(Constants.Stages.FUNDED) whenNotPaused {
+        uint256 collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
+        _transitionToBorrowedStage(collectedAssets);
+
+        address stableCoinContract = poolStorage.getAddress(instanceId, "stableCoinContract");
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        SafeERC20.safeTransfer(IERC20(stableCoinContract), borrowerAddress, collectedAssets);
+    }
+
+    function borrowerRecoverFirstLossCapital() external atStage(Constants.Stages.FUNDING_FAILED) {
+        uint256 copyFirstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
+        poolStorage.setUint256(instanceId, "firstLossAssets", 0);
+
+        address stableCoinContract = poolStorage.getAddress(instanceId, "stableCoinContract");
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        SafeERC20.safeTransfer(IERC20(stableCoinContract), borrowerAddress, copyFirstLossAssets);
+    }
+
+    /** @notice Make an interest payment.
+     *  If the pool is delinquent, the minimum payment is penalty + whatever interest that needs to be paid to bring the pool back to healthy state
+     */
+    function borrowerPayInterest(uint assets) external onlyPoolBorrower whenNotPaused {
+
+        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolCalculationsComponent pcc = PoolCalculationsComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        );
+
+        uint penalty = pcc.borrowerPenaltyAmount();
+        require(penalty < assets, "LP201"); // "LendingPool: penalty cannot be more than assets"
+
+        if (penalty > 0) {
+            uint balanceDifference = pcc.poolBalanceThreshold() - pcc.poolBalance();
+            require(assets >= penalty + balanceDifference, "LP202"); // "LendingPool: penalty+interest will not bring pool to healthy state"
+        }
+
+        uint feeableInterestAmount = assets - penalty;
+        if (feeableInterestAmount > pcc.borrowerOutstandingInterest()) {
+            feeableInterestAmount = pcc.borrowerOutstandingInterest();
+        }
+
+        uint256 protocolFeeWad = poolStorage.getUint256(instanceId, "protocolFeeWad");
+
+        uint assetsToSendToFeeSharing = (feeableInterestAmount * protocolFeeWad) / Constants.WAD + penalty;
+        uint assetsForLenders = assets - assetsToSendToFeeSharing;
+
+        uint256 borrowerInterestRepaid = poolStorage.getUint256(instanceId, "borrowerInterestRepaid");
+
+        poolStorage.setUint256(instanceId, "borrowerInterestRepaid", borrowerInterestRepaid + assets - penalty);
+
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContract"));
+
+        if (assetsToSendToFeeSharing > 0) {
+            address feeSharingContractAddress = poolStorage.getAddress(instanceId, "feeSharingContractAddress");
+            SafeERC20.safeTransfer(stableCoinContract, feeSharingContractAddress, assetsToSendToFeeSharing);
+        }
+
+        SafeERC20.safeTransferFrom(stableCoinContract, msg.sender, address(this), assets);
+
+        if (penalty > 0) {
+            emit BorrowerPayPenalty(msg.sender, penalty);
+        }
+        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+
+        emit BorrowerPayInterest(borrowerAddress, assets, assetsForLenders, assetsToSendToFeeSharing);
+    }
 }
