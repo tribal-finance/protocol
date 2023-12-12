@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import "./Component.sol";
+import "./PoolBorrowerCalculationComponent.sol";
 
 import "./PoolValidationComponent.sol";
 import "./PoolCalculationsComponent.sol";
@@ -710,11 +711,14 @@ contract PoolCoreComponent is Component {
      */
     function borrowerPayInterest(uint assets) external onlyPoolBorrower whenNotPaused {
         PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolBorrowerCalculationComponent pbc = PoolBorrowerCalculationComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_BORROWER_CALCULATIONS_COMPONENT)
+        );
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
         );
 
-        uint penalty = pcc.borrowerPenaltyAmount();
+        uint penalty = pbc.borrowerPenaltyAmount();
         require(penalty < assets, "LP201"); // "LendingPool: penalty cannot be more than assets"
 
         if (penalty > 0) {
@@ -723,8 +727,8 @@ contract PoolCoreComponent is Component {
         }
 
         uint feeableInterestAmount = assets - penalty;
-        if (feeableInterestAmount > pcc.borrowerOutstandingInterest()) {
-            feeableInterestAmount = pcc.borrowerOutstandingInterest();
+        if (feeableInterestAmount > pbc.borrowerOutstandingInterest()) {
+            feeableInterestAmount = pbc.borrowerOutstandingInterest();
         }
 
         uint256 protocolFeeWad = poolStorage.getUint256(instanceId, "protocolFeeWad");
@@ -762,9 +766,11 @@ contract PoolCoreComponent is Component {
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
         );
-
-        require(pcc.borrowerOutstandingInterest() == 0, "LP203"); // "LendingPool: interest must be paid before repaying principal"
-        require(pcc.borrowerPenaltyAmount() == 0, "LP204"); // "LendingPool: penalty must be paid before repaying principal"
+        PoolBorrowerCalculationComponent pbc = PoolBorrowerCalculationComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_BORROWER_CALCULATIONS_COMPONENT)
+        );
+        require(pbc.borrowerOutstandingInterest() == 0, "LP203"); // "LendingPool: interest must be paid before repaying principal"
+        require(pbc.borrowerPenaltyAmount() == 0, "LP204"); // "LendingPool: penalty must be paid before repaying principal"
 
         uint256 borrowedAssets = poolStorage.getUint256(instanceId, "borrowedAssets");
         _transitionToPrincipalRepaidStage(borrowedAssets);
@@ -792,12 +798,12 @@ contract PoolCoreComponent is Component {
         whenNotPaused
     {
         PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
-        PoolCalculationsComponent pcc = PoolCalculationsComponent(
-            factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
+        PoolBorrowerCalculationComponent pbc = PoolBorrowerCalculationComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_BORROWER_CALCULATIONS_COMPONENT)
         );
 
         uint256 firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
-        uint256 excessSpread = pcc.borrowerExcessSpread();
+        uint256 excessSpread = pbc.borrowerExcessSpread();
         uint256 assetsToSend = firstLossAssets + excessSpread;
 
         _transitionToFlcWithdrawnStage(assetsToSend);
