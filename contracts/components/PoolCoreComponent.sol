@@ -12,10 +12,11 @@ import "../utils/Constants.sol";
 import "../utils/Operations.sol";
 import "../utils/Identifiers.sol";
 import "../modifiers/StateControl.sol";
+import "../events/PoolEvents.sol";
 
 pragma solidity 0.8.18;
 
-contract PoolCoreComponent is Component, StateControl {
+contract PoolCoreComponent is Component, StateControl, PoolEvents {
     /*///////////////////////////////////
        MODIFIERS
     ///////////////////////////////////*/

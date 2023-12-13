@@ -7,10 +7,11 @@ import "../storage/PoolStorage.sol";
 import "../utils/Constants.sol";
 import "../utils/Identifiers.sol";
 import "../modifiers/StateControl.sol";
+import "../events/PoolEvents.sol";
 
 pragma solidity 0.8.18;
 
-contract PoolStateManagmentComponent is Component, StateControl {
+contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
     function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
         _initialize(_instanceId, Identifiers.POOL_STATE_MANAGMENT_COMPONENT, _poolStorage);
     }
