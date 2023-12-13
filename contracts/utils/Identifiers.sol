@@ -9,5 +9,6 @@ library Identifiers {
     bytes32 constant internal POOL_TRANSFERS_COMPONENT = bytes32(uint256(3));
     bytes32 constant internal POOL_VALIDATION_COMPONENT = bytes32(uint256(4));
     bytes32 constant internal POOL_TRANCHE_COMPONENT = bytes32(uint256(5));
+    bytes32 constant internal POOL_STATE_MANAGMENT_COMPONENT = bytes32(uint256(6));
 
 }
