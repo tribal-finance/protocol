@@ -7,11 +7,9 @@ pragma solidity 0.8.18;
 
 abstract contract StateControl {
     PoolStorage internal _poolStorage;
-    uint256 internal _instanceId;
 
-    function _initialize(PoolStorage __poolStorage, uint256 __instanceId) internal {
+    function _initialize(PoolStorage __poolStorage) internal {
         _poolStorage = __poolStorage;
-        _instanceId = __instanceId;
     }
 
     modifier onlyPoolBorrower() {
@@ -20,12 +18,12 @@ abstract contract StateControl {
     }
 
     function _onlyPoolBorrower() internal view {
-        address borrowerAddress = _poolStorage.getAddress(_instanceId, "borrowerAddress");
+        address borrowerAddress = _poolStorage.getAddress("borrowerAddress");
         require(msg.sender == borrowerAddress, "LP003"); // "LendingPool: not a borrower"
     }
 
     modifier whenNotPaused() {
-        require(_poolStorage.getBoolean(_instanceId, "paused"), "contract paused");
+        require(_poolStorage.getBoolean("paused"), "contract paused");
         _;
     }
 
@@ -35,7 +33,7 @@ abstract contract StateControl {
     }
 
     function _atStage(Constants.Stages _stage) internal view {
-        Constants.Stages currentStage = Constants.Stages(_poolStorage.getUint256(_instanceId, "currentStage"));
+        Constants.Stages currentStage = Constants.Stages(_poolStorage.getUint256("currentStage"));
         require(currentStage == _stage, "LP004"); // "LendingPool: not at correct stage"
     }
 
@@ -45,7 +43,7 @@ abstract contract StateControl {
     }
 
     function _atStages2(Constants.Stages _stage1, Constants.Stages _stage2) internal view {
-        Constants.Stages currentStage = Constants.Stages(_poolStorage.getUint256(_instanceId, "currentStage"));
+        Constants.Stages currentStage = Constants.Stages(_poolStorage.getUint256("currentStage"));
         require(currentStage == _stage1 || currentStage == _stage2, "LP004"); // "LendingPool: not at correct stage"
     }
 
@@ -59,7 +57,7 @@ abstract contract StateControl {
     }
 
     function _atStages3(Constants.Stages _stage1, Constants.Stages _stage2, Constants.Stages _stage3) internal view {
-        Constants.Stages currentStage = Constants.Stages(_poolStorage.getUint256(_instanceId, "currentStage"));
+        Constants.Stages currentStage = Constants.Stages(_poolStorage.getUint256("currentStage"));
         require(
             currentStage == _stage1 || currentStage == _stage2 || currentStage == _stage3,
             "LP004" // "LendingPool: not at correct stage"
