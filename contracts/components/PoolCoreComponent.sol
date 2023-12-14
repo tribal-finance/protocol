@@ -27,8 +27,8 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
     }
 
     function _authTrancheVault(uint8 _id) internal view {
-        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
-        address trancheVaultAddress = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", _id);
+        uint256 tranchesCount = poolStorage.getUint256("tranchesCount");
+        address trancheVaultAddress = poolStorage.getArrayAddress("trancheVaultAddresses", _id);
         require(_id < tranchesCount, "LP001"); // "LendingPool: invalid trancheVault id"
         require(trancheVaultAddress == msg.sender, "LP002"); // "LendingPool: trancheVault auth"
     }
@@ -39,7 +39,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
 
     function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
         Component._initialize(_instanceId, Identifiers.POOL_CORE_COMPONENT, _poolStorage);
-        StateControl._initialize(_poolStorage, _instanceId);
+        StateControl._initialize(_poolStorage);
     }
 
     function initializeFromParams(
@@ -60,49 +60,49 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         Operations.validateWad(params.trancheCoveragesWads);
 
         // Store parameters in poolStorage
-        poolStorage.setString(instanceId, "name", params.name);
-        poolStorage.setString(instanceId, "token", params.token);
-        poolStorage.setAddress(instanceId, "stableCoinContractAddress", params.stableCoinContractAddress);
-        poolStorage.setAddress(instanceId, "platformTokenContractAddress", params.platformTokenContractAddress);
-        poolStorage.setUint256(instanceId, "minFundingCapacity", params.minFundingCapacity);
-        poolStorage.setUint256(instanceId, "maxFundingCapacity", params.maxFundingCapacity);
-        poolStorage.setUint256(instanceId, "fundingPeriodSeconds", params.fundingPeriodSeconds);
-        poolStorage.setUint256(instanceId, "lendingTermSeconds", params.lendingTermSeconds);
-        poolStorage.setAddress(instanceId, "borrowerAddress", params.borrowerAddress);
-        poolStorage.setUint256(instanceId, "firstLossAssets", params.firstLossAssets);
-        poolStorage.setUint256(instanceId, "borrowerTotalInterestRateWad", params.borrowerTotalInterestRateWad);
-        poolStorage.setUint256(instanceId, "repaymentRecurrenceDays", params.repaymentRecurrenceDays);
-        poolStorage.setUint256(instanceId, "gracePeriodDays", params.gracePeriodDays);
-        poolStorage.setUint256(instanceId, "protocolFeeWad", params.protocolFeeWad);
-        poolStorage.setUint256(instanceId, "defaultPenalty", params.defaultPenalty);
-        poolStorage.setUint256(instanceId, "penaltyRateWad", params.penaltyRateWad);
-        poolStorage.setUint256(instanceId, "tranchesCount", params.tranchesCount);
+        poolStorage.setString("name", params.name);
+        poolStorage.setString("token", params.token);
+        poolStorage.setAddress("stableCoinContractAddress", params.stableCoinContractAddress);
+        poolStorage.setAddress("platformTokenContractAddress", params.platformTokenContractAddress);
+        poolStorage.setUint256("minFundingCapacity", params.minFundingCapacity);
+        poolStorage.setUint256("maxFundingCapacity", params.maxFundingCapacity);
+        poolStorage.setUint256("fundingPeriodSeconds", params.fundingPeriodSeconds);
+        poolStorage.setUint256("lendingTermSeconds", params.lendingTermSeconds);
+        poolStorage.setAddress("borrowerAddress", params.borrowerAddress);
+        poolStorage.setUint256("firstLossAssets", params.firstLossAssets);
+        poolStorage.setUint256("borrowerTotalInterestRateWad", params.borrowerTotalInterestRateWad);
+        poolStorage.setUint256("repaymentRecurrenceDays", params.repaymentRecurrenceDays);
+        poolStorage.setUint256("gracePeriodDays", params.gracePeriodDays);
+        poolStorage.setUint256("protocolFeeWad", params.protocolFeeWad);
+        poolStorage.setUint256("defaultPenalty", params.defaultPenalty);
+        poolStorage.setUint256("penaltyRateWad", params.penaltyRateWad);
+        poolStorage.setUint256("tranchesCount", params.tranchesCount);
 
         for (uint256 i = 0; i < params.tranchesCount; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheAPRsWads", i, params.trancheAPRsWads[i]);
+            poolStorage.setArrayUint256("trancheAPRsWads", i, params.trancheAPRsWads[i]);
         }
 
         for (uint256 i = 0; i < params.tranchesCount; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
+            poolStorage.setArrayUint256("trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
         }
 
         for (uint256 i = 0; i < params.tranchesCount; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheBoostRatios", i, params.trancheBoostRatios[i]);
+            poolStorage.setArrayUint256("trancheBoostRatios", i, params.trancheBoostRatios[i]);
         }
 
         for (uint256 i = 0; i < params.tranchesCount; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
+            poolStorage.setArrayUint256("trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
         }
 
         for (uint256 i = 0; i < params.tranchesCount; i++) {
-            poolStorage.setArrayAddress(instanceId, "trancheVaultAddresses", i, _trancheVaultAddresses[i]);
+            poolStorage.setArrayAddress("trancheVaultAddresses", i, _trancheVaultAddresses[i]);
         }
 
-        poolStorage.setAddress(instanceId, "feeSharingContractAddress", _feeSharingContractAddress);
-        poolStorage.setAddress(instanceId, "poolFactoryAddress", _poolFactoryAddress);
+        poolStorage.setAddress("feeSharingContractAddress", _feeSharingContractAddress);
+        poolStorage.setAddress("poolFactoryAddress", _poolFactoryAddress);
 
         // Set governance
-        poolStorage.setAddress(instanceId, "governance", _authorityAddress);
+        poolStorage.setAddress("governance", _authorityAddress);
 
         emit PoolInitialized(params, _trancheVaultAddresses, _feeSharingContractAddress, _authorityAddress);
     }
@@ -112,16 +112,16 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
     ///////////////////////////////////*/
     /** @dev Pauses the pool */
     function pause() external {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isAdmin(msg.sender), "not admin");
-        poolStorage.setBoolean(instanceId, "paused", true);
+        poolStorage.setBoolean("paused", true);
     }
 
     /** @dev Unpauses the pool */
     function unpause() external {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isAdmin(msg.sender), "not admin");
-        poolStorage.setBoolean(instanceId, "paused", false);
+        poolStorage.setBoolean("paused", false);
     }
 
     /** @notice Marks the pool as opened. This function has to be called by *owner* when
@@ -129,16 +129,16 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
      * - enables deposits and withdrawals to tranche vaults
      */
     function adminOpenPool() external atStage(Constants.Stages.FLC_DEPOSITED) whenNotPaused {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isAdmin(msg.sender), "not admin");
         uint256 openedAt = uint256(block.timestamp);
-        poolStorage.setUint256(instanceId, "openedAt", openedAt);
-        poolStorage.setUint256(instanceId, "currentStage", uint256(Constants.Stages.OPEN));
+        poolStorage.setUint256("openedAt", openedAt);
+        poolStorage.setUint256("currentStage", uint256(Constants.Stages.OPEN));
 
-        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        uint256 tranchesCount = poolStorage.getUint256("tranchesCount");
 
         for (uint i; i < tranchesCount; i++) {
-            address tranche = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            address tranche = poolStorage.getArrayAddress("trancheVaultAddresses", i);
             TrancheVault vault = TrancheVault(tranche);
             vault.enableDeposits();
             vault.enableWithdrawals();
@@ -160,14 +160,14 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         uint8 trancheId,
         uint platformTokens
     ) external atStage(Constants.Stages.OPEN) whenNotPaused {
-        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
 
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
         );
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         IERC20 platformTokenContractAddress = IERC20(
-            poolStorage.getAddress(instanceId, "platformTokenContractAddress")
+            poolStorage.getAddress("platformTokenContractAddress")
         );
 
         require(governance.isWhitelistedLender(msg.sender), "not lender");
@@ -179,12 +179,11 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
 
         // Using poolStorage for state management
         Constants.Rewardable memory r = abi.decode(
-            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, msg.sender),
+            poolStorage.getMappingUint256AddressToBytes("s_trancheRewardables", trancheId, msg.sender),
             (Constants.Rewardable)
         );
         r.lockedPlatformTokens += platformTokens;
         poolStorage.setMappingUint256AddressToBytes(
-            instanceId,
             "s_trancheRewardables",
             trancheId,
             msg.sender,
@@ -192,12 +191,11 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         );
 
         uint256 totalLockedTokens = poolStorage.getArrayUint256(
-            instanceId,
             "s_totalLockedPlatformTokensByTranche",
             trancheId
         ) + platformTokens;
 
-        poolStorage.setArrayUint256(instanceId, "s_totalLockedPlatformTokensByTranche", trancheId, totalLockedTokens);
+        poolStorage.setArrayUint256("s_totalLockedPlatformTokensByTranche", trancheId, totalLockedTokens);
 
         SafeERC20.safeTransferFrom(platformTokenContractAddress, msg.sender, address(this), platformTokens);
 
@@ -209,9 +207,9 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         uint8 trancheId,
         uint platformTokens
     ) external atStages2(Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN) whenNotPaused {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
 
-        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
 
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
@@ -221,7 +219,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
 
         // Check for roll-over settings
         Constants.RollOverSetting memory settings = abi.decode(
-            poolStorage.getMappingAddressToBytes(instanceId, "s_rollOverSettings", msg.sender),
+            poolStorage.getMappingAddressToBytes("s_rollOverSettings", msg.sender),
             (Constants.RollOverSetting)
         );
 
@@ -230,19 +228,18 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         // Check for redeemable rewards
         require(pcc.lenderRewardsByTrancheRedeemable(msg.sender, trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
 
-        IERC20 platformTokenContract = IERC20(poolStorage.getAddress(instanceId, "platformTokenContractAddress"));
+        IERC20 platformTokenContract = IERC20(poolStorage.getAddress("platformTokenContractAddress"));
         require(platformTokenContract.totalSupply() > 0, "Unlock: Token Locking Disabled");
 
         // Fetching Rewardable struct from poolStorage
         Constants.Rewardable memory r = abi.decode(
-            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, msg.sender),
+            poolStorage.getMappingUint256AddressToBytes("s_trancheRewardables", trancheId, msg.sender),
             (Constants.Rewardable)
         );
 
         require(r.lockedPlatformTokens >= platformTokens, "LP104"); // "LendingPool: not enough locked tokens"
         r.lockedPlatformTokens -= platformTokens;
         poolStorage.setMappingUint256AddressToBytes(
-            instanceId,
             "s_trancheRewardables",
             trancheId,
             msg.sender,
@@ -266,12 +263,12 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         atStages3(Constants.Stages.BORROWED, Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN)
         whenNotPaused
     {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isWhitelistedLender(msg.sender), "not lender");
 
         // Decoding roll-over settings from poolStorage
         Constants.RollOverSetting memory settings = abi.decode(
-            poolStorage.getMappingAddressToBytes(instanceId, "s_rollOverSettings", msg.sender),
+            poolStorage.getMappingAddressToBytes("s_rollOverSettings", msg.sender),
             (Constants.RollOverSetting)
         );
         require(!settings.rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
@@ -280,7 +277,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
             return;
         }
 
-        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
         );
@@ -290,19 +287,18 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
 
         // Fetching and updating Rewardable struct from poolStorage
         Constants.Rewardable memory r = abi.decode(
-            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, msg.sender),
+            poolStorage.getMappingUint256AddressToBytes("s_trancheRewardables", trancheId, msg.sender),
             (Constants.Rewardable)
         );
         r.redeemedRewards += toWithdraw;
         poolStorage.setMappingUint256AddressToBytes(
-            instanceId,
             "s_trancheRewardables",
             trancheId,
             msg.sender,
             abi.encode(r)
         );
 
-        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContractAddress"));
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContractAddress"));
         SafeERC20.safeTransfer(stableCoinContract, msg.sender, toWithdraw);
 
         emit LenderWithdrawInterest(msg.sender, trancheId, toWithdraw);
@@ -319,17 +315,17 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         atStages3(Constants.Stages.BORROWED, Constants.Stages.REPAID, Constants.Stages.FLC_WITHDRAWN)
         whenNotPaused
     {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isWhitelistedLender(msg.sender), "not lender");
 
         // Decoding roll-over settings from poolStorage
         Constants.RollOverSetting memory settings = abi.decode(
-            poolStorage.getMappingAddressToBytes(instanceId, "s_rollOverSettings", msg.sender),
+            poolStorage.getMappingAddressToBytes("s_rollOverSettings", msg.sender),
             (Constants.RollOverSetting)
         );
         require(!settings.rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
 
-        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        uint256 tranchesCount = poolStorage.getUint256("tranchesCount");
         require(toWithdraws.length == tranchesCount, "LP107"); // "LendingPool: wrong amount of tranches"
 
         for (uint8 i; i < toWithdraws.length; i++) {
@@ -347,7 +343,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
      *  @param platformTokens whether the platform tokens should be rolled over
      */
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isWhitelistedLender(msg.sender), "not lender");
 
         address lender = msg.sender;
@@ -359,7 +355,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
             rewards,
             platformTokens
         );
-        poolStorage.setMappingAddressToBytes(instanceId, "s_rollOverSettings", lender, abi.encode(newSetting));
+        poolStorage.setMappingAddressToBytes("s_rollOverSettings", lender, abi.encode(newSetting));
 
         //PoolTransfers.lenderEnableRollOver(this, lender);
     }
@@ -367,18 +363,18 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
     /** @notice cancels lenders intent to roll over the funds to the next pool.
      */
     function lenderDisableRollOver() external {
-        TribalGovernance governance = TribalGovernance(poolStorage.getAddress(instanceId, "governance"));
+        TribalGovernance governance = TribalGovernance(poolStorage.getAddress("governance"));
         require(governance.isWhitelistedLender(msg.sender), "not lender");
 
         address lender = msg.sender;
 
         // Creating a disabled RollOverSetting struct and encoding it for storage
         Constants.RollOverSetting memory disabledSetting = Constants.RollOverSetting(false, false, false, false);
-        poolStorage.setMappingAddressToBytes(instanceId, "s_rollOverSettings", lender, abi.encode(disabledSetting));
+        poolStorage.setMappingAddressToBytes("s_rollOverSettings", lender, abi.encode(disabledSetting));
     }
 
     function _emitLenderTrancheRewardsChange(address lenderAddress, uint8 trancheId) internal {
-        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
 
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
@@ -399,11 +395,11 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
     ///////////////////////////////////*/
 
     function borrowerRecoverFirstLossCapital() external atStage(Constants.Stages.FUNDING_FAILED) {
-        uint256 copyFirstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
-        poolStorage.setUint256(instanceId, "firstLossAssets", 0);
+        uint256 copyFirstLossAssets = poolStorage.getUint256("firstLossAssets");
+        poolStorage.setUint256("firstLossAssets", 0);
 
-        address stableCoinContract = poolStorage.getAddress(instanceId, "stableCoinContract");
-        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        address stableCoinContract = poolStorage.getAddress("stableCoinContract");
+        address borrowerAddress = poolStorage.getAddress("borrowerAddress");
         SafeERC20.safeTransfer(IERC20(stableCoinContract), borrowerAddress, copyFirstLossAssets);
     }
 
@@ -411,7 +407,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
      *  If the pool is delinquent, the minimum payment is penalty + whatever interest that needs to be paid to bring the pool back to healthy state
      */
     function borrowerPayInterest(uint assets) external onlyPoolBorrower whenNotPaused {
-        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
         );
@@ -429,19 +425,19 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
             feeableInterestAmount = pcc.borrowerOutstandingInterest();
         }
 
-        uint256 protocolFeeWad = poolStorage.getUint256(instanceId, "protocolFeeWad");
+        uint256 protocolFeeWad = poolStorage.getUint256("protocolFeeWad");
 
         uint assetsToSendToFeeSharing = (feeableInterestAmount * protocolFeeWad) / Constants.WAD + penalty;
         uint assetsForLenders = assets - assetsToSendToFeeSharing;
 
-        uint256 borrowerInterestRepaid = poolStorage.getUint256(instanceId, "borrowerInterestRepaid");
+        uint256 borrowerInterestRepaid = poolStorage.getUint256("borrowerInterestRepaid");
 
-        poolStorage.setUint256(instanceId, "borrowerInterestRepaid", borrowerInterestRepaid + assets - penalty);
+        poolStorage.setUint256("borrowerInterestRepaid", borrowerInterestRepaid + assets - penalty);
 
-        IERC20 stableCoinContract = IERC20(poolStorage.getAddress(instanceId, "stableCoinContract"));
+        IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContract"));
 
         if (assetsToSendToFeeSharing > 0) {
-            address feeSharingContractAddress = poolStorage.getAddress(instanceId, "feeSharingContractAddress");
+            address feeSharingContractAddress = poolStorage.getAddress("feeSharingContractAddress");
             SafeERC20.safeTransfer(stableCoinContract, feeSharingContractAddress, assetsToSendToFeeSharing);
         }
 
@@ -450,7 +446,7 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         if (penalty > 0) {
             emit BorrowerPayPenalty(msg.sender, penalty);
         }
-        address borrowerAddress = poolStorage.getAddress(instanceId, "borrowerAddress");
+        address borrowerAddress = poolStorage.getAddress("borrowerAddress");
 
         emit BorrowerPayInterest(borrowerAddress, assets, assetsForLenders, assetsToSendToFeeSharing);
     }

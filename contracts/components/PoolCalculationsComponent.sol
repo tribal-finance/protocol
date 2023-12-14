@@ -20,13 +20,13 @@ contract PoolCalculationsComponent is Component {
      *  @param trancheId tranche id
      */
     function lenderTotalExpectedRewardsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
-        PoolFactory factory = PoolFactory(poolStorage.getAddress(instanceId, "poolFactory"));
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
 
         PoolCalculationsComponent pcc = PoolCalculationsComponent(
             factory.componentRegistry(instanceId, Identifiers.POOL_CALCULATIONS_COMPONENT)
         );
 
-        uint256 lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+        uint256 lendingTermSeconds = poolStorage.getUint256("lendingTermSeconds");
 
         return
             pcc.lenderTotalExpectedRewardsByTranche(
@@ -39,7 +39,6 @@ contract PoolCalculationsComponent is Component {
     function lenderEffectiveAprByTrancheWad(address lenderAddress, uint8 trancheId) public view returns (uint) {
         // uint stakedAssets = lendingPool.lenderStakedTokensByTranche(lenderAddress, trancheId);
         bytes memory rawData = poolStorage.getMappingUint256AddressToBytes(
-            instanceId,
             "lenderStakedTokensByTranche",
             trancheId,
             lenderAddress
@@ -50,12 +49,12 @@ contract PoolCalculationsComponent is Component {
         uint256 lockedPlatformTokens = rewardData.lockedPlatformTokens;
 
         // uint trancheBoostRatio = lendingPool.trancheBoostRatios(trancheId);
-        uint256 trancheBoostRatio = poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", trancheId);
+        uint256 trancheBoostRatio = poolStorage.getArrayUint256("trancheBoostRatios", trancheId);
         // uint trancheAPRWad = lendingPool.trancheAPRsWads(trancheId);
-        uint256 trancheAPRWad = poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", trancheId);
+        uint256 trancheAPRWad = poolStorage.getArrayUint256("trancheAPRsWads", trancheId);
 
         //uint trancheBoostedAPRWad = lendingPool.trancheBoostedAPRsWads(trancheId);
-        uint256 trancheBoostedAPRWad = poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", trancheId);
+        uint256 trancheBoostedAPRWad = poolStorage.getArrayUint256("trancheBoostedAPRsWads", trancheId);
 
         if (stakedAssets == 0) {
             return 0;
@@ -71,14 +70,13 @@ contract PoolCalculationsComponent is Component {
 
     function lenderRewardsByTrancheGeneratedByDate(address lenderAddress, uint8 trancheId) public view returns (uint) {
         // uint fundedAt = lendingPool.fundedAt();
-        uint fundedAt = poolStorage.getUint256(instanceId, "fundedAt");
+        uint fundedAt = poolStorage.getUint256("fundedAt");
         if (fundedAt == 0) {
             return 0;
         }
 
         // uint lenderDepositedAssets = lendingPool.lenderDepositedAssetsByTranche(lenderAddress, trancheId);
         bytes memory rawDataDeposited = poolStorage.getMappingUint256AddressToBytes(
-            instanceId,
             "lenderDepositedAssetsByTranche",
             trancheId,
             lenderAddress
@@ -90,7 +88,7 @@ contract PoolCalculationsComponent is Component {
         uint lenderEffectiveApr = lenderEffectiveAprByTrancheWad(lenderAddress, trancheId);
 
         // uint lendingTermSeconds = lendingPool.lendingTermSeconds();
-        uint lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+        uint lendingTermSeconds = poolStorage.getUint256("lendingTermSeconds");
 
         uint secondsElapsed = block.timestamp - fundedAt;
         if (secondsElapsed > lendingTermSeconds) {
@@ -107,16 +105,15 @@ contract PoolCalculationsComponent is Component {
 
         for (uint8 trancheId = 0; trancheId < tranchesCount; trancheId++) {
             // Retrieve total staked assets by tranche from poolStorage
-            uint stakedAssets = poolStorage.getArrayUint256(instanceId, "s_totalStakedAssetsByTranche", trancheId);
+            uint stakedAssets = poolStorage.getArrayUint256("s_totalStakedAssetsByTranche", trancheId);
             totalStakedAssets += stakedAssets;
 
             // Retrieve and calculate total locked platform tokens by tranche and tranche boost ratio
             uint256 lockedPlatformTokens = poolStorage.getArrayUint256(
-                instanceId,
                 "s_totalLockedPlatformTokensByTranche",
                 trancheId
             );
-            uint trancheBoostRatio = poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", trancheId);
+            uint trancheBoostRatio = poolStorage.getArrayUint256("trancheBoostRatios", trancheId);
             uint boostedAssets = lockedPlatformTokens / trancheBoostRatio;
             if (boostedAssets > stakedAssets) {
                 boostedAssets = stakedAssets;
@@ -125,8 +122,8 @@ contract PoolCalculationsComponent is Component {
             uint unBoostedAssets = stakedAssets - boostedAssets;
 
             // Retrieve tranche APRs and boosted APRs from poolStorage
-            uint trancheAPRWad = poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", trancheId);
-            uint trancheBoostedAPRWad = poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", trancheId);
+            uint trancheAPRWad = poolStorage.getArrayUint256("trancheAPRsWads", trancheId);
+            uint trancheBoostedAPRWad = poolStorage.getArrayUint256("trancheBoostedAPRsWads", trancheId);
 
             weightedSum += unBoostedAssets * trancheAPRWad;
             weightedSum += boostedAssets * trancheBoostedAPRWad;
@@ -140,12 +137,12 @@ contract PoolCalculationsComponent is Component {
     }
 
     function allLendersEffectiveAprWad() public view returns (uint256) {
-        return allLendersEffectiveAprWad(poolStorage.getUint256(instanceId, "tranchesCount"));
+        return allLendersEffectiveAprWad(poolStorage.getUint256("tranchesCount"));
     }
 
     function poolBalance() public view returns (uint) {
-        uint firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
-        uint borrowerInterestRepaid = poolStorage.getUint256(instanceId, "borrowerInterestRepaid");
+        uint firstLossAssets = poolStorage.getUint256("firstLossAssets");
+        uint borrowerInterestRepaid = poolStorage.getUint256("borrowerInterestRepaid");
         uint allLendersInterestByDate = allLendersInterestByDate();
 
         uint positiveBalance = firstLossAssets + borrowerInterestRepaid;
@@ -156,11 +153,11 @@ contract PoolCalculationsComponent is Component {
     }
 
     function poolBalanceThreshold() public view returns (uint) {
-        uint borrowedAssets = poolStorage.getUint256(instanceId, "borrowedAssets");
-        uint borrowerTotalInterestRateWad = poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad");
-        uint repaymentRecurrenceDays = poolStorage.getUint256(instanceId, "repaymentRecurrenceDays");
-        uint gracePeriodDays = poolStorage.getUint256(instanceId, "gracePeriodDays");
-        uint firstLossAssets = poolStorage.getUint256(instanceId, "firstLossAssets");
+        uint borrowedAssets = poolStorage.getUint256("borrowedAssets");
+        uint borrowerTotalInterestRateWad = poolStorage.getUint256("borrowerTotalInterestRateWad");
+        uint repaymentRecurrenceDays = poolStorage.getUint256("repaymentRecurrenceDays");
+        uint gracePeriodDays = poolStorage.getUint256("gracePeriodDays");
+        uint firstLossAssets = poolStorage.getUint256("firstLossAssets");
 
         uint dailyBorrowerInterestAmount = (borrowedAssets * borrowerTotalInterestRateWad) / Constants.WAD / 365;
         uint interestGoDownAmount = (repaymentRecurrenceDays + gracePeriodDays) * dailyBorrowerInterestAmount;
@@ -173,9 +170,9 @@ contract PoolCalculationsComponent is Component {
     function borrowerPenaltyAmount() public view returns (uint) {
         uint poolBalance = poolBalance();
         uint poolBalanceThreshold = poolBalanceThreshold();
-        uint collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
+        uint collectedAssets = poolStorage.getUint256("collectedAssets");
         uint allLendersEffectiveAprWad = allLendersEffectiveAprWad();
-        uint penaltyRateWad = poolStorage.getUint256(instanceId, "penaltyRateWad");
+        uint penaltyRateWad = poolStorage.getUint256("penaltyRateWad");
 
         if (poolBalance >= poolBalanceThreshold) {
             return 0;
@@ -196,10 +193,10 @@ contract PoolCalculationsComponent is Component {
     }
 
     function allLendersInterest() public view returns (uint256) {
-        uint256 tranchesCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        uint256 tranchesCount = poolStorage.getUint256("tranchesCount");
         uint256 allLendersAprWad = allLendersEffectiveAprWad(tranchesCount);
-        uint256 collectedAssets = poolStorage.getUint256(instanceId, "collectedAssets");
-        uint256 lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+        uint256 collectedAssets = poolStorage.getUint256("collectedAssets");
+        uint256 lendingTermSeconds = poolStorage.getUint256("lendingTermSeconds");
 
         // Make sure that WAD and YEAR are defined or retrieved correctly
         // uint WAD = getWadValue(); // if WAD is not a global constant
@@ -209,8 +206,8 @@ contract PoolCalculationsComponent is Component {
     }
 
     function allLendersInterestByDate() public view returns (uint) {
-        uint256 fundedAt = poolStorage.getUint256(instanceId, "fundedAt");
-        uint256 lendingTermSeconds = poolStorage.getUint256(instanceId, "lendingTermSeconds");
+        uint256 fundedAt = poolStorage.getUint256("fundedAt");
+        uint256 lendingTermSeconds = poolStorage.getUint256("lendingTermSeconds");
         if (fundedAt == 0 || block.timestamp <= fundedAt) {
             return 0;
         }
@@ -222,34 +219,34 @@ contract PoolCalculationsComponent is Component {
     }
 
     function trancheVaultContracts() public view returns (TrancheVault[] memory contracts) {
-        uint256 trancheCount = poolStorage.getUint256(instanceId, "tranchesCount");
+        uint256 trancheCount = poolStorage.getUint256("tranchesCount");
         contracts = new TrancheVault[](trancheCount);
 
         for (uint i = 0; i < trancheCount; ++i) {
-            address trancheVaultAddress = poolStorage.getArrayAddress(instanceId, "trancheVaultAddresses", i);
+            address trancheVaultAddress = poolStorage.getArrayAddress("trancheVaultAddresses", i);
             contracts[i] = TrancheVault(trancheVaultAddress);
         }
     }
 
     function setInitializer(Constants.LendingPoolParams calldata params) public {
-        poolStorage.setString(instanceId, "name", params.name);
-        poolStorage.setString(instanceId, "token", params.token);
+        poolStorage.setString("name", params.name);
+        poolStorage.setString("token", params.token);
 
         // Tranche APRs, Boosted APRs, Boost Ratios, and Coverages are arrays of uint256
         for (uint i = 0; i < params.trancheAPRsWads.length; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheAPRsWads", i, params.trancheAPRsWads[i]);
+            poolStorage.setArrayUint256("trancheAPRsWads", i, params.trancheAPRsWads[i]);
         }
 
         for (uint i = 0; i < params.trancheBoostedAPRsWads.length; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
+            poolStorage.setArrayUint256("trancheBoostedAPRsWads", i, params.trancheBoostedAPRsWads[i]);
         }
 
         for (uint i = 0; i < params.trancheBoostRatios.length; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheBoostRatios", i, params.trancheBoostRatios[i]);
+            poolStorage.setArrayUint256("trancheBoostRatios", i, params.trancheBoostRatios[i]);
         }
 
         for (uint i = 0; i < params.trancheCoveragesWads.length; i++) {
-            poolStorage.setArrayUint256(instanceId, "trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
+            poolStorage.setArrayUint256("trancheCoveragesWads", i, params.trancheCoveragesWads[i]);
         }
     }
 
@@ -259,7 +256,7 @@ contract PoolCalculationsComponent is Component {
      */
     function lenderRewardsByTrancheRedeemed(address lenderAddress, uint8 trancheId) public view returns (uint256) {
         Constants.Rewardable memory rewardable = abi.decode(
-            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress),
+            poolStorage.getMappingUint256AddressToBytes("s_trancheRewardables", trancheId, lenderAddress),
             (Constants.Rewardable)
         );
         return rewardable.redeemedRewards;
@@ -290,12 +287,12 @@ contract PoolCalculationsComponent is Component {
     function lenderPlatformTokensByTrancheLockable(address lenderAddress, uint8 trancheId) public view returns (uint) {
         // Fetching Rewardable struct from poolStorage
         Constants.Rewardable memory r = abi.decode(
-            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress),
+            poolStorage.getMappingUint256AddressToBytes("s_trancheRewardables", trancheId, lenderAddress),
             (Constants.Rewardable)
         );
 
         // Fetching trancheBoostRatio for the given trancheId from poolStorage
-        uint trancheBoostRatio = poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", trancheId);
+        uint trancheBoostRatio = poolStorage.getArrayUint256("trancheBoostRatios", trancheId);
 
         uint maxLockablePlatformTokens = r.stakedAssets * trancheBoostRatio;
         return maxLockablePlatformTokens - r.lockedPlatformTokens;
@@ -304,7 +301,7 @@ contract PoolCalculationsComponent is Component {
     function lenderDepositedAssetsByTranche(address lenderAddress, uint8 trancheId) public view returns (uint) {
         // Fetching Rewardable struct for the given trancheId and lenderAddress from poolStorage
         Constants.Rewardable memory r = abi.decode(
-            poolStorage.getMappingUint256AddressToBytes(instanceId, "s_trancheRewardables", trancheId, lenderAddress),
+            poolStorage.getMappingUint256AddressToBytes("s_trancheRewardables", trancheId, lenderAddress),
             (Constants.Rewardable)
         );
 
@@ -322,8 +319,8 @@ contract PoolCalculationsComponent is Component {
     function borrowerAdjustedInterestRateWad() public view returns (uint adj) {
         return
             borrowerAdjustedInterestRateWad(
-                poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad"),
-                poolStorage.getUint256(instanceId, "lendingTermSeconds")
+                poolStorage.getUint256("borrowerTotalInterestRateWad"),
+                poolStorage.getUint256("lendingTermSeconds")
             );
     }
 
@@ -337,7 +334,7 @@ contract PoolCalculationsComponent is Component {
     function borrowerExpectedInterest() public view returns (uint256) {
         return
             borrowerExpectedInterest(
-                poolStorage.getUint256(instanceId, "collectedAssets"),
+                poolStorage.getUint256("collectedAssets"),
                 borrowerAdjustedInterestRateWad()
             );
     }
@@ -355,16 +352,16 @@ contract PoolCalculationsComponent is Component {
     function borrowerOutstandingInterest() public view returns (uint) {
         return
             borrowerOutstandingInterest(
-                poolStorage.getUint256(instanceId, "borrowerInterestRepaid"),
+                poolStorage.getUint256("borrowerInterestRepaid"),
                 borrowerExpectedInterest()
             );
     }
 
     function borrowerExcessSpread() public view returns (uint) {
-        uint borrowerInterestRepaid = poolStorage.getUint256(instanceId, "borrowerInterestRepaid");
+        uint borrowerInterestRepaid = poolStorage.getUint256("borrowerInterestRepaid");
         uint allLendersInterest = allLendersInterest();
         uint borrowerExpectedInterest = borrowerExpectedInterest();
-        uint protocolFeeWad = poolStorage.getUint256(instanceId, "protocolFeeWad");
+        uint protocolFeeWad = poolStorage.getUint256("protocolFeeWad");
 
         if (borrowerOutstandingInterest(borrowerInterestRepaid, borrowerExpectedInterest) > 0) {
             return 0;

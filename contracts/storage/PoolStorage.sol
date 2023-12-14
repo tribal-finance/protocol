@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.18;
 
+
+import "../components/Component.sol";
 import "../governance/TribalGovernance.sol";
 import "../utils/Constants.sol";
 
@@ -106,118 +108,114 @@ contract PoolStorage {
     }
 
     // String Storage
-    function setString(uint256 instanceId, string memory label, string memory value) external canWrite {
-        stringStorage[keccak256(abi.encode(instanceId, label))] = value;
+    function setString(string memory label, string memory value) external canWrite {
+        stringStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getString(uint256 instanceId, string memory label) external view returns (string memory) {
-        return stringStorage[(keccak256(abi.encode(instanceId, label)))];
+    function getString(string memory label) external view returns (string memory) {
+        return stringStorage[(keccak256(abi.encode(Component(msg.sender), label)))];
     }
 
     // Bytes Storage
-    function setBytes(uint256 instanceId, string memory label, bytes memory value) external canWrite {
-        bytesStorage[keccak256(abi.encode(instanceId, label))] = value;
+    function setBytes(string memory label, bytes memory value) external canWrite {
+        bytesStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getBytes(uint256 instanceId, string memory label) external view returns (bytes memory) {
-        return bytesStorage[keccak256(abi.encode(instanceId, label))];
+    function getBytes(string memory label) external view returns (bytes memory) {
+        return bytesStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))];
     }
 
     // Uint Storage
-    function setUint256(uint256 instanceId, string memory label, uint256 value) external canWrite {
-        uintStorage[keccak256(abi.encode(instanceId, label))] = value;
+    function setUint256(string memory label, uint256 value) external canWrite {
+        uintStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getUint256(uint256 instanceId, string memory label) external view returns (uint256) {
-        return uintStorage[keccak256(abi.encode(instanceId, label))];
+    function getUint256(string memory label) external view returns (uint256) {
+        return uintStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))];
     }
 
     // Int Storage
-    function setInt256(uint256 instanceId, string memory label, int256 value) external canWrite {
-        intStorage[keccak256(abi.encode(instanceId, label))] = value;
+    function setInt256(string memory label, int256 value) external canWrite {
+        intStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getInt256(uint256 instanceId, string memory label) external view returns (int256) {
-        return intStorage[keccak256(abi.encode(instanceId, label))];
+    function getInt256(string memory label) external view returns (int256) {
+        return intStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))];
     }
 
     // Address Storage
-    function setAddress(uint256 instanceId, string memory label, address value) external canWrite {
-        addressStorage[keccak256(abi.encode(instanceId, label))] = value;
+    function setAddress(string memory label, address value) external canWrite {
+        addressStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getAddress(uint256 instanceId, string memory label) external view returns (address) {
-        return addressStorage[keccak256(abi.encode(instanceId, label))];
+    function getAddress(string memory label) external view returns (address) {
+        return addressStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))];
     }
 
     // Boolean Storage
-    function setBoolean(uint256 instanceId, string memory label, bool value) external canWrite {
-        booleanStorage[keccak256(abi.encode(instanceId, label))] = value;
+    function setBoolean(string memory label, bool value) external canWrite {
+        booleanStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getBoolean(uint256 instanceId, string memory label) external view returns (bool) {
-        return booleanStorage[keccak256(abi.encode(instanceId, label))];
+    function getBoolean(string memory label) external view returns (bool) {
+        return booleanStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))];
     }
 
     // Bytes32 Storage
-    function setBytes32(uint256 instanceId, string memory label, bytes32 value) external canWrite {
-        bytes32Storage[keccak256(abi.encode(instanceId, label))] = value;
+    function setBytes32(string memory label, bytes32 value) external canWrite {
+        bytes32Storage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))] = value;
     }
 
-    function getBytes32(uint256 instanceId, string memory label) external view returns (bytes32) {
-        return bytes32Storage[keccak256(abi.encode(instanceId, label))];
+    function getBytes32(string memory label) external view returns (bytes32) {
+        return bytes32Storage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))];
     }
 
     // complex localized types
-    function setArrayAddress(uint256 instanceId, string memory label, uint256 key, address value) external canWrite {
-        arrayAddressStorage[keccak256(abi.encode(instanceId, label))][key] = value;
+    function setArrayAddress(string memory label, uint256 key, address value) external canWrite {
+        arrayAddressStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key] = value;
     }
 
-    function getArrayAddress(uint256 instanceId, string memory label, uint256 key) external view returns (address) {
-        return arrayAddressStorage[keccak256(abi.encode(instanceId, label))][key];
+    function getArrayAddress(string memory label, uint256 key) external view returns (address) {
+        return arrayAddressStorage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key];
     }
 
-    function setArrayUint256(uint256 instanceId, string memory label, uint256 key, uint256 value) external canWrite {
-        arrayUint256Storage[keccak256(abi.encode(instanceId, label))][key] = value;
+    function setArrayUint256(string memory label, uint256 key, uint256 value) external canWrite {
+        arrayUint256Storage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key] = value;
     }
 
-    function getArrayUint256(uint256 instanceId, string memory label, uint256 key) external view returns (uint256) {
-        return arrayUint256Storage[keccak256(abi.encode(instanceId, label))][key];
+    function getArrayUint256(string memory label, uint256 key) external view returns (uint256) {
+        return arrayUint256Storage[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key];
     }
 
     function setMappingAddressToBytes(
-        uint256 instanceId,
         string memory label,
         address key,
         bytes memory value
     ) external canWrite {
-        mappingAddressToBytes[keccak256(abi.encode(instanceId, label))][key] = value;
+        mappingAddressToBytes[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key] = value;
     }
 
     function getMappingAddressToBytes(
-        uint256 instanceId,
         string memory label,
         address key
     ) external view returns (bytes memory) {
-        return mappingAddressToBytes[keccak256(abi.encode(instanceId, label))][key];
+        return mappingAddressToBytes[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key];
     }
 
     function setMappingUint256AddressToBytes(
-        uint256 instanceId,
         string memory label,
         uint256 key0,
         address key1,
         bytes memory value
     ) external canWrite {
-        mappingUintAddressToBytes[keccak256(abi.encode(instanceId, label))][key0][key1] = value;
+        mappingUintAddressToBytes[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key0][key1] = value;
     }
 
     function getMappingUint256AddressToBytes(
-        uint256 instanceId,
         string memory label,
         uint256 key0,
         address key1    
     ) external view returns (bytes memory) {
-        return mappingUintAddressToBytes[keccak256(abi.encode(instanceId, label))][key0][key1];
+        return mappingUintAddressToBytes[keccak256(abi.encode(Component(msg.sender).instanceId(), label))][key0][key1];
     }
 }
