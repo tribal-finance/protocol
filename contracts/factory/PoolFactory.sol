@@ -47,6 +47,8 @@ contract PoolFactory is Initializable {
     mapping(uint256 => mapping(bytes32 => address)) public componentRegistry;
     uint256 public deploymentCounter;
 
+    uint256[] public instanceIds;
+
     function initialize(address _governance, address _poolStorage) public initializer {
         governance = TribalGovernance(_governance);
         poolStorage = PoolStorage(_poolStorage);
@@ -111,18 +113,19 @@ contract PoolFactory is Initializable {
 
         address[] memory trancheVaultAddresses = new address[](params.tranchesCount);
         
-
+        uint256 instanceId = uint256(keccak256(abi.encode(block.number, deploymentCounter)));
         for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
             Component c = clonedPoolComponents[i];
-            c.initialize(deploymentCounter, poolStorage);
+            c.initialize(instanceId, poolStorage);
             governance.grantRole(Constants.POOL_STORAGE_WRITER, address(c));
 
             bytes32 cID = c.identifer();
             
-            componentRegistry[deploymentCounter][cID] = address(c);
+            componentRegistry[instanceId][cID] = address(c);
+
         }
 
-        PoolCoreComponent(address(componentRegistry[deploymentCounter][Identifiers.POOL_CORE_COMPONENT])).initializeFromParams(params, trancheVaultAddresses, feeSharingContractAddress, address(governance), address(this));
+        PoolCoreComponent(address(componentRegistry[instanceId][Identifiers.POOL_CORE_COMPONENT])).initializeFromParams(params, trancheVaultAddresses, feeSharingContractAddress, address(governance), address(this));
 
        // address[] memory trancheVaultAddresses = _deployTrancheVaults(
        //     params,
@@ -134,6 +137,7 @@ contract PoolFactory is Initializable {
         // initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
         
         deploymentCounter++;
+        instanceIds.push(instanceId);
         return clonedPoolComponents;
     }
 
