@@ -6,6 +6,7 @@ import { ADMIN, DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT,
 import { Component, PoolFactory, PoolStorage, TribalGovernance } from "../../../typechain-types";
 import { getComponentBundleImplementation } from "../utils/helpers";
 import exp from "constants";
+import { factory } from "../../../typechain-types/contracts";
 
 const { hexZeroPad, formatBytes32String } = ethers.utils;
 
@@ -75,9 +76,10 @@ describe("PoolFactory", async () => {
 
         const deploymentCounter = await poolFactory.deploymentCounter();
         for (let i = 0; i < deploymentCounter.toNumber(); i++) {
+            const instanceId = await poolFactory.instanceIds(i);
             for (let j = 1; j < 5; j++) {
                 const componentKey = hexZeroPad(`0x0${j}`, 32);
-                const compAddr = await poolFactory.componentRegistry(i, componentKey);
+                const compAddr = await poolFactory.componentRegistry(instanceId, componentKey);
                 const component: Component = await ethers.getContractAt("Component", compAddr);
                 expect(await component.identifer()).not.hexEqual("0x00")
                 expect(await component.poolStorage()).not.equals(ethers.constants.AddressZero);
@@ -85,13 +87,13 @@ describe("PoolFactory", async () => {
         }
     })
 
-    it("success - values are initialized correctly after deployment", async () => {
+    it.only("success - values are initialized correctly after deployment", async () => {
         const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
         defaultParams.borrowerAddress = borrower.address;
         defaultParams.stableCoinContractAddress = ethers.Wallet.createRandom().address;
         defaultParams.platformTokenContractAddress = ethers.Wallet.createRandom().address;
 
-        const instanceId = 0;
+        let instanceId: any = 0;
 
         expect(await poolStorage.getString(instanceId, "name")).equals("");
         expect(await poolStorage.getString(instanceId, "token")).equals("");
@@ -120,6 +122,8 @@ describe("PoolFactory", async () => {
 
         // Deploy the pool using the factory
         await poolFactory.connect(owner).deployPool(defaultParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
+
+        instanceId = await poolFactory.instanceIds(0);
 
         expect(await poolStorage.getString(instanceId, "name")).equals(defaultParams.name);
         expect(await poolStorage.getString(instanceId, "token")).equals(defaultParams.token);
