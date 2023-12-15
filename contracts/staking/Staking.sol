@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "../authority/AuthorityAware.sol";
+import "../governance/TribalGovernance.sol";
 import "./IStaking.sol";
 
 /** @title Staking smart contract
@@ -14,7 +14,7 @@ import "./IStaking.sol";
  *  You can see the math explanation in this video: https://www.youtube.com/watch?v=mo6rHnDU8us&t=728s
  *  In addition to that, I want to mention that it is inspired by Synthetix staking contract
  */
-contract Staking is IStaking, Initializable, AuthorityAware {
+contract Staking is IStaking, Initializable {
     /*///////////////////////////////////
        CONSTANTS
     ///////////////////////////////////*/
@@ -46,6 +46,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /// @dev unstake requests
     mapping(address => UnstakeRequest) public unstakeRequests;
 
+    TribalGovernance public governance;
+
     /*///////////////////////////////////
        EVENTS
     ///////////////////////////////////*/
@@ -59,13 +61,13 @@ contract Staking is IStaking, Initializable, AuthorityAware {
        INITIALIZER
     ///////////////////////////////////*/
     /** @notice Initialize the contract
-     *  @param _authority Address of the Authority contract
+     *  @param _governance Address of the Authority contract
      *  @param _stakingToken Address of the PLATFORM token
      *  @param _rewardToken Address of the USDC token
      *  @param _cooldownPeriodSeconds Cooldown period in seconds
      */
     function initialize(
-        address _authority,
+        TribalGovernance _governance,
         ERC20Upgradeable _stakingToken,
         ERC20Upgradeable _rewardToken,
         uint256 _cooldownPeriodSeconds
@@ -73,8 +75,7 @@ contract Staking is IStaking, Initializable, AuthorityAware {
         stakingToken = _stakingToken;
         rewardToken = _rewardToken;
         cooldownPeriodSeconds = _cooldownPeriodSeconds;
-        __Ownable_init();
-        __AuthorityAware__init(_authority);
+        governance = _governance;
     }
 
     constructor() {
@@ -99,7 +100,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /** @notice Stake PLATFORM tokens
      *  @param amount Amount of PLATFORM tokens to stake
      */
-    function stake(uint256 amount) external onlyWhitelisted {
+    function stake(uint256 amount) external {
+        require(governance.isWhitelisted(msg.sender), "not whitelisted");
         require(amount > 0, "Amount must be greater than 0");
         require(stakingToken.balanceOf(msg.sender) >= amount, "Insufficient balance");
 
@@ -116,7 +118,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /** @notice Unstake requested amount of PLATFORM tokens
      *  You should call requestUnstake() and wait for the cooldown period to pass before calling this function
      */
-    function unstake() external onlyWhitelisted {
+    function unstake() external {
+        require(governance.isWhitelisted(msg.sender), "not whitelisted");
         UnstakeRequest storage r = unstakeRequests[msg.sender];
         require(r.timestampExecutable > 0, "No unstake request");
         require(block.timestamp >= r.timestampExecutable, "Cooldown period not passed");
@@ -133,7 +136,8 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     /** @notice Request to unstake PLATFORM tokens
      *  @param amount Amount of PLATFORM tokens to unstake
      */
-    function requestUnstake(uint256 amount) external onlyWhitelisted {
+    function requestUnstake(uint256 amount) external {
+        require(governance.isWhitelisted(msg.sender), "not whitelisted");
         require(amount > 0, "Amount must be greater than 0");
         require(stakedBalanceOf[msg.sender] >= amount, "Insufficient staked balance");
         require(unstakeRequests[msg.sender].timestampExecutable == 0, "Unstake request already exists");
@@ -147,9 +151,9 @@ contract Staking is IStaking, Initializable, AuthorityAware {
     }
 
     /// @notice Claim rewards
-    function claimReward() external onlyWhitelisted returns (uint) {
+    function claimReward() external returns (uint256) {
+        require(governance.isWhitelisted(msg.sender), "not whitelisted");
         _updateRewards(msg.sender);
-
         uint reward = earned[msg.sender];
         if (reward > 0) {
             earned[msg.sender] = 0;

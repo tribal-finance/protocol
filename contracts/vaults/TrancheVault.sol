@@ -8,11 +8,11 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 
-import "../authority/AuthorityAware.sol";
+import "../governance/TribalGovernance.sol";
 import "../pool/LendingPool.sol";
 import "../factory/PoolFactory.sol";
 
-contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable, AuthorityAware {
+contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable {
     using MathUpgradeable for uint256;
 
     /*////////////////////////////////////////////////
@@ -107,6 +107,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
 
     /* transferEnabled */
     bool private s_transferEnabled;
+    TribalGovernance private _governance;
     event ChangeTransferEnabled(address indexed actor, bool oldValue, bool newValue);
 
     function transferEnabled() public view returns (bool) {
@@ -157,7 +158,7 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     modifier onlyOwnerOrPool() {
-        require(_msgSender() == poolAddress() || _msgSender() == owner(), "Vault: onlyOwnerOrPool");
+        require(_msgSender() == poolAddress() || _governance.hasRole(Constants.OWNER, msg.sender), "Vault: onlyOwnerOrPool");
         _;
     }
 
@@ -205,9 +206,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         _setMaxFundingCapacity(_maxCapacity);
         __ERC20_init(_tokenName, _symbol);
         __Pausable_init();
-        __Ownable_init();
         __ERC4626_init(IERC20Upgradeable(_underlying));
-        __AuthorityAware__init(_authority);
+        _governance = TribalGovernance(_authority);
     }
 
     /*////////////////////////////////////////////////
@@ -245,12 +245,14 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     }
 
     /** @dev Pauses the pool */
-    function pause() external onlyOwnerOrAdmin {
+    function pause() external {
+        require(_governance.isAdmin(msg.sender), "not admin");
         _pause();
     }
 
     /** @dev Unpauses the pool */
-    function unpause() external onlyOwnerOrAdmin {
+    function unpause() external {
+        require(_governance.isAdmin(msg.sender), "not admin");
         _unpause();
     }
 
@@ -303,7 +305,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual override whenNotPaused onlyLender whenDepositEnabled returns (uint256) {
+    ) public virtual override whenNotPaused whenDepositEnabled returns (uint256) {
+        require(_governance.isWhitelistedLender(msg.sender), "not admin");
         return super.deposit(assets, receiver);
     }
 
@@ -311,7 +314,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual override whenNotPaused onlyLender whenDepositEnabled returns (uint256) {
+    ) public virtual override whenNotPaused whenDepositEnabled returns (uint256) {
+        require(_governance.isWhitelistedLender(msg.sender), "not admin");
         return super.mint(shares, receiver);
     }
 
@@ -326,7 +330,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 assets,
         address receiver,
         address owner
-    ) public override onlyLender whenNotPaused whenWithdrawEnabled returns (uint256) {
+    ) public override whenNotPaused whenWithdrawEnabled returns (uint256) {
+        require(_governance.isWhitelistedLender(msg.sender), "not admin");
         return super.withdraw(assets, receiver, owner);
     }
 
@@ -335,7 +340,8 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         uint256 shares,
         address receiver,
         address owner
-    ) public override onlyLender whenNotPaused whenWithdrawEnabled returns (uint256) {
+    ) public override whenNotPaused whenWithdrawEnabled returns (uint256) {
+        require(_governance.isWhitelistedLender(msg.sender), "not admin");
         return super.redeem(shares, receiver, owner);
     }
 
