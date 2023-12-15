@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { deployProtocol, labeledSigners } from "../utils/deployments";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ADMIN, DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT, DEPLOYER, LENDER } from "../utils/constants";
-import { Component, PoolFactory, PoolStorage, TribalGovernance } from "../../../typechain-types";
+import { Component, PoolFactory, PoolStorage, PoolStorageTester, TribalGovernance } from "../../../typechain-types";
 import { getComponentBundleImplementation } from "../utils/helpers";
 import exp from "constants";
 import { factory } from "../../../typechain-types/contracts";
@@ -16,6 +16,8 @@ describe("PoolFactory", async () => {
     let governance: TribalGovernance;
     let poolStorage: PoolStorage;
     let poolFactory: PoolFactory
+
+    let poolStorageTester: PoolStorageTester;
 
     let deployer: SignerWithAddress;
     let admin: SignerWithAddress;
@@ -42,6 +44,7 @@ describe("PoolFactory", async () => {
 
         governance = deployment.governance;
         poolStorage = deployment.poolStorage;
+        poolStorageTester = deployment.poolStorageTester;
         poolFactory = deployment.poolFactory;
     })
 
@@ -87,7 +90,7 @@ describe("PoolFactory", async () => {
         }
     })
 
-    it.only("success - values are initialized correctly after deployment", async () => {
+    it("success - values are initialized correctly after deployment", async () => {
         const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
         defaultParams.borrowerAddress = borrower.address;
         defaultParams.stableCoinContractAddress = ethers.Wallet.createRandom().address;
@@ -95,59 +98,62 @@ describe("PoolFactory", async () => {
 
         let instanceId: any = 0;
 
-        expect(await poolStorage.getString(instanceId, "name")).equals("");
-        expect(await poolStorage.getString(instanceId, "token")).equals("");
-        expect(await poolStorage.getAddress(instanceId, "stableCoinContractAddress")).equals(ethers.constants.AddressZero);
-        expect(await poolStorage.getAddress(instanceId, "platformTokenContractAddress")).equals(ethers.constants.AddressZero);
-        expect(await poolStorage.getAddress(instanceId, "borrowerAddress")).equals(ethers.constants.AddressZero);
-        expect(await poolStorage.getUint256(instanceId, "minFundingCapacity")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "maxFundingCapacity")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "fundingPeriodSeconds")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "lendingTermSeconds")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "firstLossAssets")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "repaymentRecurrenceDays")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "gracePeriodDays")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "protocolFeeWad")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "defaultPenalty")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "penaltyRateWad")).equals(0);
-        expect(await poolStorage.getUint256(instanceId, "tranchesCount")).equals(0);
+        expect(ethers.utils.defaultAbiCoder.decode(["string"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getString", ["name"])))).to.deep.equal([""]);
+        expect(ethers.utils.defaultAbiCoder.decode(["string"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getString", ["token"])))).to.deep.equal([""]);
+        expect(ethers.utils.defaultAbiCoder.decode(["address"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getAddress", ["stableCoinContractAddress"])))).to.deep.equal([ethers.constants.AddressZero]);
+        expect(ethers.utils.defaultAbiCoder.decode(["address"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getAddress", ["platformTokenContractAddress"])))).to.deep.equal([ethers.constants.AddressZero]);
+        expect(ethers.utils.defaultAbiCoder.decode(["address"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getAddress", ["borrowerAddress"])))).to.deep.equal([ethers.constants.AddressZero]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["minFundingCapacity"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["maxFundingCapacity"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["fundingPeriodSeconds"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["lendingTermSeconds"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["firstLossAssets"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["borrowerTotalInterestRateWad"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["repaymentRecurrenceDays"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["gracePeriodDays"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["protocolFeeWad"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["penaltyRateWad"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["defaultPenalty"])))).to.deep.equal([0]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["tranchesCount"])))).to.deep.equal([0]);
 
         for(let i = 0; i < defaultParams.tranchesCount; i++) {
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", i)).equals(0);
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", i)).equals(0);
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", i)).equals(0);
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheCoveragesWads", i)).equals(0);
-        }
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheAPRsWads", i])))).to.deep.equal([0]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheBoostedAPRsWads", i])))).to.deep.equal([0]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheBoostRatios", i])))).to.deep.equal([0]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheCoveragesWads", i])))).to.deep.equal([0]);
 
+        }
+        
         // Deploy the pool using the factory
         await poolFactory.connect(owner).deployPool(defaultParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
-
         instanceId = await poolFactory.instanceIds(0);
+        await poolStorageTester.setInstanceId(instanceId);
 
-        expect(await poolStorage.getString(instanceId, "name")).equals(defaultParams.name);
-        expect(await poolStorage.getString(instanceId, "token")).equals(defaultParams.token);
-        expect(await poolStorage.getAddress(instanceId, "stableCoinContractAddress")).equals(defaultParams.stableCoinContractAddress);
-        expect(await poolStorage.getAddress(instanceId, "platformTokenContractAddress")).equals(defaultParams.platformTokenContractAddress);
-        expect(await poolStorage.getAddress(instanceId, "borrowerAddress")).equals(defaultParams.borrowerAddress);
-        expect(await poolStorage.getUint256(instanceId, "minFundingCapacity")).equals(defaultParams.minFundingCapacity);
-        expect(await poolStorage.getUint256(instanceId, "maxFundingCapacity")).equals(defaultParams.maxFundingCapacity);
-        expect(await poolStorage.getUint256(instanceId, "fundingPeriodSeconds")).equals(defaultParams.fundingPeriodSeconds);
-        expect(await poolStorage.getUint256(instanceId, "lendingTermSeconds")).equals(defaultParams.lendingTermSeconds);
-        expect(await poolStorage.getUint256(instanceId, "firstLossAssets")).equals(defaultParams.firstLossAssets);
-        expect(await poolStorage.getUint256(instanceId, "borrowerTotalInterestRateWad")).equals(defaultParams.borrowerTotalInterestRateWad);
-        expect(await poolStorage.getUint256(instanceId, "repaymentRecurrenceDays")).equals(defaultParams.repaymentRecurrenceDays);
-        expect(await poolStorage.getUint256(instanceId, "gracePeriodDays")).equals(defaultParams.gracePeriodDays);
-        expect(await poolStorage.getUint256(instanceId, "protocolFeeWad")).equals(defaultParams.protocolFeeWad);
-        expect(await poolStorage.getUint256(instanceId, "defaultPenalty")).equals(defaultParams.defaultPenalty);
-        expect(await poolStorage.getUint256(instanceId, "penaltyRateWad")).equals(defaultParams.penaltyRateWad);
-        expect(await poolStorage.getUint256(instanceId, "tranchesCount")).equals(defaultParams.tranchesCount);
+        expect(ethers.utils.defaultAbiCoder.decode(["string"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getString", ["name"])))).to.deep.equal([defaultParams.name]);
+        expect(ethers.utils.defaultAbiCoder.decode(["string"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getString", ["token"])))).to.deep.equal([defaultParams.token]);
+        expect(ethers.utils.defaultAbiCoder.decode(["address"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getAddress", ["stableCoinContractAddress"])))).to.deep.equal([defaultParams.stableCoinContractAddress]);
+        expect(ethers.utils.defaultAbiCoder.decode(["address"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getAddress", ["platformTokenContractAddress"])))).to.deep.equal([defaultParams.platformTokenContractAddress]);
+        expect(ethers.utils.defaultAbiCoder.decode(["address"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getAddress", ["borrowerAddress"])))).to.deep.equal([defaultParams.borrowerAddress]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["minFundingCapacity"])))).to.deep.equal([defaultParams.minFundingCapacity]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["maxFundingCapacity"])))).to.deep.equal([defaultParams.maxFundingCapacity]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["fundingPeriodSeconds"])))).to.deep.equal([defaultParams.fundingPeriodSeconds]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["lendingTermSeconds"])))).to.deep.equal([defaultParams.lendingTermSeconds]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["firstLossAssets"])))).to.deep.equal([defaultParams.firstLossAssets]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["borrowerTotalInterestRateWad"])))).to.deep.equal([defaultParams.borrowerTotalInterestRateWad]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["repaymentRecurrenceDays"])))).to.deep.equal([defaultParams.repaymentRecurrenceDays]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["gracePeriodDays"])))).to.deep.equal([defaultParams.gracePeriodDays]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["protocolFeeWad"])))).to.deep.equal([defaultParams.protocolFeeWad]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["penaltyRateWad"])))).to.deep.equal([defaultParams.penaltyRateWad]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["defaultPenalty"])))).to.deep.equal([defaultParams.defaultPenalty]);
+        expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getUint256", ["tranchesCount"])))).to.deep.equal([defaultParams.tranchesCount]);
+
 
         for(let i = 0; i < defaultParams.tranchesCount; i++) {
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheAPRsWads", i)).equals(defaultParams.trancheAPRsWads[i]);
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostedAPRsWads", i)).equals(defaultParams.trancheBoostedAPRsWads[i]);
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheBoostRatios", i)).equals(defaultParams.trancheBoostRatios[i]);
-            expect(await poolStorage.getArrayUint256(instanceId, "trancheCoveragesWads", i)).equals(defaultParams.trancheCoveragesWads[i]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheAPRsWads", i])))).to.deep.equal([defaultParams.trancheAPRsWads[i]]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheBoostedAPRsWads", i])))).to.deep.equal([defaultParams.trancheBoostedAPRsWads[i]]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheBoostRatios", i])))).to.deep.equal([defaultParams.trancheBoostRatios[i]]);
+            expect(ethers.utils.defaultAbiCoder.decode(["uint256"], await poolStorageTester.callStatic.execute(poolStorage.interface.encodeFunctionData("getArrayUint256", ["trancheCoveragesWads", i])))).to.deep.equal([defaultParams.trancheCoveragesWads[i]]);
+
         }
     });
 

@@ -113,7 +113,7 @@ contract PoolStorage {
     }
 
     function getString(string memory label) external view returns (string memory) {
-        return stringStorage[(keccak256(abi.encode(Component(msg.sender), label)))];
+        return stringStorage[(keccak256(abi.encode(Component(msg.sender).instanceId(), label)))];
     }
 
     // Bytes Storage
