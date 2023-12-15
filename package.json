@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "hardhat test",
+    "test": "hardhat test ./test/v2/**/*.ts",
     "test-coverage": "hardhat coverage",
     "compile": "hardhat compile",
     "docgen": "hardhat docgen"

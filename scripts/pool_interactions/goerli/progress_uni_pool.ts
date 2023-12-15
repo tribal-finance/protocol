@@ -5,8 +5,8 @@ import {
   DeployedContractsType,
   deployUnitranchePool,
 } from "../../..//lib/pool_deployments";
-import { STAGES_LOOKUP } from "../../../test/helpers/stages";
-import { USDC } from "../../../test/helpers/conversion";
+import { STAGES_LOOKUP } from "../../../test/v1-legacy/helpers/stages";
+import { USDC } from "../../../test/v1-legacy/helpers/conversion";
 
 console.log("network: ", network.name);
 dotenv.config({ path: `./.env.${network.name}` });

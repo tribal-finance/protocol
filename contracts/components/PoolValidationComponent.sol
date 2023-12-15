@@ -5,11 +5,15 @@ import "./Component.sol";
 import "../vaults/TrancheVault.sol";
 import "../storage/PoolStorage.sol";
 import "../utils/Constants.sol";
+import "../utils/Identifiers.sol";
 
 pragma solidity 0.8.18;
 
 contract PoolValidationComponent is Component {
-    constructor(uint256 _instanceId, PoolStorage _poolStorage) Component(_instanceId, _poolStorage) {}
+
+    function initialize(uint256 _instanceId, PoolStorage _poolStorage) public initializer {
+        _initialize(_instanceId, Identifiers.POOL_VALIDATION_COMPONENT, _poolStorage);
+    }
 
     function validateInitParams(
         LendingPool.LendingPoolParams calldata params,

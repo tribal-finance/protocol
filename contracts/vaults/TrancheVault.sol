@@ -263,14 +263,14 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable 
 
     /**@dev used to approve the process of the rollover to deployments that do not yet exist (executed with older tranche before creation of next tranche) */
     function approveRollover(address lender, uint256 assets) external onlyOwnerOrPool {
-        LendingPool pool = LendingPool(poolAddress());
-        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
+        // LendingPool pool = LendingPool(poolAddress());
+        // PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
 
-        address[8] memory futureTranches = factory.nextTranches();
-        for (uint256 i = 0; i < futureTranches.length; i++) {
-            //super.approve(futureTranches[i], convertToShares(amount));
-            approvedRollovers[lender][futureTranches[i]] = assets;
-        }
+        // address[8] memory futureTranches = factory.nextTranches();
+        // for (uint256 i = 0; i < futureTranches.length; i++) {
+        //     //super.approve(futureTranches[i], convertToShares(amount));
+        //     approvedRollovers[lender][futureTranches[i]] = assets;
+        // }
     }
 
     function executeRolloverAndBurn(address lender, uint256 rewards) external onlyDeadTranche whenNotPaused returns (uint256) {
