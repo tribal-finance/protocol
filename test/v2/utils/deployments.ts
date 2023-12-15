@@ -1,9 +1,18 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { ethers, upgrades } from "hardhat";
-import { Component, FeeSharing, PoolFactory, PoolStorage, TribalGovernance } from "../../../typechain-types";
+import { Component, FeeSharing, PoolFactory, PoolStorage, PoolStorageTester, TribalGovernance } from "../../../typechain-types";
 import { ADMIN, BORROWER, DEPLOYER, LENDER, POOL_STORAGE_READER, POOL_STORAGE_WRITER } from "./constants";
 import { getNextAddresses } from "./helpers";
 
+export const deployPoolStorageTester = async (
+    deployer: SignerWithAddress
+): Promise<PoolStorageTester> => {
+    const PoolStorageTester = await ethers.getContractFactory("PoolStorageTester");
+    const poolStorageTester = await PoolStorageTester.deploy();
+    await poolStorageTester.deployed();
+
+    return poolStorageTester;
+}
 
 export const deployTribalGovernance = async (
     deployer: SignerWithAddress,
@@ -111,6 +120,7 @@ export const deployProtocol = async (): Promise<{
     governance: TribalGovernance
     poolStorage: PoolStorage,
     poolFactory: PoolFactory,
+    poolStorageTester: PoolStorageTester
 }> => {
 
     const { deployer, admin, owner, borrower, lender1, lender2, lender3, foundation, signers } = await labeledSigners();
@@ -123,20 +133,26 @@ export const deployProtocol = async (): Promise<{
     const poolStorage: PoolStorage = await deployPoolStorage(deployer, governance);
     const components: Component[] = await deployComponentBundle(deployer);
     const poolFactory: PoolFactory = await deployPoolFactory(deployer, governance, poolStorage);
+    const poolStorageTester: PoolStorageTester = await deployPoolStorageTester(deployer);
 
     // TODO replace with mock deployment
     await poolFactory.connect(admin).setFeeSharingContractAddress(ethers.Wallet.createRandom().address);
 
     await poolFactory.connect(admin).setPoolComponents(components.map(c => c.address))
     await governance.connect(admin).grantRole(BORROWER, borrower.address);
+    await poolStorageTester.setPoolStorage(poolStorage.address);
 
     // specific logic for making testing easier
     await governance.connect(admin).grantRole(POOL_STORAGE_READER, admin.address);
     await governance.connect(admin).grantRole(POOL_STORAGE_WRITER, admin.address);
 
+    await governance.connect(admin).grantRole(POOL_STORAGE_READER, poolStorageTester.address);
+    await governance.connect(admin).grantRole(POOL_STORAGE_WRITER, poolStorageTester.address);
+
     return {
         governance,
         poolStorage,
-        poolFactory
+        poolFactory,
+        poolStorageTester
     };
 }
