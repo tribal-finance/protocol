@@ -25,8 +25,11 @@ contract PoolStorage {
     mapping(bytes32 => bytes32) private bytes32Storage;
 
     mapping(bytes32 => mapping(uint256 => address)) arrayAddressStorage;
+    mapping(bytes32 => mapping(uint256 => uint256)) arrayUint256Storage;
 
     mapping(bytes32 => mapping(address => bytes)) mappingAddressToBytes;
+
+    mapping(bytes32 => mapping(uint256 => mapping(address => bytes))) mappingUintAddressToBytes;
 
     TribalGovernance public governance;
 
@@ -86,11 +89,11 @@ contract PoolStorage {
 
     // Global Boolean Storage
     function setBooleanGlobally(string memory label, bool value) external canWrite {
-        globalAooleanStorage[keccak256(abi.encode(label))] = value; // Note: Typo here, it should be `globalBooleanStorage`
+        globalAooleanStorage[keccak256(abi.encode(label))] = value; 
     }
 
     function getBooleanGlobally(string memory label) external view returns (bool) {
-        return globalAooleanStorage[keccak256(abi.encode(label))]; // Note: Typo here, it should be `globalBooleanStorage`
+        return globalAooleanStorage[keccak256(abi.encode(label))];
     }
 
     // Global Bytes32 Storage
@@ -174,6 +177,14 @@ contract PoolStorage {
         return arrayAddressStorage[keccak256(abi.encode(instanceId, label))][key];
     }
 
+    function setArrayUint256(uint256 instanceId, string memory label, uint256 key, uint256 value) external canWrite {
+        arrayUint256Storage[keccak256(abi.encode(instanceId, label))][key] = value;
+    }
+
+    function getArrayUint256(uint256 instanceId, string memory label, uint256 key) external view returns (uint256) {
+        return arrayUint256Storage[keccak256(abi.encode(instanceId, label))][key];
+    }
+
     function setMappingAddressToBytes(
         uint256 instanceId,
         string memory label,
@@ -189,5 +200,24 @@ contract PoolStorage {
         address key
     ) external view returns (bytes memory) {
         return mappingAddressToBytes[keccak256(abi.encode(instanceId, label))][key];
+    }
+
+    function setMappingUint256AddressToBytes(
+        uint256 instanceId,
+        string memory label,
+        uint256 key0,
+        address key1,
+        bytes memory value
+    ) external canWrite {
+        mappingUintAddressToBytes[keccak256(abi.encode(instanceId, label))][key0][key1] = value;
+    }
+
+    function getMappingUint256AddressToBytes(
+        uint256 instanceId,
+        string memory label,
+        uint256 key0,
+        address key1    
+    ) external view returns (bytes memory) {
+        return mappingUintAddressToBytes[keccak256(abi.encode(instanceId, label))][key0][key1];
     }
 }

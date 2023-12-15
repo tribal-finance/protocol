@@ -553,10 +553,13 @@ contract LendingPool is ILendingPool, PausableUpgradeable {
     /* VIEWS */
 
     /// @notice average APR of all lenders across all tranches, boosted or not
+
+    // migrated to pool calculations
     function allLendersInterest() public view returns (uint) {
         return (((allLendersEffectiveAprWad() * collectedAssets) / WAD) * lendingTermSeconds) / YEAR;
     }
 
+    // migrated to pool calculations
     function allLendersInterestByDate() public view returns (uint) {
         return PoolCalculations.allLendersInterestByDate(this);
     }

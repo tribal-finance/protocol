@@ -25,6 +25,7 @@ library PoolCalculations {
         return result;
     }
 
+    // unused in contracts: don't migrate
     function poolBalanceThreshold(LendingPool lendingPool) public view returns (uint) {
         uint borrowedAssets = lendingPool.borrowedAssets();
         uint borrowerTotalInterestRateWad = lendingPool.borrowerTotalInterestRateWad();
@@ -40,6 +41,7 @@ library PoolCalculations {
         return firstLossAssets - interestGoDownAmount;
     }
 
+    // unused in contracts: don't migrate
     function poolBalance(
         LendingPool lendingPool
     ) public view returns (uint) {
@@ -54,6 +56,7 @@ library PoolCalculations {
         return positiveBalance - allLendersInterestByDate;
     }
 
+    // unused in contracts: don't migrate
     function borrowerPenaltyAmount(LendingPool lendingPool) public view returns (uint) {
         uint poolBalance = lendingPool.poolBalance();
         uint poolBalanceThreshold = lendingPool.poolBalanceThreshold();
@@ -79,6 +82,7 @@ library PoolCalculations {
         return penalty;
     }
 
+    // unused in contracts: don't migrate
     function borrowerExpectedInterest(
         uint collectedAssets,
         uint borrowerAdjustedInterestRateWad
@@ -86,6 +90,7 @@ library PoolCalculations {
         return (collectedAssets * borrowerAdjustedInterestRateWad) / WAD;
     }
 
+    // unused in contracts: don't migrate
     function borrowerOutstandingInterest(
         uint borrowerInterestRepaid,
         uint borrowerExpectedInterest
@@ -96,6 +101,7 @@ library PoolCalculations {
         return borrowerExpectedInterest - borrowerInterestRepaid;
     }
 
+    // unused in contracts: don't migrate
     function borrowerExcessSpread(
         LendingPool lendingPool
     ) public view returns (uint) {
@@ -111,6 +117,7 @@ library PoolCalculations {
         return borrowerInterestRepaid - allLendersInterest - fees;
     }
 
+    // unused in contracts: don't migrate
     function borrowerAdjustedInterestRateWad(
         uint borrowerTotalInterestRateWad,
         uint lendingTermSeconds
@@ -118,6 +125,7 @@ library PoolCalculations {
         return (borrowerTotalInterestRateWad * lendingTermSeconds) / YEAR;
     }
 
+    // used in contracts, migrate
     function lenderEffectiveAprByTrancheWad(
         LendingPool lendingPool,
         address lenderAddress,
@@ -141,6 +149,7 @@ library PoolCalculations {
         return weightedAverage;
     }
 
+    // used in contracts, migrate
     function lenderRewardsByTrancheGeneratedByDate(
         LendingPool lendingPool,
         address lenderAddress, 
@@ -161,6 +170,7 @@ library PoolCalculations {
         return (lenderDepositedAssets * lenderEffectiveApr * secondsElapsed) / (YEAR * WAD);
     }
 
+    // unused in contracts, don't migrate
     function lenderTotalExpectedRewardsByTranche(
         uint lenderDepositedAssets,
         uint lenderEffectiveApr,
@@ -169,6 +179,7 @@ library PoolCalculations {
         return (lenderDepositedAssets * lenderEffectiveApr * lendingTermSeconds) / (YEAR * WAD);
     }
 
+    // unused in contracts, don't migrate
     function lenderTotalAprWad(LendingPool lendingPool, address lenderAddress) public view returns (uint) {
         uint256 tranchesCount = lendingPool.tranchesCount();
 
@@ -187,6 +198,7 @@ library PoolCalculations {
         return weightedApysWad / totalAssets;
     }
 
+    // used in contracts, migrate
     function allLendersEffectiveAprWad(LendingPool lendingPool, uint256 tranchesCount) public view returns (uint) {
         uint weightedSum = 0;
         uint totalStakedAssets = 0;
@@ -208,6 +220,7 @@ library PoolCalculations {
         return weightedSum / totalStakedAssets;
     }
 
+    // used in contracts, migrate
     function allLendersInterestByDate(LendingPool lendingPool) public view returns (uint) {
         uint256 fundedAt = lendingPool.fundedAt();
         uint256 lendingTermSeconds = lendingPool.lendingTermSeconds();
@@ -219,6 +232,7 @@ library PoolCalculations {
         return (lendingPool.allLendersInterest() * elapsedTime) / lendingTermSeconds;
     }
 
+    // used in contracts, migrate
     function trancheVaultContracts(LendingPool lendingPool) public view returns (TrancheVault[] memory contracts) {
         uint256 trancheCount = lendingPool.tranchesCount();
         contracts = new TrancheVault[](trancheCount);
@@ -228,6 +242,7 @@ library PoolCalculations {
         }
     }
 
+    // used in contracts, migrate
     function validateInitParams(
         LendingPool.LendingPoolParams calldata params,
         address[] calldata _trancheVaultAddresses,
@@ -275,6 +290,7 @@ library PoolCalculations {
         require(_authorityAddress != address(0), "LP022"); // "LendingPool: authorityAddress empty"
     }
 
+    // unused
     function validateWad(uint256[] memory ints) external pure {
         for(uint256 i = 0; i < ints.length; i++) {
             require(ints[i] <= 1e18, "LP024 - bad wad");
