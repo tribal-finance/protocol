@@ -123,7 +123,19 @@ contract PoolTransfersComponent is Component {
         }*/
 
 
-    function doTransferOut(address _to, uint256 _amount) public {
+    function doTransferOutStable(address _to, uint256 _amount) public {
         SafeERC20.safeTransfer(IERC20(poolStorage.getAddress("stableCoinContractAddress")), _to, _amount);
+    }
+    
+    function doTrasnferInStable(address _from, uint256 _amount) public  {
+        SafeERC20.safeTransferFrom(IERC20(poolStorage.getAddress("stableCoinContractAddress")), _from, address(this), _amount);
+    }
+
+    function doTransferOutPlatform(address _to, uint256 _amount) public {
+        SafeERC20.safeTransfer(IERC20(poolStorage.getAddress("platformTokenContractAddress")), _to, _amount);
+    }
+    
+    function doTrasnferInPlatform(address _from, uint256 _amount) public  {
+        SafeERC20.safeTransferFrom(IERC20(poolStorage.getAddress("platformTokenContractAddress")), _from, address(this), _amount);
     }
 }

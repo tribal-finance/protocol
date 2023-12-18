@@ -197,7 +197,11 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
 
         poolStorage.setArrayUint256("s_totalLockedPlatformTokensByTranche", trancheId, totalLockedTokens);
 
-        SafeERC20.safeTransferFrom(platformTokenContractAddress, msg.sender, address(this), platformTokens);
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+
+        ptc.doTrasnferInPlatform(msg.sender, platformTokens);
 
         emit LenderLockPlatformTokens(msg.sender, trancheId, platformTokens);
         _emitLenderTrancheRewardsChange(msg.sender, trancheId);
@@ -246,7 +250,10 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
             abi.encode(r)
         );
 
-        SafeERC20.safeTransfer(platformTokenContract, msg.sender, platformTokens);
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+        ptc.doTransferOutPlatform(msg.sender, platformTokens);
 
         emit LenderUnlockPlatformTokens(msg.sender, trancheId, platformTokens);
     }
@@ -298,8 +305,10 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
             abi.encode(r)
         );
 
-        IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContractAddress"));
-        SafeERC20.safeTransfer(stableCoinContract, msg.sender, toWithdraw);
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+        ptc.doTransferOutStable(msg.sender, toWithdraw);
 
         emit LenderWithdrawInterest(msg.sender, trancheId, toWithdraw);
         _emitLenderTrancheRewardsChange(msg.sender, trancheId);
@@ -398,9 +407,13 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
         uint256 copyFirstLossAssets = poolStorage.getUint256("firstLossAssets");
         poolStorage.setUint256("firstLossAssets", 0);
 
-        address stableCoinContract = poolStorage.getAddress("stableCoinContract");
         address borrowerAddress = poolStorage.getAddress("borrowerAddress");
-        SafeERC20.safeTransfer(IERC20(stableCoinContract), borrowerAddress, copyFirstLossAssets);
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+
+        ptc.doTransferOutStable(borrowerAddress, copyFirstLossAssets);
     }
 
     /** @notice Make an interest payment.
@@ -434,14 +447,16 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
 
         poolStorage.setUint256("borrowerInterestRepaid", borrowerInterestRepaid + assets - penalty);
 
-        IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContract"));
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
 
         if (assetsToSendToFeeSharing > 0) {
             address feeSharingContractAddress = poolStorage.getAddress("feeSharingContractAddress");
-            SafeERC20.safeTransfer(stableCoinContract, feeSharingContractAddress, assetsToSendToFeeSharing);
+            ptc.doTransferOutStable(feeSharingContractAddress, assetsToSendToFeeSharing);
         }
 
-        SafeERC20.safeTransferFrom(stableCoinContract, msg.sender, address(this), assets);
+        ptc.doTransferOutStable(msg.sender, assets);
 
         if (penalty > 0) {
             emit BorrowerPayPenalty(msg.sender, penalty);

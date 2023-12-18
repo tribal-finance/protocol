@@ -38,9 +38,13 @@ contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
 
         _transitionToFlcWithdrawnStage(assetsToSend);
 
-        IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContract"));
         address borrowerAddress = poolStorage.getAddress("borrowerAddress");
-        SafeERC20.safeTransfer(stableCoinContract, borrowerAddress, assetsToSend);
+
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+
+        ptc.doTransferOutStable(borrowerAddress, assetsToSend);
     }
 
     /** @notice Repay principal
@@ -59,15 +63,19 @@ contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
         uint256 borrowedAssets = poolStorage.getUint256("borrowedAssets");
         _transitionToPrincipalRepaidStage(borrowedAssets);
 
-        IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContract"));
-        SafeERC20.safeTransferFrom(stableCoinContract, msg.sender, address(this), borrowedAssets);
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+
+        ptc.doTrasnferInStable(msg.sender, borrowedAssets);
 
         uint256 tranchesCount = poolStorage.getUint256("tranchesCount");
         for (uint i = 0; i < tranchesCount; ++i) {
             address trancheVaultAddress = poolStorage.getArrayAddress("trancheVaultAddresses", i);
             TrancheVault tv = TrancheVault(trancheVaultAddress);
             uint256 tvTotalAssets = tv.totalAssets();
-            SafeERC20.safeTransfer(stableCoinContract, address(tv), tvTotalAssets);
+            ptc.doTransferOutStable(address(tv), tvTotalAssets);
+            // TODO, don't send funds to TV, it should all be in Transfers Component
             tv.enableWithdrawals();
         }
     }
@@ -83,17 +91,26 @@ contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
     {
         uint256 firstLossAssets = poolStorage.getUint256("firstLossAssets");
         _transitionToFlcDepositedStage(firstLossAssets);
-        address stableCoinContract = poolStorage.getAddress("stableCoinContract");
-        SafeERC20.safeTransferFrom(IERC20(stableCoinContract), msg.sender, address(this), firstLossAssets);
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
+        
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+
+        ptc.doTrasnferInStable(msg.sender, firstLossAssets);
     }
 
     function borrow() external onlyPoolBorrower atStage(Constants.Stages.FUNDED) whenNotPaused {
         uint256 collectedAssets = poolStorage.getUint256("collectedAssets");
         _transitionToBorrowedStage(collectedAssets);
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
 
-        address stableCoinContract = poolStorage.getAddress("stableCoinContract");
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+        
         address borrowerAddress = poolStorage.getAddress("borrowerAddress");
-        SafeERC20.safeTransfer(IERC20(stableCoinContract), borrowerAddress, collectedAssets);
+        ptc.doTransferOutStable(borrowerAddress, collectedAssets);
     }
 
     function _claimTrancheInterestForLender(address lender, uint8 trancheId) internal {
@@ -117,7 +134,7 @@ contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
             PoolTransfersComponent ptc = PoolTransfersComponent(
                 factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
             );
-            ptc.doTransferOut(lender, rewards);
+            ptc.doTransferOutStable(lender, rewards);
             emit LenderWithdrawInterest(lender, trancheId, rewards);
         }
     }
@@ -152,6 +169,11 @@ contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
         IERC20 stableCoinContract = IERC20(poolStorage.getAddress("stableCoinContractAddress"));
         uint availableAssets = stableCoinContract.balanceOf(address(this));
 
+        PoolFactory factory = PoolFactory(poolStorage.getAddress("poolFactory"));
+        PoolTransfersComponent ptc = PoolTransfersComponent(
+            factory.componentRegistry(instanceId, Identifiers.POOL_TRANSFERS_COMPONENT)
+        );
+
         uint256 trancheCount = poolStorage.getUint256("trancheCount");
         for (uint i = 0; i < trancheCount; i++) {
             address trancheVaultAddress = poolStorage.getArrayAddress("trancheVaultAddresses", i);
@@ -162,6 +184,7 @@ contract PoolStateManagmentComponent is Component, StateControl, PoolEvents {
 
             if (assetsToSend > 0) {
                 SafeERC20.safeTransfer(stableCoinContract, address(tv), assetsToSend);
+                ptc.doTransferOutStable(address(tv), assetsToSend);
             }
             availableAssets -= assetsToSend;
             tv.setDefaultRatioWad(trancheDefaultRatioWad);
