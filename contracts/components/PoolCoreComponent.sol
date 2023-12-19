@@ -36,7 +36,6 @@ contract PoolCoreComponent is Component, StateControl, PoolEvents {
     /*///////////////////////////////////
        INITIALIZATION
     ///////////////////////////////////*/
-
     function initialize(uint256 _instanceId, PoolStorage _poolStorage) public override initializer {
         Component._initialize(_instanceId, Identifiers.POOL_CORE_COMPONENT, _poolStorage);
         StateControl._initialize(_poolStorage);
