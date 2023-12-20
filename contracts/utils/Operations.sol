@@ -21,4 +21,10 @@ library Operations {
 
         return result;
     }
+
+    function validateWad(uint256[] memory ints) internal pure {
+        for(uint256 i = 0; i < ints.length; i++) {
+            require(ints[i] <= 1e18, "LP024 - bad wad");
+        }
+    }
 }
