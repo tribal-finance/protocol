@@ -3,5 +3,10 @@
     "contractName": "platformToken",
     "contractAddress": "0x3b1A962BE25430793B12a359E11760c2298e325D",
     "timestamp": 1703133936
+  },
+  {
+    "contractName": "mockusdc",
+    "contractAddress": "0xd9af0d725ABE1070e2010C421596d81810E4a633",
+    "timestamp": 1703134800
   }
 ]

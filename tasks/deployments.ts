@@ -35,6 +35,37 @@ task("deploy-empty-token", "deploys the 'no-platform-token'")
         })
     })
 
+task("deploy-usdc-token", "deploys the usdc token and faucet")
+    .setAction(async (args: any, hre) => {
+        const { ethers, upgrades } = hre;
+        const network = hre.network.name;
+
+        await retryableRequest(async () => {
+            const PlatformToken = await ethers.getContractFactory("MockUSDC");
+            const platformToken = await PlatformToken.deploy();
+            await platformToken.deployed();
+            console.log("Deployed Empty Platform Token to", platformToken.address);
+
+            writeToDeploymentsFile({
+                contractName: "mockusdc",
+                contractAddress: platformToken.address,
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+            }, network)
+        });
+
+        await retryableRequest(async () => {
+            const platformTokenAddress = getMostCurrentContract("mockusdc", network).contractAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: platformTokenAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified empty token")
+            })
+        })
+    })
+
 task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
     .addParam("foundationAddress", "This is the beneficiary of the fee sharing")
