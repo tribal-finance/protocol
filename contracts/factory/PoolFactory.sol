@@ -7,10 +7,12 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../governance/TribalGovernance.sol";
-import "../pool/LendingPool.sol";
 import "../components/Component.sol";
+import "../components/PoolCoreComponent.sol";
 import "../vaults/TrancheVault.sol";
 import "../storage/PoolStorage.sol";
+import "../utils/Identifiers.sol";
+import "../utils/Constants.sol";
 
 contract PoolFactory is Initializable {
     using Math for uint;
@@ -23,8 +25,6 @@ contract PoolFactory is Initializable {
         address secondTrancheVaultAddress;
         address[] poolComponents;
     }
-
-    uint private constant WAD = 10 ** 18;
 
     event PoolCloned(address indexed addr, address implementationAddress);
     event TrancheVaultCloned(address indexed addr, address implementationAddress);
@@ -44,7 +44,10 @@ contract PoolFactory is Initializable {
     mapping(address => bool) public prevDeployedTranche;
 
     /// @notice used to gain function level access to systems by their instance id
-    mapping(uint256 => Component[]) public componentBundles;
+    mapping(uint256 => mapping(bytes32 => address)) public componentRegistry;
+    uint256 public deploymentCounter;
+
+    uint256[] public instanceIds;
 
     function initialize(address _governance, address _poolStorage) public initializer {
         governance = TribalGovernance(_governance);
@@ -91,7 +94,7 @@ contract PoolFactory is Initializable {
      * . See {LendingPool-initialize}
      */
     function deployPool(
-        LendingPool.LendingPoolParams calldata params,
+        Constants.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads
     ) external returns (Component[] memory) {
         require(governance.isOwner(msg.sender), "not owner");
@@ -108,6 +111,22 @@ contract PoolFactory is Initializable {
 
         Component[] memory clonedPoolComponents = _clonePool();
 
+        address[] memory trancheVaultAddresses = new address[](params.tranchesCount);
+        
+        uint256 instanceId = uint256(keccak256(abi.encode(block.number, deploymentCounter)));
+        for(uint256 i = 0; i < clonedPoolComponents.length; i++) {
+            Component c = clonedPoolComponents[i];
+            c.initialize(instanceId, poolStorage);
+            governance.grantRole(Constants.POOL_STORAGE_WRITER, address(c));
+
+            bytes32 cID = c.identifer();
+            
+            componentRegistry[instanceId][cID] = address(c);
+
+        }
+
+        PoolCoreComponent(address(componentRegistry[instanceId][Identifiers.POOL_CORE_COMPONENT])).initializeFromParams(params, trancheVaultAddresses, feeSharingContractAddress, address(governance), address(this));
+
        // address[] memory trancheVaultAddresses = _deployTrancheVaults(
        //     params,
        //     fundingSplitWads,
@@ -116,7 +135,9 @@ contract PoolFactory is Initializable {
        // );
 
         // initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
-
+        
+        deploymentCounter++;
+        instanceIds.push(instanceId);
         return clonedPoolComponents;
     }
 
@@ -135,6 +156,7 @@ contract PoolFactory is Initializable {
         return clonedPoolComponents;
     }
 
+/*
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
         uint[][] calldata fundingSplitWads,
@@ -155,8 +177,8 @@ contract PoolFactory is Initializable {
             TrancheVault(trancheVaultAddresses[i]).initialize(
                 poolAddress,
                 i,
-                params.minFundingCapacity.mulDiv(fundingSplitWads[i][1], WAD),
-                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], WAD),
+                params.minFundingCapacity.mulDiv(fundingSplitWads[i][1], Constants.WAD),
+                params.maxFundingCapacity.mulDiv(fundingSplitWads[i][0], Constants.WAD),
                 string(abi.encodePacked(params.name, " Tranche ", Strings.toString(uint(i)), " Token")),
                 string(abi.encodePacked("tv", Strings.toString(uint(i)), params.token)),
                 params.stableCoinContractAddress,
@@ -167,7 +189,10 @@ contract PoolFactory is Initializable {
             governance.grantRole(Constants.OWNER, ownerAddress);
         }
     }
+*/
 
+
+/*
     function initializePoolAndCreatePoolRecord(
         address poolAddress,
         LendingPool.LendingPoolParams calldata params,
@@ -197,4 +222,5 @@ contract PoolFactory is Initializable {
 
         emit PoolDeployed(msg.sender, record);
     }
+    */
 }
