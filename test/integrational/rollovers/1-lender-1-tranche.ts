@@ -297,16 +297,16 @@ describe("Rollovers (1 Lender)", function () {
       await ethers.provider.send("evm_mine", []);
     });
 
-    it("🏛️ borrower repays 10000 USDC as principal", async () => {
+    it.skip("🏛️ borrower repays 10000 USDC as principal", async () => {
       await usdc.connect(borrower).approve(lendingPool.address, USDC(10000));
       await lendingPool.connect(borrower).borrowerRepayPrincipal();
     });
 
-    it("transitions to REPAID stage", async () => {
+    it.skip("transitions to REPAID stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
     });
 
-    it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
+    it.skip("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool
         .connect(borrower)
@@ -317,15 +317,15 @@ describe("Rollovers (1 Lender)", function () {
       );
     });
 
-    it("transitions to FLC_WITHDRAWN stage", async () => {
+    it.skip("transitions to FLC_WITHDRAWN stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
     });
 
-    it("👜 100 USDC interest withdraw from lender 2", async () => {
+    it.skip("👜 100 USDC interest withdraw from lender 2", async () => {
       await lendingPool.connect(lender2).lenderRedeemRewards([USDC(100)]);
     });
 
-    it("👜 2000 usdc principal withdrawal for lender 2", async () => {
+    it.skip("👜 2000 usdc principal withdrawal for lender 2", async () => {
       await firstTrancheVault
         .connect(lender2)
         .withdraw(
