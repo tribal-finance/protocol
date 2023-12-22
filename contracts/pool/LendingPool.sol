@@ -125,6 +125,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     uint public borrowedAssets;
     uint public borrowerInterestRepaid;
 
+    uint public rolloverRatio;
+
     EnumerableSet.AddressSet internal s_lenders;
 
     /// @dev trancheId => (lenderAddress => RewardableRecord)
@@ -144,6 +146,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     /*///////////////////////////////////
        MODIFIERS
     ///////////////////////////////////*/
+
+    modifier onlyProtocol {
+        require(PoolFactory(poolFactoryAddress).isProtocol(msg.sender), "sender must be protocol");
+        _;
+    }
 
     modifier authTrancheVault(uint8 id) {
         _authTrancheVault(id);
@@ -666,6 +673,18 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         return maxLockablePlatformTokens - r.lockedPlatformTokens;
     }
 
+    function _rolloverRatio() internal {
+        uint256 enablements = 0;
+        uint256 total = lenderCount();
+        for(uint256 i = 0; i < total; i++) {
+            if(s_rollOverSettings[lendersAt(i)].enabled) {
+                enablements++;
+            }
+        }
+
+        rolloverRatio = enablements * 1e18 / total;
+    }
+
     /*///////////////////////////////////
        Rollover settings
     ///////////////////////////////////*/
@@ -678,29 +697,35 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
         address lender = _msgSender();
         s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
-        PoolTransfers.lenderEnableRollOver(this, principal, rewards, platformTokens, lender);
+        
+        // update rolloverRatio
+        _rolloverRatio();
     }
 
     /**
      * @dev This function rolls funds from prior deployments into currently active deployments
      * @param deadLendingPoolAddr The address of the lender whose funds are transfering over to the new lender
-     * @param deadTrancheAddrs The address of the tranches whose funds are mapping 1:1 with the next traches
      * @param lenderStartIndex The first lender to start migrating over
      * @param lenderEndIndex The last lender to migrate
      */
     function executeRollover(
         address deadLendingPoolAddr,
-        address[] memory deadTrancheAddrs,
         uint256 lenderStartIndex,
         uint256 lenderEndIndex
     ) external onlyOwnerOrAdmin atStage(Stages.OPEN) whenNotPaused {
-        PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs, lenderStartIndex, lenderEndIndex);
+        LendingPool deadpool = LendingPool(deadLendingPoolAddr);
+        uint256 rollover = deadpool.rolloverRatio();
+        for(uint256 trancheIndex = 0; trancheIndex < deadpool.tranchesCount(); trancheIndex++) {
+            TrancheVault tranche = TrancheVault(deadpool.trancheVaultAddresses(trancheIndex));
+            tranche.totalAssets();
+        }
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
      */
     function lenderDisableRollOver() external onlyLender {
         s_rollOverSettings[_msgSender()] = RollOverSetting(false, false, false, false);
+        _rolloverRatio();
     }
 
     /** @notice returns lender's roll over settings
@@ -932,5 +957,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     function _stableCoinContract() internal view returns (IERC20) {
         return IERC20(stableCoinContractAddress);
+    }
+
+    function doTransferOut(address _token, address _to, uint256 _amount) public onlyProtocol {
+        SafeERC20.safeTransfer(IERC20(_token), _to, _amount);
     }
 }

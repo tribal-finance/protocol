@@ -38,6 +38,8 @@ contract PoolFactory is AuthorityAware {
     mapping(address => uint256) public nonces;
     mapping(address => bool) public prevDeployedTranche;
 
+    mapping(address => bool) public isProtocol;
+
     function initialize(address _authority) public initializer {
         __Ownable_init();
         __AuthorityAware__init(_authority);
@@ -105,6 +107,11 @@ contract PoolFactory is AuthorityAware {
         );
 
         initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
+
+        isProtocol[poolAddress] = true;
+        for(uint256 i = 0; i < trancheVaultAddresses.length; i++) {
+            isProtocol[trancheVaultAddresses[i]] = true;
+        }
 
         return poolAddress;
     }
