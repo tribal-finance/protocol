@@ -160,6 +160,12 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         _;
     }
 
+    modifier onlyDeployedPool() {
+        PoolFactory factory = PoolFactory(poolFactoryAddress);
+        require(factory.prevDeployedPool(msg.sender), "Pool: onlyPriorPool");
+        _;
+    }
+
     function _onlyPoolBorrower() internal view {
         require(_msgSender() == borrowerAddress, "LP003"); // "LendingPool: not a borrower"
     }
@@ -697,10 +703,22 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs, lenderStartIndex, lenderEndIndex);
     }
 
+    function slashBorrowerBurden(
+        uint256 amount
+    ) external onlyDeployedPool {
+        borrowedAssets -= amount;
+    }
+
     /** @notice cancels lenders intent to roll over the funds to the next pool.
      */
     function lenderDisableRollOver() external onlyLender {
         s_rollOverSettings[_msgSender()] = RollOverSetting(false, false, false, false);
+    }
+
+    /** @notice cancels lenders intent to roll over the funds to the next pool.
+     */
+    function poolDisableRollOver(address lender) external onlyDeployedPool {
+        s_rollOverSettings[lender] = RollOverSetting(false, false, false, false);
     }
 
     /** @notice returns lender's roll over settings

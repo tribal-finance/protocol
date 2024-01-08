@@ -259,36 +259,19 @@ contract TrancheVault is Initializable, ERC4626Upgradeable, PausableUpgradeable,
         SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), poolAddress(), assets);
     }
 
-    /**@dev used to approve the process of the rollover to deployments that do not yet exist (executed with older tranche before creation of next tranche) */
-    function approveRollover(address lender, uint256 assets) external onlyOwnerOrPool {
-        LendingPool pool = LendingPool(poolAddress());
-        PoolFactory factory = PoolFactory(pool.poolFactoryAddress());
-
-        address[8] memory futureTranches = factory.nextTranches();
-        for (uint256 i = 0; i < futureTranches.length; i++) {
-            //super.approve(futureTranches[i], convertToShares(amount));
-            approvedRollovers[lender][futureTranches[i]] = assets;
-        }
-    }
-
-    function executeRolloverAndBurn(address lender, uint256 rewards) external onlyDeadTranche whenNotPaused returns (uint256) {
-        TrancheVault newTranche = TrancheVault(_msgSender());
-        uint256 assets = approvedRollovers[lender][address(newTranche)] + rewards;
-        SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(asset()), address(newTranche), assets);
-        uint256 shares = convertToAssets(assets - rewards);
+    function burnShares(address lender, uint256 lenderPrincipal) external onlyDeadTranche whenNotPaused {
+        uint256 shares = convertToAssets(lenderPrincipal);
         _burn(lender, shares);
-        return assets;
     }
 
     /**@dev used to process the rollover (executed with newer tranche on deploy) */
-    function rollover(address lender, address deadTrancheAddr, uint256 rewards) external onlyPool {
+    function transferShares(address lender, address deadTrancheAddr, uint256 lenderPrincipal) external onlyPool {
         TrancheVault deadTranche = TrancheVault(deadTrancheAddr);
         require(deadTranche.asset() == asset(), "Incompatible asset types");
-        // transfer in capital from prev tranche
-        uint256 assetsRolled = deadTranche.executeRolloverAndBurn(lender, rewards);
-        IERC20Upgradeable(asset()).approve(address(this), assetsRolled);
-        uint256 shares = previewDeposit(assetsRolled);
-        _deposit(address(this), lender, assetsRolled, shares);
+        deadTranche.burnShares(lender, lenderPrincipal);
+        uint256 shares = previewDeposit(lenderPrincipal);
+        LendingPool(poolAddress()).onTrancheDeposit(id(), lender, lenderPrincipal);
+        _mint(lender, shares);
     }
 
     /*////////////////////////////////////////////////

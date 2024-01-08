@@ -37,6 +37,7 @@ contract PoolFactory is AuthorityAware {
     /// @dev we need to track a nonce as salt for each implementation
     mapping(address => uint256) public nonces;
     mapping(address => bool) public prevDeployedTranche;
+    mapping(address => bool) public prevDeployedPool;
 
     function initialize(address _authority) public initializer {
         __Ownable_init();
@@ -96,6 +97,7 @@ contract PoolFactory is AuthorityAware {
         require(wadMin == 1e18, "LP027 - bad min wad");
 
         address poolAddress = _clonePool();
+        prevDeployedPool[poolAddress] = true;
 
         address[] memory trancheVaultAddresses = _deployTrancheVaults(
             params,
