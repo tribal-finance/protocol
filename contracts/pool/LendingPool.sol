@@ -691,16 +691,13 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      * @dev This function rolls funds from prior deployments into currently active deployments
      * @param deadLendingPoolAddr The address of the lender whose funds are transfering over to the new lender
      * @param deadTrancheAddrs The address of the tranches whose funds are mapping 1:1 with the next traches
-     * @param lenderStartIndex The first lender to start migrating over
-     * @param lenderEndIndex The last lender to migrate
      */
     function executeRollover(
         address deadLendingPoolAddr,
-        address[] memory deadTrancheAddrs,
-        uint256 lenderStartIndex,
-        uint256 lenderEndIndex
+        address[] memory deadTrancheAddrs
     ) external onlyOwnerOrAdmin atStage(Stages.OPEN) whenNotPaused {
-        PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs, lenderStartIndex, lenderEndIndex);
+        PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs);
+        _transitionToBorrowedStage(collectedAssets);
     }
 
     function slashBorrowerBurden(
@@ -738,6 +735,17 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function borrowerDepositFirstLossCapital() external onlyPoolBorrower atStage(Stages.INITIAL) whenNotPaused {
         _transitionToFlcDepositedStage(firstLossAssets);
         SafeERC20.safeTransferFrom(_stableCoinContract(), msg.sender, address(this), firstLossAssets);
+    }
+
+    function poolRolloverFirstLossCaptial() external onlyDeployedPool whenNotPaused {
+        SafeERC20.safeTransfer(_stableCoinContract(), msg.sender, firstLossAssets);
+        firstLossAssets = 0;
+    }
+
+    function adminRolloverFirstLossCaptial(LendingPool pool) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
+        _transitionToFlcDepositedStage(firstLossAssets);
+        pool.poolRolloverFirstLossCaptial();
+        // what happens to excess spread?
     }
 
     /** @notice Borrows collected funds from the pool */
@@ -814,6 +822,15 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint assetsToSend = firstLossAssets + borrowerExcessSpread();
         _transitionToFlcWithdrawnStage(assetsToSend);
         SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
+    }
+
+    /** @notice Withdraw first loss capital and excess spread
+     *  can be called only after principal is repaid
+     */
+    function transferFirstLossCapitalAndExcessSpread(address nextPool) external atStage(Stages.BORROWED) onlyDeployedPool {
+        uint assetsToSend = firstLossAssets + borrowerExcessSpread();
+        SafeERC20.safeTransfer(_stableCoinContract(), nextPool, assetsToSend);
+        firstLossAssets = 0;
     }
 
     /* VIEWS */

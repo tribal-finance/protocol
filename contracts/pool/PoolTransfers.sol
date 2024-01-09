@@ -49,9 +49,7 @@ library PoolTransfers {
     function executeRollover(
         LendingPool lendingPool,
         address deadLendingPoolAddr,
-        address[] memory deadTrancheAddrs,
-        uint256 lenderStartIndex,
-        uint256 lenderEndIndex
+        address[] memory deadTrancheAddrs
     ) external {
         uint256 tranchesCount = lendingPool.tranchesCount();
         // TODO: require all interest to be repaid
@@ -69,7 +67,7 @@ library PoolTransfers {
         uint256 rolledAssets = 0;
 
         // TODO update pool so that we can enter repaid state
-        for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
+        for (uint256 i = 0; i < deadpool.lenderCount(); i++) {
             address lender = deadpool.lendersAt(i);
             LendingPool.RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(
                 lender
@@ -78,13 +76,16 @@ library PoolTransfers {
                 continue;
             }
 
-            for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-                TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
-                uint256 lenderPrincipal = deadpool.lenderStakedTokensByTranche(lender, trancheId);
-                rolledAssets += lenderPrincipal;
-                vault.transferShares(lender, deadTrancheAddrs[trancheId], lenderPrincipal);
-                deadpool.poolDisableRollOver(lender);
+            if (settings.principal) {
+                for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+                    TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
+                    uint256 lenderPrincipal = deadpool.lenderStakedTokensByTranche(lender, trancheId);
+                    rolledAssets += lenderPrincipal;
+                    vault.transferShares(lender, deadTrancheAddrs[trancheId], lenderPrincipal);
+                }
             }
+            deadpool.poolDisableRollOver(lender);
+            
         }
         deadpool.slashBorrowerBurden(rolledAssets);
 
