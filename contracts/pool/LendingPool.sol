@@ -710,13 +710,21 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         borrowedAssets -= amount;
     }
 
-    function incrementTotalLockedPlatformTokens(uint8 trancheId, uint256 amount, address lender) external onlyDeployedPool {
-         LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
+    function incrementTotalLockedPlatformTokens(
+        uint8 trancheId,
+        uint256 amount,
+        address lender
+    ) external onlyDeployedPool {
+        LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
         r.lockedPlatformTokens += amount;
         s_totalLockedPlatformTokensByTranche[trancheId] += amount;
     }
 
-    function decrementTotalLockedPlatformTokens(uint8 trancheId, uint256 amount, address lender) external onlyDeployedPool {
+    function decrementTotalLockedPlatformTokens(
+        uint8 trancheId,
+        uint256 amount,
+        address lender
+    ) external onlyDeployedPool {
         LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
         r.lockedPlatformTokens -= amount;
         s_totalLockedPlatformTokensByTranche[trancheId] -= amount;
