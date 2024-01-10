@@ -29,7 +29,7 @@ library PoolTransfers {
 
         // Transfer the platform tokens from the dead pool to the lending pool
         deadPool.decrementTotalLockedPlatformTokens(trancheId, platformTokens, lender);
-        _receivePlatformTokensFromDeadPool(deadPool, lender, trancheId, platformTokens, lendingPool);
+        _receivePlatformTokensFromDeadPool(lender, trancheId, platformTokens, lendingPool);
 
         // Transfer platform tokens to the lending pool contract
         IERC20 platformToken = IERC20(deadPool.platformTokenContractAddress());
@@ -37,13 +37,11 @@ library PoolTransfers {
     }
 
     function _receivePlatformTokensFromDeadPool(
-        LendingPool deadPool,
         address lender,
         uint8 trancheId,
         uint platformTokens,
         LendingPool lendingPool
     ) internal {
-        require(msg.sender == address(deadPool), "Only dead pool can call");
         lendingPool.incrementTotalLockedPlatformTokens(trancheId, platformTokens, lender);
         emit PlatformTokensReceivedFromDeadPool(lender, trancheId, platformTokens);
     }

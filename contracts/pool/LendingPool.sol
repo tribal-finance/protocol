@@ -774,6 +774,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function adminRolloverFirstLossCaptial(
         LendingPool pool
     ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
+        require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
         _transitionToFlcDepositedStage(firstLossAssets);
         pool.poolRolloverFirstLossCaptial();
     }
