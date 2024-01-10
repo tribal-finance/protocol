@@ -61,12 +61,7 @@ library PoolTransfers {
         require(deadpool.borrowerOutstandingInterest() == 0, "all interest must be repaid");
         require(lendingPool.borrowerAddress() == deadpool.borrowerAddress(), "borrowers must match");
         require(tranchesCount == deadTrancheAddrs.length, "tranche array mismatch");
-        require(
-            keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
-            "rollover incampatible due to version mismatch"
-        ); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
-        // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
-
+        
         uint256 rolledAssets = 0;
 
         // TODO update pool so that we can enter repaid state

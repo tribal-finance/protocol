@@ -568,8 +568,8 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         expect(await nextLendingPool.borrowerOutstandingInterest()).to.equal(0);
       });
   
-      it.skip("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-        expect(await nextLendingPool.borrowerExcessSpread()).to.equal(USDC(50));
+      it("borrowerExcessSpread() is now 175", async () => {
+        expect(await nextLendingPool.borrowerExcessSpread()).to.equal(USDC(175));
       });
   
       it("⏳ 3 days pass by", async () => {
