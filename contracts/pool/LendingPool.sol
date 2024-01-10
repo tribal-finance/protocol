@@ -43,18 +43,19 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         bool platformTokens;
     }
 
-    enum Stages {                   // WARNING, DO NOT REORDER ENUM!!!
-        INITIAL,                    // 0
-        OPEN,                       // 1
-        FUNDED,                     // 2
-        FUNDING_FAILED,             // 3
-        FLC_DEPOSITED,              // 4
-        BORROWED,                   // 5
-        BORROWER_INTEREST_REPAID,   // 6
-        DELINQUENT,                 // 7
-        REPAID,                     // 8
-        DEFAULTED,                  // 9
-        FLC_WITHDRAWN               // 10
+    enum Stages {
+        // WARNING, DO NOT REORDER ENUM!!!
+        INITIAL, // 0
+        OPEN, // 1
+        FUNDED, // 2
+        FUNDING_FAILED, // 3
+        FLC_DEPOSITED, // 4
+        BORROWED, // 5
+        BORROWER_INTEREST_REPAID, // 6
+        DELINQUENT, // 7
+        REPAID, // 8
+        DEFAULTED, // 9
+        FLC_WITHDRAWN // 10
     }
 
     struct LendingPoolParams {
@@ -338,7 +339,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  this function is expected to be called by *owner* once the funding period ends
      */
     function adminTransitionToFundedState() external onlyOwnerOrAdmin atStage(Stages.OPEN) {
-        require(block.timestamp >= openedAt + fundingPeriodSeconds, "Cannot accrue interest or declare failure before start time");
+        require(
+            block.timestamp >= openedAt + fundingPeriodSeconds,
+            "Cannot accrue interest or declare failure before start time"
+        );
         if (collectedAssets >= minFundingCapacity) {
             _transitionToFundedStage();
         } else {
@@ -370,7 +374,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function _transitionToFundingFailedStage() internal whenNotPaused {
         fundingFailedAt = uint64(block.timestamp);
         currentStage = Stages.FUNDING_FAILED;
-        
+
         TrancheVault[] memory vaults = trancheVaultContracts();
 
         for (uint i; i < trancheVaultAddresses.length; i++) {
@@ -629,10 +633,13 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      *  @param lenderAddress lender address
      *  @param trancheId tranche id
      */
-    function lenderRewardsByTrancheRedeemableSpecial(address lenderAddress, uint8 trancheId) public view returns (uint) {
+    function lenderRewardsByTrancheRedeemableSpecial(
+        address lenderAddress,
+        uint8 trancheId
+    ) public view returns (uint) {
         uint256 willReward = lenderRewardsByTrancheGeneratedByDate(lenderAddress, trancheId);
         uint256 hasRewarded = lenderRewardsByTrancheRedeemed(lenderAddress, trancheId);
-        if(hasRewarded > willReward) {
+        if (hasRewarded > willReward) {
             return 0;
         }
         return willReward - hasRewarded;
@@ -684,7 +691,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderEnableRollOver(bool principal, bool rewards, bool platformTokens) external onlyLender {
         address lender = _msgSender();
         s_rollOverSettings[lender] = RollOverSetting(true, principal, rewards, platformTokens);
-        PoolTransfers.lenderEnableRollOver(this, principal, rewards, platformTokens, lender);
     }
 
     /**
@@ -700,10 +706,24 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         _transitionToBorrowedStage(collectedAssets);
     }
 
-    function slashBorrowerBurden(
-        uint256 amount
-    ) external onlyDeployedPool {
+    function slashBorrowerBurden(uint256 amount) external onlyDeployedPool {
         borrowedAssets -= amount;
+    }
+
+    function incrementTotalLockedPlatformTokens(uint8 trancheId, uint256 amount, address lender) external onlyDeployedPool {
+         LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
+        r.lockedPlatformTokens += amount;
+        s_totalLockedPlatformTokensByTranche[trancheId] += amount;
+    }
+
+    function decrementTotalLockedPlatformTokens(uint8 trancheId, uint256 amount, address lender) external onlyDeployedPool {
+        LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
+        r.lockedPlatformTokens -= amount;
+        s_totalLockedPlatformTokensByTranche[trancheId] -= amount;
+    }
+
+    function transferToAdjacentPool(IERC20 _token, uint256 _amount) external onlyDeployedPool whenNotPaused {
+        SafeERC20.safeTransfer(_token, msg.sender, _amount);
     }
 
     /** @notice cancels lenders intent to roll over the funds to the next pool.
@@ -742,10 +762,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         firstLossAssets = 0;
     }
 
-    function adminRolloverFirstLossCaptial(LendingPool pool) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
+    function adminRolloverFirstLossCaptial(
+        LendingPool pool
+    ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
         _transitionToFlcDepositedStage(firstLossAssets);
         pool.poolRolloverFirstLossCaptial();
-        // what happens to excess spread?
     }
 
     /** @notice Borrows collected funds from the pool */
@@ -818,7 +839,12 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     /** @notice Withdraw first loss capital and excess spread
      *  can be called only after principal is repaid
      */
-    function borrowerWithdrawFirstLossCapitalAndExcessSpread() external onlyPoolBorrower atStage(Stages.REPAID) whenNotPaused {
+    function borrowerWithdrawFirstLossCapitalAndExcessSpread()
+        external
+        onlyPoolBorrower
+        atStage(Stages.REPAID)
+        whenNotPaused
+    {
         uint assetsToSend = firstLossAssets + borrowerExcessSpread();
         _transitionToFlcWithdrawnStage(assetsToSend);
         SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
@@ -827,7 +853,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     /** @notice Withdraw first loss capital and excess spread
      *  can be called only after principal is repaid
      */
-    function transferFirstLossCapitalAndExcessSpread(address nextPool) external atStage(Stages.BORROWED) onlyDeployedPool {
+    function transferFirstLossCapitalAndExcessSpread(
+        address nextPool
+    ) external atStage(Stages.BORROWED) onlyDeployedPool {
         uint assetsToSend = firstLossAssets + borrowerExcessSpread();
         SafeERC20.safeTransfer(_stableCoinContract(), nextPool, assetsToSend);
         firstLossAssets = 0;
@@ -858,7 +886,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     /** @notice how much penalty the borrower owes because of the delinquency fact */
     function borrowerPenaltyAmount() public view returns (uint) {
-        if(currentStage > Stages.FLC_DEPOSITED) {
+        if (currentStage > Stages.FLC_DEPOSITED) {
             return PoolCalculations.borrowerPenaltyAmount(this);
         }
     }

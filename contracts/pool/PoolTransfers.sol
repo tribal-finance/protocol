@@ -9,42 +9,47 @@ import "../factory/PoolFactory.sol";
 import "../vaults/TrancheVault.sol";
 
 library PoolTransfers {
-    function lenderEnableRollOver(
-        LendingPool lendingPool,
-        bool principal,
-        bool rewards,
-        bool platformTokens,
-        address lender
-    ) external {
-        PoolFactory poolFactory = PoolFactory(lendingPool.poolFactoryAddress());
-        uint256 lockedPlatformTokens;
-        uint256 trancheCount = lendingPool.tranchesCount();
-        for (uint8 trancheId; trancheId < trancheCount; trancheId++) {
-            (uint256 staked, , , ) = lendingPool.s_trancheRewardables(trancheId, lender);
-            TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
-            (, uint256 locked, , ) = lendingPool.s_trancheRewardables(trancheId, lender);
-            lockedPlatformTokens += locked;
+    event PlatformTokensReceivedFromDeadPool(address indexed lender, uint8 indexed trancheId, uint256 platformTokens);
+    event WarningLenderHasNoPlatformTokensStaked(
+        address indexed lender,
+        uint8 indexed trancheId,
+        uint256 platformTokens
+    );
+
+    function _transferAllPlatformTokensToNewPool(
+        LendingPool deadPool,
+        address lender,
+        uint8 trancheId,
+        LendingPool lendingPool
+    ) internal {
+        (, uint256 platformTokens, , ) = deadPool.s_trancheRewardables(trancheId, lender);
+        if (platformTokens == 0) {
+            emit WarningLenderHasNoPlatformTokensStaked(lender, trancheId, platformTokens);
         }
 
-        address[4] memory futureLenders = poolFactory.nextLenders();
-        for (uint256 i = 0; i < futureLenders.length; i++) {
-            SafeERC20.safeApprove(IERC20(lendingPool.platformTokenContractAddress()), futureLenders[i], 0);
-            // approve transfer of platform tokens
-            SafeERC20.safeApprove(
-                IERC20(lendingPool.platformTokenContractAddress()),
-                futureLenders[i],
-                lockedPlatformTokens
-            );
+        // Transfer the platform tokens from the dead pool to the lending pool
+        deadPool.decrementTotalLockedPlatformTokens(trancheId, platformTokens, lender);
+        _receivePlatformTokensFromDeadPool(deadPool, lender, trancheId, platformTokens, lendingPool);
 
-            SafeERC20.safeApprove(IERC20(lendingPool.stableCoinContractAddress()), futureLenders[i], 0);
-            // approve transfer of the stablecoin contract
-            SafeERC20.safeApprove(
-                IERC20(lendingPool.stableCoinContractAddress()), // asume tranches.asset() == stablecoin address
-                futureLenders[i],
-                2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
-            );
-        }
+        // Transfer platform tokens to the lending pool contract
+        IERC20 platformToken = IERC20(deadPool.platformTokenContractAddress());
+        deadPool.transferToAdjacentPool(platformToken, platformTokens);
     }
+
+    function _receivePlatformTokensFromDeadPool(
+        LendingPool deadPool,
+        address lender,
+        uint8 trancheId,
+        uint platformTokens,
+        LendingPool lendingPool
+    ) internal {
+        require(msg.sender == address(deadPool), "Only dead pool can call");
+        lendingPool.incrementTotalLockedPlatformTokens(trancheId, platformTokens, lender);
+        emit PlatformTokensReceivedFromDeadPool(lender, trancheId, platformTokens);
+    }
+
+    // Remember to declare the event used in the function
+    event PlatformTokensReceivedFromOldPool(address indexed lender, uint8 indexed trancheId, uint256 platformTokens);
 
     function executeRollover(
         LendingPool lendingPool,
@@ -76,6 +81,17 @@ library PoolTransfers {
                 continue;
             }
 
+            if (settings.platformTokens) {
+                // ask deadpool to move platform token into this new contract
+                for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+                    _transferAllPlatformTokensToNewPool(deadpool, lender, trancheId, lendingPool);
+                }
+            }
+
+            if (settings.rewards) {
+                // TODO: figure out how to roll interest
+            }
+
             if (settings.principal) {
                 for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
                     TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
@@ -85,13 +101,7 @@ library PoolTransfers {
                 }
             }
             deadpool.poolDisableRollOver(lender);
-            
         }
         deadpool.slashBorrowerBurden(rolledAssets);
-
-        // ask deadpool to move platform token into this new contract
-        IERC20 platoken = IERC20(lendingPool.platformTokenContractAddress());
-        uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
-        SafeERC20.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
     }
 }
