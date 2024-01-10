@@ -206,6 +206,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         );
     }
 
+    // ERRORS
+    error InsufficientAllowance(uint256 shortfall, uint256 currentAllowance);
+
+
     /*///////////////////////////////////
        EVENTS
     ///////////////////////////////////*/
@@ -775,6 +779,21 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         LendingPool pool
     ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
         require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
+
+        if(pool.firstLossAssets() > firstLossAssets) {
+            // we have surplus coming, refund extra to borrower
+            uint256 flcSurplus = pool.firstLossAssets() - firstLossAssets;
+            SafeERC20.safeTransfer(IERC20(_stableCoinContract()), borrowerAddress, flcSurplus);
+        } else if(pool.firstLossAssets() < firstLossAssets) {
+            // we have a shortfall, ask borrower for more
+            uint256 flcShortfall = firstLossAssets - pool.firstLossAssets();
+            uint256 allowance = IERC20(_stableCoinContract()).allowance(borrowerAddress, address(this));
+            if(allowance < flcShortfall) {
+                revert InsufficientAllowance(flcShortfall, allowance);
+            }
+            SafeERC20.safeTransferFrom(IERC20(_stableCoinContract()), borrowerAddress, address(this), flcShortfall);
+        }
+
         _transitionToFlcDepositedStage(firstLossAssets);
         pool.poolRolloverFirstLossCaptial();
     }
