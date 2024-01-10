@@ -390,11 +390,11 @@ describe("Rollovers (1 Lender)", function () {
           await firstTrancheVault.balanceOf(await lender2.getAddress()),
         ])
 
-        const borroweredAssetsInitial = await lendingPool.borrowedAssets();
+        const borroweredAssetsInitial = await nextLendingPool.borrowedAssets();
 
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address]);
 
-        const borroweredAssetsFinal = await lendingPool.borrowedAssets();
+        const borroweredAssetsFinal = await nextLendingPool.borrowedAssets();
 
         const finalBalancesAsset = await Promise.all([
           await asset.balanceOf(lendingPool.address),
@@ -432,7 +432,7 @@ describe("Rollovers (1 Lender)", function () {
         expect(deltaBalancesVault[1]).equals(initialBalancesVault[1])
         expect(deltaBalancesVault[2]).equals(0)
 
-        expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(-borroweredAssetsInitial);
+        expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(borroweredAssetsFinal);
       })
 
       it("🏛️ borrower repays 10000 USDC as principal", async () => {

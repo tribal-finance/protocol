@@ -461,14 +461,14 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
       });
 
-      it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
+      it("🏛️ borrower withdraws FLC(0) + excess spread (175USDC)", async () => {
         const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
         await lendingPool
           .connect(borrower)
           .borrowerWithdrawFirstLossCapitalAndExcessSpread();
         const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
         expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-          USDC(50)
+          USDC(175)
         );
 
         // borrower is still allowed to pull out the excess spread?
