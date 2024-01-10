@@ -43,20 +43,21 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         bool platformTokens;
     }
 
-    enum Stages {
-        // WARNING, DO NOT REORDER ENUM!!!
-        INITIAL, // 0
-        OPEN, // 1
-        FUNDED, // 2
-        FUNDING_FAILED, // 3
-        FLC_DEPOSITED, // 4
-        BORROWED, // 5
-        BORROWER_INTEREST_REPAID, // 6
-        DELINQUENT, // 7
-        REPAID, // 8
-        DEFAULTED, // 9
-        FLC_WITHDRAWN // 10
+    // prettier-ignore
+    enum Stages {                   // WARNING, DO NOT REORDER ENUM!!!
+        INITIAL,                    // 0
+        OPEN,                       // 1
+        FUNDED,                     // 2
+        FUNDING_FAILED,             // 3
+        FLC_DEPOSITED,              // 4
+        BORROWED,                   // 5
+        BORROWER_INTEREST_REPAID,   // 6
+        DELINQUENT,                 // 7
+        REPAID,                     // 8
+        DEFAULTED,                  // 9
+        FLC_WITHDRAWN               // 10
     }
+    // prettier-ignore
 
     struct LendingPoolParams {
         string name;
