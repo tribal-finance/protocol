@@ -373,7 +373,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       });
 
       it("2000 USDC flc deposit from the borrower", async () => {
-        await nextLendingPool.adminRolloverFirstLossCaptial(lendingPool.address);
+        await nextLendingPool.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
       });
 
       it("transitions to the FLC_DEPOSITED stage", async () => {

@@ -21,10 +21,22 @@ abstract contract AuthorityAware is OwnableUpgradeable {
         _;
     }
 
+    modifier onlyOwnerOrAdminOrBorrower() {
+        _onlyOwnerOrAdminOrBorrower();
+        _;
+    }
+
     function _onlyOwnerOrAdmin() internal view {
         require(
             owner() == msg.sender || authority.isAdmin(msg.sender),
             "AA:OA" // "AuthorityAware: caller is not the owner or admin"
+        );
+    }
+
+    function _onlyOwnerOrAdminOrBorrower() internal view {
+        require(
+            owner() == msg.sender || authority.isAdmin(msg.sender),
+            "AA:OAB" // "AuthorityAware: caller is not the owner or admin"
         );
     }
 

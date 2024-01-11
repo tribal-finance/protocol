@@ -775,9 +775,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         firstLossAssets = 0;
     }
 
-    function adminRolloverFirstLossCaptial(
+    function adminOrBorrowerRolloverFirstLossCaptial(
         LendingPool pool
-    ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
+    ) external onlyOwnerOrAdminOrBorrower atStage(Stages.INITIAL) whenNotPaused {
         require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
 
         if(pool.firstLossAssets() > firstLossAssets) {
