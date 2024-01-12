@@ -317,7 +317,8 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
     describe("test out rolling over into next pool", async () => {
 
       let nextLendingPool: LendingPool;
-      let nextTrancheVault: TrancheVault;
+      let nextTrancheVault1: TrancheVault;
+      let nextTrancheVault2: TrancheVault;
 
       it("prepare next generation of protocol to roll into", async () => {
         const futureLenders = await poolFactory.nextLenders();
@@ -344,7 +345,8 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
 
         expect(nextTrancheAddr).hexEqual(futureTranches[0]);
 
-        nextTrancheVault = await ethers.getContractAt("TrancheVault", nextTrancheAddr);
+        nextTrancheVault1 = await ethers.getContractAt("TrancheVault", nextTrancheAddr);
+        nextTrancheVault2 = await ethers.getContractAt("TrancheVault", await nextLendingPool.trancheVaultAddresses(1));
 
       })
 
@@ -374,13 +376,15 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
 
       it("perform rollover and expect no asset transfers", async () => {
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
+        const platformToken = await ethers.getContractAt("ERC20", await lendingPool.platformTokenContractAddress());
 
         const initialBalancesAsset = await Promise.all([
           await asset.balanceOf(lendingPool.address),
           await asset.balanceOf(firstTrancheVault.address),
           await asset.balanceOf(secondTrancheVault.address),
           await asset.balanceOf(nextLendingPool.address),
-          await asset.balanceOf(nextTrancheVault.address)
+          await asset.balanceOf(nextTrancheVault1.address),
+          await asset.balanceOf(nextTrancheVault2.address)
         ])
 
         const initialBalancesVault = await Promise.all([
@@ -394,7 +398,46 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
 
         const borroweredAssetsInitial = await lendingPool.borrowedAssets();
 
+        const initialBoostedLender1Tranche0Pool1 = await lendingPool.s_trancheRewardables(0, await lender1.getAddress());
+        const initialBoostedLender2Tranche0Pool1 = await lendingPool.s_trancheRewardables(0, await lender2.getAddress());
+        const initialBoostedLender1Tranche1Pool1 = await lendingPool.s_trancheRewardables(1, await lender1.getAddress());
+        const initialBoostedLender2Tranche1Pool1 = await lendingPool.s_trancheRewardables(1, await lender2.getAddress());
+
+        const initialBoostedLender1Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender1.getAddress());
+        const initialBoostedLender2Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender2.getAddress());
+        const initialBoostedLender1Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender1.getAddress());
+        const initialBoostedLender2Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender2.getAddress());
+
+        console.log("Boosting state-transfer tests")
+        console.log("initials pool 1")
+        console.log(initialBoostedLender1Tranche0Pool1.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche0Pool1.lockedPlatformTokens);
+        console.log(initialBoostedLender1Tranche1Pool1.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens);
+        console.log("initials pool 2")
+        console.log(initialBoostedLender1Tranche0Pool2.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche0Pool2.lockedPlatformTokens);
+        console.log(initialBoostedLender1Tranche1Pool2.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens);
+
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address]);
+
+
+        const finalBoostedLender1Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender1.getAddress());
+        const finalBoostedLender2Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender2.getAddress());
+        const finalBoostedLender1Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender1.getAddress());
+        const finalBoostedLender2Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender2.getAddress());
+        
+        console.log("finals pool 2")
+        console.log(finalBoostedLender1Tranche0Pool2.lockedPlatformTokens);
+        console.log(finalBoostedLender2Tranche0Pool2.lockedPlatformTokens);
+        console.log(finalBoostedLender1Tranche1Pool2.lockedPlatformTokens);
+        console.log(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens);
+
+        expect(finalBoostedLender1Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender1Tranche0Pool2.lockedPlatformTokens)).equals(initialBoostedLender1Tranche0Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender2Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche0Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche0Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens)
 
         const borroweredAssetsFinal = await lendingPool.borrowedAssets();
 
@@ -403,7 +446,8 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
           await asset.balanceOf(firstTrancheVault.address),
           await asset.balanceOf(secondTrancheVault.address),
           await asset.balanceOf(nextLendingPool.address),
-          await asset.balanceOf(nextTrancheVault.address)
+          await asset.balanceOf(nextTrancheVault1.address),
+          await asset.balanceOf(nextTrancheVault2.address)
         ])
 
         const finalBalancesVault = await Promise.all([
@@ -421,6 +465,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
           initialBalancesAsset[2].sub(finalBalancesAsset[2]),
           initialBalancesAsset[3].sub(finalBalancesAsset[3]),
           initialBalancesAsset[4].sub(finalBalancesAsset[4]),
+          initialBalancesAsset[5].sub(finalBalancesAsset[5]),
         ]
 
         const deltaBalancesVault = [
@@ -437,6 +482,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         expect(deltaBalancesAsset[2]).equals(0)
         expect(deltaBalancesAsset[3]).equals(0)
         expect(deltaBalancesAsset[4]).equals(0)
+        expect(deltaBalancesAsset[5]).equals(0)
 
 
         expect(deltaBalancesVault[0]).equals(0)
