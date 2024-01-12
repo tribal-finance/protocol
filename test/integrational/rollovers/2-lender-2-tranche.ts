@@ -408,6 +408,9 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         const initialBoostedLender1Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender1.getAddress());
         const initialBoostedLender2Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender2.getAddress());
 
+        const initialBalanceOfPool1PlatformToken = await platformToken.balanceOf(lendingPool.address);
+        const initialBalanceOfPool2PlatformToken = await platformToken.balanceOf(nextLendingPool.address);
+
         console.log("Boosting state-transfer tests")
         console.log("initials pool 1")
         console.log(initialBoostedLender1Tranche0Pool1.lockedPlatformTokens);
@@ -422,6 +425,11 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
 
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address]);
 
+        const finalBalanceOfPool1PlatformToken = await platformToken.balanceOf(lendingPool.address);
+        const finalBalanceOfPool2PlatformToken = await platformToken.balanceOf(nextLendingPool.address);
+
+        expect(initialBalanceOfPool1PlatformToken.sub(finalBalanceOfPool1PlatformToken)).equals(initialBalanceOfPool1PlatformToken);
+        expect(finalBalanceOfPool2PlatformToken.sub(initialBalanceOfPool2PlatformToken)).equals(initialBalanceOfPool1PlatformToken);
 
         const finalBoostedLender1Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender1.getAddress());
         const finalBoostedLender2Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender2.getAddress());
