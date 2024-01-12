@@ -314,31 +314,6 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       await ethers.provider.send("evm_mine", []);
     });
 
-    it.skip("🏛️ borrower repays 10000 USDC as principal", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(10000));
-      await lendingPool.connect(borrower).borrowerRepayPrincipal();
-    });
-
-    it.skip("transitions to REPAID stage", async () => {
-      expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
-    });
-
-    it.skip("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
-      const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
-      await lendingPool
-        .connect(borrower)
-        .borrowerWithdrawFirstLossCapitalAndExcessSpread();
-      const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-        USDC(2050)
-      );
-    });
-
-    it.skip("transitions to FLC_WITHDRAWN stage", async () => {
-      expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
-    });
-
-
     describe("test out rolling over into next pool", async () => {
 
       let nextLendingPool: LendingPool;
@@ -353,7 +328,6 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
-
 
         const updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
