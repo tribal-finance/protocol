@@ -287,6 +287,7 @@ export async function deployDuotranchePool(
     borrower,
     lenders,
     poolFactory,
+    lendingPoolParams,
     ...deployedContracts,
   };
 }

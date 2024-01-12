@@ -5,7 +5,7 @@ import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
-import { DEFAULT_LENDING_POOL_PARAMS } from "../../../lib/pool_deployments";
+import { DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT } from "../../../lib/pool_deployments";
 
 import {
   ITestUSDC,
@@ -52,7 +52,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         return contracts;
       };
 
-      const data = await deployUnitranchePool(
+      const data = await deployDuotranchePool(
         poolFactory,
         deployer,
         borrower,
@@ -75,12 +75,14 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       platformToken: PlatformToken,
       lendingPool: LendingPool,
       firstTrancheVault: TrancheVault,
+      secondTrancheVault: TrancheVault,
       authority: Authority,
       poolFactory: PoolFactory,
       deployer: Signer,
       borrower: Signer,
       lender1: Signer,
-      lender2: Signer;
+      lender2: Signer,
+      lendingPoolParams: any;
 
     before(async () => {
       const data = await loadFixture(duoPoolFixture);
@@ -88,12 +90,17 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
       firstTrancheVault = data.firstTrancheVault;
+      secondTrancheVault = data.secondTrancheVault as TrancheVault;
+      if (!secondTrancheVault) {
+        throw new Error("Bad second tranche vault");
+      }
       poolFactory = data.poolFactory;
       deployer = data.deployer;
       borrower = data.borrower;
       lender1 = data.lenders[0];
       lender2 = data.lenders[1];
       authority = data.authority;
+      lendingPoolParams = data.lendingPoolParams;
     });
 
     it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
@@ -152,9 +159,9 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
     it("2000 USDC deposit from lender 2", async () => {
       await usdc
         .connect(lender2)
-        .approve(firstTrancheVault.address, USDC(2000));
+        .approve(secondTrancheVault.address, USDC(2000));
 
-      await firstTrancheVault
+      await secondTrancheVault
         .connect(lender2)
         .deposit(USDC(2000), await lender2.getAddress());
     });
@@ -164,13 +171,13 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
     })
 
-    it("sets lenderTotalExpectedRewardsByTranche for lender2 to 100 (2000* 1/2 year * 10%)", async () => {
+    it("sets lenderTotalExpectedRewardsByTranche for lender2 to 120 (2000* 1/2 year * 10%)", async () => {
       expect(
         await lendingPool.lenderTotalExpectedRewardsByTranche(
           await lender2.getAddress(),
-          0
+          1
         )
-      ).to.equal(USDC(100));
+      ).to.equal(USDC(120));
     });
 
     it("sets borrowerExpectedInterest() to 750 USDC", async () => {
@@ -190,17 +197,17 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         .lenderLockPlatformTokensByTranche(0, WAD(10000));
     });
 
-    it("sets lenderTotalExpectedRewardsByTranche for lender1 to 525 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
+    it("sets lenderTotalExpectedRewardsByTranche for lender1 to 400 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
       expect(
         await lendingPool.lenderTotalExpectedRewardsByTranche(
           await lender1.getAddress(),
           0
         )
-      ).to.equal(USDC(525));
+      ).to.equal(USDC(400));
     });
 
-    it("sets allLendersInterest() to 625 USDC", async () => {
-      expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+    it("sets allLendersInterest() to 520 USDC", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(520));
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
@@ -297,8 +304,8 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.borrowerOutstandingInterest()).to.equal(0);
     });
 
-    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(50));
+    it("borrowerExcessSpread() is now 155 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
+      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(155));
     });
 
     it("⏳ 3 days pass by", async () => {
@@ -341,18 +348,18 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         const futureLenders = await poolFactory.nextLenders();
         const futureTranches = await poolFactory.nextTranches();
 
-        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+        const defaultParams = lendingPoolParams;
 
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
 
 
-        const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
+        const updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]); // view only execution to check lender address
+        const nextPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); // view only execution to check lender address
         expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(false);
-        await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]); // run the state change
+        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); // run the state change
         expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(true);
 
         nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
@@ -397,6 +404,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         const initialBalancesAsset = await Promise.all([
           await asset.balanceOf(lendingPool.address),
           await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(secondTrancheVault.address),
           await asset.balanceOf(nextLendingPool.address),
           await asset.balanceOf(nextTrancheVault.address)
         ])
@@ -405,17 +413,21 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
           await firstTrancheVault.balanceOf(await borrower.getAddress()),
           await firstTrancheVault.balanceOf(await lender1.getAddress()),
           await firstTrancheVault.balanceOf(await lender2.getAddress()),
+          await secondTrancheVault.balanceOf(await borrower.getAddress()),
+          await secondTrancheVault.balanceOf(await lender1.getAddress()),
+          await secondTrancheVault.balanceOf(await lender2.getAddress()),
         ])
 
         const borroweredAssetsInitial = await lendingPool.borrowedAssets();
 
-        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address]);
+        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address]);
 
         const borroweredAssetsFinal = await lendingPool.borrowedAssets();
 
         const finalBalancesAsset = await Promise.all([
           await asset.balanceOf(lendingPool.address),
           await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(secondTrancheVault.address),
           await asset.balanceOf(nextLendingPool.address),
           await asset.balanceOf(nextTrancheVault.address)
         ])
@@ -424,6 +436,9 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
           await firstTrancheVault.balanceOf(await borrower.getAddress()),
           await firstTrancheVault.balanceOf(await lender1.getAddress()),
           await firstTrancheVault.balanceOf(await lender2.getAddress()),
+          await secondTrancheVault.balanceOf(await borrower.getAddress()),
+          await secondTrancheVault.balanceOf(await lender1.getAddress()),
+          await secondTrancheVault.balanceOf(await lender2.getAddress()),
         ])
 
         const deltaBalancesAsset = [
@@ -431,23 +446,31 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
           initialBalancesAsset[1].sub(finalBalancesAsset[1]),
           initialBalancesAsset[2].sub(finalBalancesAsset[2]),
           initialBalancesAsset[3].sub(finalBalancesAsset[3]),
+          initialBalancesAsset[4].sub(finalBalancesAsset[4]),
         ]
 
         const deltaBalancesVault = [
           initialBalancesVault[0].sub(finalBalancesVault[0]),
           initialBalancesVault[1].sub(finalBalancesVault[1]),
           initialBalancesVault[2].sub(finalBalancesVault[2]),
+          initialBalancesVault[3].sub(finalBalancesVault[3]),
+          initialBalancesVault[4].sub(finalBalancesVault[4]),
+          initialBalancesVault[5].sub(finalBalancesVault[5]),
         ]
 
         expect(deltaBalancesAsset[0]).equals(0)
         expect(deltaBalancesAsset[1]).equals(0)
         expect(deltaBalancesAsset[2]).equals(0)
         expect(deltaBalancesAsset[3]).equals(0)
+        expect(deltaBalancesAsset[4]).equals(0)
 
 
         expect(deltaBalancesVault[0]).equals(0)
         expect(deltaBalancesVault[1]).equals(initialBalancesVault[1])
         expect(deltaBalancesVault[2]).equals(initialBalancesVault[2])
+        expect(deltaBalancesVault[3]).equals(0)
+        expect(deltaBalancesVault[4]).equals(initialBalancesVault[4])
+        expect(deltaBalancesVault[5]).equals(initialBalancesVault[5])
 
         expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(-borroweredAssetsInitial);
       })
@@ -461,14 +484,14 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
       });
 
-      it("🏛️ borrower withdraws FLC(0) + excess spread (175USDC)", async () => {
+      it("🏛️ borrower withdraws FLC(0) + excess spread (155USDC)", async () => {
         const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
         await lendingPool
           .connect(borrower)
           .borrowerWithdrawFirstLossCapitalAndExcessSpread();
         const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
         expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-          USDC(175)
+          USDC(155)
         );
 
         // borrower is still allowed to pull out the excess spread?
@@ -485,15 +508,15 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       })
 
       it("have lender 2 redeem their rewards", async () => {
-        let amount = await lendingPool.lenderRewardsByTrancheRedeemable(await lender2.getAddress(), 0);
+        let amount = await lendingPool.lenderRewardsByTrancheRedeemable(await lender2.getAddress(), 1);
         expect(amount).gt(0);
-        await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(0, amount);
+        await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(1, amount);
       })
-  
+
       it("transitioned nextLendingPool to the BORROWED stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.BORROWED);
       });
-  
+
       it("nextLendingPool contract now holds 2000 USDC (just the first loss)", async () => {
         expect(await usdc.balanceOf(nextLendingPool.address)).to.equal(USDC(2000));
       });
@@ -503,90 +526,90 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower pays $125 interest", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(125));
         await nextLendingPool.connect(borrower).borrowerPayInterest(USDC(125));
       });
-  
+
       it("⏳ 30 days pass by", async () => {
         // wait 30 days
         await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower pays $125 interest", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(125));
         await nextLendingPool.connect(borrower).borrowerPayInterest(USDC(125));
       });
-  
+
       it("⏳ 30 days pass by", async () => {
         // wait 30 days
         await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower pays $125 interest", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(125));
         await nextLendingPool.connect(borrower).borrowerPayInterest(USDC(125));
       });
-  
+
       it("⏳ 30 days pass by", async () => {
         // wait 30 days
         await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower pays $125 interest", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(125));
         await nextLendingPool.connect(borrower).borrowerPayInterest(USDC(125));
       });
-  
+
       it("⏳ 30 days pass by", async () => {
         // wait 30 days
         await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower pays $125 interest", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(125));
         await nextLendingPool.connect(borrower).borrowerPayInterest(USDC(125));
       });
-  
+
       it("⏳ 30 days pass by", async () => {
         // wait 30 days
         await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower pays $125 interest", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(125));
         await nextLendingPool.connect(borrower).borrowerPayInterest(USDC(125));
       });
-  
+
       it("borrowerOutstandingInterest() is now 0 (borrower already paid 750 USDC)", async () => {
         expect(await nextLendingPool.borrowerOutstandingInterest()).to.equal(0);
       });
-  
-      it("borrowerExcessSpread() is now 175", async () => {
-        expect(await nextLendingPool.borrowerExcessSpread()).to.equal(USDC(175));
+
+      it("borrowerExcessSpread() is now 155", async () => {
+        expect(await nextLendingPool.borrowerExcessSpread()).to.equal(USDC(155));
       });
-  
+
       it("⏳ 3 days pass by", async () => {
         // wait 30 days
         await ethers.provider.send("evm_increaseTime", [3 * 24 * 60 * 60]);
         await ethers.provider.send("evm_mine", []);
       });
-  
+
       it("🏛️ borrower repays 10000 USDC as principal", async () => {
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(10000));
         await nextLendingPool.connect(borrower).borrowerRepayPrincipal();
       });
-  
+
       it("transitions to REPAID stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.REPAID);
       });
-  
+
       it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
         const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
         await nextLendingPool
@@ -597,7 +620,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         //  USDC(2050)
         //);
       });
-  
+
       it("transitions to FLC_WITHDRAWN stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
       });
