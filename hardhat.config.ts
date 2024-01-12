@@ -57,6 +57,8 @@ const config: HardhatUserConfig = {
         process.env.SEPOLIA_LENDER2_KEY!,
         process.env.SEPOLIA_BORROWER_KEY!,
       ],
+
+      gas: 4000000
     },
 
     mainnet: {
