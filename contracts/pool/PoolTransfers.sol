@@ -55,7 +55,6 @@ library PoolTransfers {
         address[] memory deadTrancheAddrs
     ) external {
         uint256 tranchesCount = lendingPool.tranchesCount();
-        // TODO: require all interest to be repaid
         LendingPool deadpool = LendingPool(deadLendingPoolAddr);
         require(deadpool.currentStage() == LendingPool.Stages.BORROWED, "must be in borrowed stage");
         require(deadpool.borrowerOutstandingInterest() == 0, "all interest must be repaid");
@@ -64,7 +63,6 @@ library PoolTransfers {
         
         uint256 rolledAssets = 0;
 
-        // TODO update pool so that we can enter repaid state
         for (uint256 i = 0; i < deadpool.lenderCount(); i++) {
             address lender = deadpool.lendersAt(i);
             LendingPool.RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(
