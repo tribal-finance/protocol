@@ -674,5 +674,10 @@
     "contractAddress": "0x52173b6ac069619c206b9A0e75609fC92860AB2A",
     "implementationAddress": "0x773330693cb7d5d233348e25809770a32483a940",
     "timestamp": 1678261307
+  },
+  {
+    "contractName": "platformToken",
+    "contractAddress": "0x0b27a79cb9C0B38eE06Ca3d94DAA68e0Ed17F953",
+    "timestamp": 1678261296
   }
 ]
