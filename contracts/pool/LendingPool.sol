@@ -443,8 +443,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         defaultedAt = uint64(block.timestamp);
         currentStage = Stages.DEFAULTED;
         _claimInterestForAllLenders();
-        // TODO: update repaid interest to be the total interest paid to lenders
-        // TODO: should the protocol fees be paid in event of default
         uint availableAssets = _stableCoinContract().balanceOf(address(this));
         TrancheVault[] memory vaults = trancheVaultContracts();
 
