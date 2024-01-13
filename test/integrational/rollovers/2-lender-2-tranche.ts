@@ -329,6 +329,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
+        defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).add(USDC(1000));
 
         const updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
@@ -350,12 +351,15 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
 
       })
 
-      it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
+      it("is initially in INITIAL stage and requires a deposit of 3000 USDC", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
-        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(2000));
+        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(3000));
       });
 
-      it("2000 USDC flc deposit from the borrower", async () => {
+      it("3000 USDC flc deposit from the borrower", async () => {
+        //await expect(nextLendingPool.callStatic.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address)).to.be.reverted;
+        // previous flc was 2000 so now borrower needs to approve an additonal 1000 since the new flc is 3000
+        await usdc.approve(nextLendingPool.address, 1000000000);
         await nextLendingPool.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
       });
 
