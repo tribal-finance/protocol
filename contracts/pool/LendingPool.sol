@@ -781,6 +781,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         if(pool.firstLossAssets() > firstLossAssets) {
             // we have surplus coming, refund extra to borrower
             uint256 flcSurplus = pool.firstLossAssets() - firstLossAssets;
+
+            pool.poolRolloverFirstLossCaptial();
             SafeERC20.safeTransfer(IERC20(_stableCoinContract()), borrowerAddress, flcSurplus);
         } else if(pool.firstLossAssets() < firstLossAssets) {
             // we have a shortfall, ask borrower for more
@@ -790,10 +792,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
                 revert InsufficientAllowance(flcShortfall, allowance);
             }
             SafeERC20.safeTransferFrom(IERC20(_stableCoinContract()), borrowerAddress, address(this), flcShortfall);
+            pool.poolRolloverFirstLossCaptial();
         }
 
         _transitionToFlcDepositedStage(firstLossAssets);
-        pool.poolRolloverFirstLossCaptial();
     }
 
     /** @notice Borrows collected funds from the pool */
@@ -875,17 +877,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint assetsToSend = firstLossAssets + borrowerExcessSpread();
         _transitionToFlcWithdrawnStage(assetsToSend);
         SafeERC20.safeTransfer(_stableCoinContract(), borrowerAddress, assetsToSend);
-    }
-
-    /** @notice Withdraw first loss capital and excess spread
-     *  can be called only after principal is repaid
-     */
-    function transferFirstLossCapitalAndExcessSpread(
-        address nextPool
-    ) external atStage(Stages.BORROWED) onlyDeployedPool {
-        uint assetsToSend = firstLossAssets + borrowerExcessSpread();
-        SafeERC20.safeTransfer(_stableCoinContract(), nextPool, assetsToSend);
-        firstLossAssets = 0;
     }
 
     /* VIEWS */

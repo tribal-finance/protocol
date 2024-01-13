@@ -357,9 +357,9 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
       });
 
       it("3000 USDC flc deposit from the borrower", async () => {
-        //await expect(nextLendingPool.callStatic.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address)).to.be.reverted;
+        await expect(nextLendingPool.callStatic.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address)).to.be.revertedWith("InsufficientAllowance");
         // previous flc was 2000 so now borrower needs to approve an additonal 1000 since the new flc is 3000
-        await usdc.approve(nextLendingPool.address, 1000000000);
+        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(1000));
         await nextLendingPool.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
       });
 
@@ -549,8 +549,8 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.BORROWED);
       });
 
-      it("nextLendingPool contract now holds 2000 USDC (just the first loss)", async () => {
-        expect(await usdc.balanceOf(nextLendingPool.address)).to.equal(USDC(2000));
+      it("nextLendingPool contract now holds 3000 USDC (just the first loss)", async () => {
+        expect(await usdc.balanceOf(nextLendingPool.address)).to.equal(USDC(3000));
       });
 
       it("⏳ 30 days pass by", async () => {

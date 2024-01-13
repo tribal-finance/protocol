@@ -318,7 +318,8 @@ describe("Rollovers (2 Lender)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
-        
+        defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).sub(USDC(1000));
+
 
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
@@ -339,14 +340,13 @@ describe("Rollovers (2 Lender)", function () {
 
       })
 
-      it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
+      it("is initially in INITIAL stage and requires a deposit of 1000 USDC", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
-        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(2000));
+        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(1000));
       });
   
       it("2000 USDC flc deposit from the borrower", async () => {
-        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(2000));
-        await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
+        await nextLendingPool.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
       });
   
       it("transitions to the FLC_DEPOSITED stage", async () => {
@@ -433,14 +433,14 @@ describe("Rollovers (2 Lender)", function () {
         expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
       });
   
-      it("🏛️ borrower withdraws FLC + excess spread (2175USDC)", async () => {
+      it("🏛️ borrower excess spread (175 USDC), flc was rolled into next pool", async () => {
         const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
         await lendingPool
           .connect(borrower)
           .borrowerWithdrawFirstLossCapitalAndExcessSpread();
         const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
-        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-          USDC(2175)
+        expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).equals(
+          USDC(175)
         );
       });
   
