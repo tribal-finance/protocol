@@ -222,7 +222,7 @@ describe("FeeSharing", function () {
         before(async function () {
             const accounts = await ethers.getSigners();
             owner = accounts[0];
-            
+
             await testSetup();
 
             // Setup the balance for distribution
@@ -258,11 +258,8 @@ describe("FeeSharing", function () {
             expect(stakingBalance).to.equal(expectedDistribution[0]);
             expect(foundationBalance).to.equal(expectedDistribution[1]);
     
-            // Additional checks as necessary
-            // For example, checking events emitted or other side effects of distributeFees
         });
     
-        // Additional test cases as necessary
     });
     
 });
