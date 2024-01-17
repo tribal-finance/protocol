@@ -56,6 +56,28 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
 };
 export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [[WAD(0.8), WAD(0.75)], [WAD(0.2), WAD(0.25)]];
 
+export function calculateTrancheCapacities(params: any, fundingSplitWads: any) {
+  let trancheCapacities = [];
+
+  for (let i = 0; i < params.tranchesCount; i++) {
+      let minCapacityForTranche = params.minFundingCapacity.mul(fundingSplitWads[i][1]).div(ethers.constants.WeiPerEther);
+      let maxCapacityForTranche = params.maxFundingCapacity.mul(fundingSplitWads[i][0]).div(ethers.constants.WeiPerEther);
+
+      // Swap if minCapacity is greater than maxCapacity
+      if (minCapacityForTranche.gt(maxCapacityForTranche)) {
+          [minCapacityForTranche, maxCapacityForTranche] = [maxCapacityForTranche, minCapacityForTranche];
+      }
+
+      trancheCapacities.push({
+          tranche: i,
+          minCapacity: minCapacityForTranche,
+          maxCapacity: maxCapacityForTranche
+      });
+  }
+
+  return trancheCapacities;
+}
+
 export async function deployPlatformToken(
   deployer: Signer,
   lenders: Array<Signer>,

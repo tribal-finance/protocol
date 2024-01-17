@@ -9,6 +9,7 @@ import { Signer, Contract } from "ethers";
 import {
     DEFAULT_LENDING_POOL_PARAMS,
     DEFAULT_MULTITRANCHE_FUNDING_SPLIT,
+    calculateTrancheCapacities,
     deployDuotranchePool,
     deployFactoryAndImplementations,
     deployUnitranchePool,
@@ -84,54 +85,14 @@ describe("TrancheVault contract", function () {
         });
 
         it("Should correctly get minFundingCapacity", async function () {
-            const trancheCount = await lendingPool.tranchesCount();
-            console.log(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity);
-            console.log(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity);
-            console.log(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][1])
-            console.log(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][1])
-
-            function calculateTrancheCapacities(params: any, fundingSplitWads: any) {
-                let trancheCapacities = [];
-
-                for (let i = 0; i < params.tranchesCount; i++) {
-                    let minCapacityForTranche = params.minFundingCapacity.mul(fundingSplitWads[i][1]).div(ethers.constants.WeiPerEther);
-                    let maxCapacityForTranche = params.maxFundingCapacity.mul(fundingSplitWads[i][0]).div(ethers.constants.WeiPerEther);
-
-                    // Swap if minCapacity is greater than maxCapacity
-                    if (minCapacityForTranche.gt(maxCapacityForTranche)) {
-                        [minCapacityForTranche, maxCapacityForTranche] = [maxCapacityForTranche, minCapacityForTranche];
-                    }
-
-                    trancheCapacities.push({
-                        tranche: i,
-                        minCapacity: minCapacityForTranche,
-                        maxCapacity: maxCapacityForTranche
-                    });
-                }
-
-                return trancheCapacities;
-            }
-
-            // Example usage
             const params = {
-                minFundingCapacity: ethers.BigNumber.from("10000000000"), // Example total min capacity
-                maxFundingCapacity: ethers.BigNumber.from("12000000000"), // Example total max capacity
-                tranchesCount: 2 // Example tranche count
+                minFundingCapacity: DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity,
+                maxFundingCapacity: DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity,
+                tranchesCount: 2 
             };
 
-            const fundingSplitWads = [
-                [ethers.BigNumber.from("800000000000000000"), ethers.BigNumber.from("750000000000000000")], // Tranche 0 split ratios
-                [ethers.BigNumber.from("200000000000000000"), ethers.BigNumber.from("250000000000000000")]  // Tranche 1 split ratios
-            ];
+            const capacities = calculateTrancheCapacities(params, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
 
-            // Output the results
-            console.log(calculateTrancheCapacities(params, fundingSplitWads));
-
-            for (let i = 0; i < trancheCount; i++) {
-                console.log("-----------Tranche", i, "------------------")
-                console.log(await tranches[i].minFundingCapacity())
-                console.log(await tranches[i].maxFundingCapacity())
-            }
             expect(await tranches[0].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][1]).div(ethers.utils.parseEther("1")));
             expect(await tranches[1].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][1]).div(ethers.utils.parseEther("1")));
         });
