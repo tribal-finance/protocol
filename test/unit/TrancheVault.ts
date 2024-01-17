@@ -88,6 +88,33 @@ describe("TrancheVault contract", function () {
             console.log(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity);
             console.log(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][1])
             console.log(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][1])
+
+            // Function to calculate min/max funding capacities for each tranche
+            function calculateTrancheCapacities() {
+                let trancheCapacities: any = [];
+
+                DEFAULT_MULTITRANCHE_FUNDING_SPLIT.forEach((splitRatio, index) => {
+                    let minCapacityForTranche = DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(splitRatio[0]).div(ethers.utils.parseEther("1"));
+                    let maxCapacityForTranche = DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(splitRatio[1]).div(ethers.utils.parseEther("1"));
+
+                    // Swap if minCapacity is greater than maxCapacity
+                    if (minCapacityForTranche > maxCapacityForTranche) {
+                        [minCapacityForTranche, maxCapacityForTranche] = [maxCapacityForTranche, minCapacityForTranche];
+                    }
+
+                    trancheCapacities.push({
+                        tranche: index,
+                        minCapacity: minCapacityForTranche,
+                        maxCapacity: maxCapacityForTranche
+                    });
+                });
+
+                return trancheCapacities;
+            }
+
+            // Output the results
+            console.log(calculateTrancheCapacities());
+
             for (let i = 0; i < trancheCount; i++) {
                 console.log("-----------Tranche", i, "------------------")
                 console.log(await tranches[i].minFundingCapacity())
