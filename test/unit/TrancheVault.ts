@@ -69,6 +69,9 @@ describe("TrancheVault contract", function () {
 
             for (let i = 0; i < trancheCount; i++) {
                 tranches.push(await ethers.getContractAt("TrancheVault", await lendingPool.trancheVaultAddresses(i)));
+                console.log("-----------Tranche", i, "------------------")
+                console.log(await tranches[i].minFundingCapacity())
+                console.log(await tranches[i].maxFundingCapacity())
             }
         })
 

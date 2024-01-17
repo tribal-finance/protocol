@@ -130,11 +130,12 @@ describe("FeeSharing", function () {
         })
     });
     describe("distributeFees", function () {
-        it.skip("Should distribute fees correctly", async function () {
+        it("Should distribute fees correctly", async function () {
             const { feeSharing, beneficiaries, mockAssetContract, shares, owner, wad, mockStakingContract } =  await deployFeeSharingStandaloneFixture(true);
     
             const balance = ethers.utils.parseUnits("10000000", 18);
-            await mockAssetContract.mock.balanceOf.returns(balance);
+            mockAssetContract.mock.balanceOf.returns(balance);
+            mockAssetContract.mock.balanceOf.returns(balance);
     
             const expectedDistribution = [
                 balance.mul(await feeSharing.beneficiariesSharesWad(0)).div(wad),
@@ -142,12 +143,12 @@ describe("FeeSharing", function () {
             ];
     
             // Mock the approve and transfer methods for all calls
-            await mockAssetContract.mock.approve.returns(true);
-            await mockAssetContract.mock.transfer.returns(true);
-            await mockAssetContract.mock.allowance.returns(0);
+            mockAssetContract.mock.approve.returns(true);
+            mockAssetContract.mock.transfer.returns(true);
+            mockAssetContract.mock.allowance.returns(0);
     
             // Mock the staking contract
-            await mockStakingContract.mock.addReward.returns();
+            mockStakingContract.mock.addReward.returns();
     
             await feeSharing.distributeFees();
 
