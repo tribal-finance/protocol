@@ -15,7 +15,9 @@ import {
     deployUnitranchePool,
 } from "../../lib/pool_deployments";
 import STAGES from "../helpers/stages";
-import { WAD } from "../helpers/conversion";
+import { USDC, WAD } from "../helpers/conversion";
+import { Sign } from "crypto";
+import testSetup from "../helpers/usdc";
 
 describe("FeeSharing", function () {
 
@@ -212,4 +214,55 @@ describe("FeeSharing", function () {
 
     });
 
+    describe("distributeFees", function () {
+        let owner: Signer;
+        let balance: BigNumber;
+        let shares: any;
+    
+        before(async function () {
+            const accounts = await ethers.getSigners();
+            owner = accounts[0];
+            
+            await testSetup();
+
+            // Setup the balance for distribution
+            
+            balance = USDC(1000); // Example balance
+            
+            await assetContract.connect(owner).transfer(feeSharingContract.address, balance);
+    
+            // Define the shares for the beneficiaries
+            shares = [
+                ethers.utils.parseEther("0.2"), // 20% to the first beneficiary
+                ethers.utils.parseEther("0.8"), // 80% to the second beneficiary
+            ];
+    
+            // Setup the beneficiaries in the feeSharingContract
+            const beneficiaries = [stakingContract.address, foundationAddress];
+            await feeSharingContract.connect(owner).updateBenificiariesAndShares(beneficiaries, shares);
+        });
+        
+        it("Should distribute fees correctly", async function () {
+            await feeSharingContract.connect(owner).distributeFees();
+    
+            // Assert that the fees are distributed according to the shares
+            const expectedDistribution = [
+                balance.mul(shares[0]).div(wad),
+                balance.mul(shares[1]).div(wad)
+            ];
+    
+            // Check balances of beneficiaries after distribution
+            const stakingBalance = await assetContract.balanceOf(stakingContract.address);
+            const foundationBalance = await assetContract.balanceOf(foundationAddress);
+    
+            expect(stakingBalance).to.equal(expectedDistribution[0]);
+            expect(foundationBalance).to.equal(expectedDistribution[1]);
+    
+            // Additional checks as necessary
+            // For example, checking events emitted or other side effects of distributeFees
+        });
+    
+        // Additional test cases as necessary
+    });
+    
 });
