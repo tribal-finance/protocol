@@ -30,14 +30,19 @@ export async function processLendingPoolParams(ethers: any, factory: PoolFactory
 
     lendingPoolParams = lendingPoolParams.trim();
 
+    console.log("sending data to factory...")
+
     const tx = await signers[0].sendTransaction({
         to: factory.address,
         data: lendingPoolParams
     })
 
+    
     const receipt = await tx.wait();
     const timestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp
-
+    
+    console.log("parsing deployment into cache...")
+    
     receipt.logs.forEach((log: any) => {
         try {
             const parsedLog = factory.interface.parseLog(log);
