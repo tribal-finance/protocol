@@ -14,6 +14,7 @@ import {
     deployUnitranchePool,
 } from "../../lib/pool_deployments";
 import STAGES from "../helpers/stages";
+import { WAD } from "../helpers/conversion";
 
 describe("TrancheVault contract", function () {
     let accounts;
@@ -89,31 +90,42 @@ describe("TrancheVault contract", function () {
             console.log(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][1])
             console.log(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][1])
 
-            // Function to calculate min/max funding capacities for each tranche
-            function calculateTrancheCapacities() {
-                let trancheCapacities: any = [];
+            function calculateTrancheCapacities(params: any, fundingSplitWads: any) {
+                let trancheCapacities = [];
 
-                DEFAULT_MULTITRANCHE_FUNDING_SPLIT.forEach((splitRatio, index) => {
-                    let minCapacityForTranche = DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(splitRatio[0]).div(ethers.utils.parseEther("1"));
-                    let maxCapacityForTranche = DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(splitRatio[1]).div(ethers.utils.parseEther("1"));
+                for (let i = 0; i < params.tranchesCount; i++) {
+                    let minCapacityForTranche = params.minFundingCapacity.mul(fundingSplitWads[i][1]).div(ethers.constants.WeiPerEther);
+                    let maxCapacityForTranche = params.maxFundingCapacity.mul(fundingSplitWads[i][0]).div(ethers.constants.WeiPerEther);
 
                     // Swap if minCapacity is greater than maxCapacity
-                    if (minCapacityForTranche > maxCapacityForTranche) {
+                    if (minCapacityForTranche.gt(maxCapacityForTranche)) {
                         [minCapacityForTranche, maxCapacityForTranche] = [maxCapacityForTranche, minCapacityForTranche];
                     }
 
                     trancheCapacities.push({
-                        tranche: index,
+                        tranche: i,
                         minCapacity: minCapacityForTranche,
                         maxCapacity: maxCapacityForTranche
                     });
-                });
+                }
 
                 return trancheCapacities;
             }
 
+            // Example usage
+            const params = {
+                minFundingCapacity: ethers.BigNumber.from("10000000000"), // Example total min capacity
+                maxFundingCapacity: ethers.BigNumber.from("12000000000"), // Example total max capacity
+                tranchesCount: 2 // Example tranche count
+            };
+
+            const fundingSplitWads = [
+                [ethers.BigNumber.from("800000000000000000"), ethers.BigNumber.from("750000000000000000")], // Tranche 0 split ratios
+                [ethers.BigNumber.from("200000000000000000"), ethers.BigNumber.from("250000000000000000")]  // Tranche 1 split ratios
+            ];
+
             // Output the results
-            console.log(calculateTrancheCapacities());
+            console.log(calculateTrancheCapacities(params, fundingSplitWads));
 
             for (let i = 0; i < trancheCount; i++) {
                 console.log("-----------Tranche", i, "------------------")
