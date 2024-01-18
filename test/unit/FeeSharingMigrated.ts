@@ -24,6 +24,7 @@ describe("FeeSharing", function () {
     let feeSharingContract: FeeSharing;
     let stakingContract: Staking;
     let assetContract: ERC20;
+    let platformTokenContract: ERC20;
     let authorityContract: Authority;
     let wad: BigNumber;
     let foundationAddress: string;
@@ -46,7 +47,7 @@ describe("FeeSharing", function () {
     }
 
     before(async function () {
-        const { lendingPool, poolFactory, firstTrancheVault, staking, authority, feeSharing } = await loadFixture(duoPoolFixture);
+        const { lendingPool, poolFactory, firstTrancheVault, staking, authority, feeSharing, platformToken } = await loadFixture(duoPoolFixture);
 
         // Assuming the asset contract, staking, and authority are already deployed and available
         // Replace these with actual contract addresses or deployment logic
@@ -54,6 +55,7 @@ describe("FeeSharing", function () {
         stakingContract = await ethers.getContractAt("Staking", staking.address);
         authorityContract = await ethers.getContractAt("Authority", authority.address);
         feeSharingContract = await ethers.getContractAt("FeeSharing", feeSharing.address);
+        platformTokenContract = await ethers.getContractAt("PlatformToken", platformToken.address)
 
         wad = ethers.utils.parseEther("1");
         const beneficiaries = [staking.address, "OtherBeneficiaryAddress"];
@@ -236,16 +238,20 @@ describe("FeeSharing", function () {
                 ethers.utils.parseEther("0.2"), // 20% to the first beneficiary
                 ethers.utils.parseEther("0.8"), // 80% to the second beneficiary
             ];
-    
             // Setup the beneficiaries in the feeSharingContract
             const beneficiaries = [stakingContract.address, foundationAddress];
             await feeSharingContract.connect(owner).updateBenificiariesAndShares(beneficiaries, shares);
         });
         
         it("Should distribute fees correctly", async function () {
-            await feeSharingContract.connect(owner).distributeFees();
+            await platformTokenContract.approve(stakingContract.address, balance);
+            await stakingContract.stake(balance);
+
+            await assetContract.approve(stakingContract.address, balance);
+            await stakingContract.addReward(balance);
+
+            await feeSharingContract.distributeFees();
     
-            // Assert that the fees are distributed according to the shares
             const expectedDistribution = [
                 balance.mul(shares[0]).div(wad),
                 balance.mul(shares[1]).div(wad)
@@ -255,11 +261,16 @@ describe("FeeSharing", function () {
             const stakingBalance = await assetContract.balanceOf(stakingContract.address);
             const foundationBalance = await assetContract.balanceOf(foundationAddress);
     
-            expect(stakingBalance).to.equal(expectedDistribution[0]);
+            expect(stakingBalance.sub(balance)).to.equal(expectedDistribution[0]);
             expect(foundationBalance).to.equal(expectedDistribution[1]);
     
         });
     
     });
     
+    describe("stakingContract", function () {
+        it("Should return correct staking contract", async function () {
+            expect(await feeSharingContract.stakingContract()).to.equal(stakingContract.address);
+        });
+    });
 });
