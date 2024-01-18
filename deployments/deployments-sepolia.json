@@ -339,5 +339,33 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0x6Cb0AfC9CeE1f1b40D160C24DfE564173A737284",
     "timestamp": 1705539756
+  },
+  {
+    "contractName": "authority",
+    "contractAddress": "0x5eF6f9F88372453cec0049c401dBD8cCCF2F9CDa",
+    "implementationAddress": "0x6b173a735fe948ab60f353d9e056f36cea17b321",
+    "timestamp": 1705540752
+  },
+  {
+    "contractName": "poolFactory",
+    "contractAddress": "0xE718c78c828016915EB5B18C44751b0701912A2b",
+    "implementationAddress": "0x81c11dddf37f9aacf242cd2f113a6188e9f7948a",
+    "timestamp": 1705540764
+  },
+  {
+    "contractName": "feeSharing",
+    "contractAddress": "0x10CA7651fb594B8C916A89beA260DC91307A3945",
+    "implementationAddress": "0xdb3fcf05ffaf455ec4db5aaea5918d7608191a1f",
+    "timestamp": 1705540776
+  },
+  {
+    "contractName": "lendingPoolV1-clonable",
+    "contractAddress": "0x04Ff5DA7B40663766c7221c5245aD1062d101740",
+    "timestamp": 1705540812
+  },
+  {
+    "contractName": "trancheVaultV1-clonable",
+    "contractAddress": "0xDae328F0dDDE7C6c1757C53580d3157023CC8956",
+    "timestamp": 1705540824
   }
 ]
