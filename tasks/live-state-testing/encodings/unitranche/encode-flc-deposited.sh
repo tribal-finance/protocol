@@ -1,8 +1,8 @@
 #!/bin/bash
 
-export USDC_ADDRESS_6="0x07865c6E87B9F70255377e024ace6630C1Eaa37F"
+export USDC_ADDRESS_6="0xd9af0d725ABE1070e2010C421596d81810E4a633"
 export BORROWER_ADDRESS="0x8DfA5E23c8bd7911ea7A31b180b1572B5858300B"
-export PLATFORM_TOKEN_ADDRESS="0x0f81CdC8c06CF924B829E9FDA1f616fA716322F2"
+export PLATFORM_TOKEN_ADDRESS="0x3b1A962BE25430793B12a359E11760c2298e325D"
 
 npx hardhat encode-pool-initializer \
   --name " v1.0.3 FLC_DEPOSITED" \
@@ -11,7 +11,7 @@ npx hardhat encode-pool-initializer \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 10000 \
   --max-funding-capacity 12000 \
-  --funding-period-seconds 30 \
+  --funding-period-seconds 1 \
   --lending-term-seconds 1814400 \
   --first-loss-assets 200 \
   --repayment-recurrence-days 30 \
