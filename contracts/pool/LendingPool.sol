@@ -781,7 +781,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         if(pool.firstLossAssets() > firstLossAssets) {
             // we have surplus coming, refund extra to borrower
             uint256 flcSurplus = pool.firstLossAssets() - firstLossAssets;
-
             pool.poolRolloverFirstLossCaptial();
             SafeERC20.safeTransfer(IERC20(_stableCoinContract()), borrowerAddress, flcSurplus);
         } else if(pool.firstLossAssets() < firstLossAssets) {
