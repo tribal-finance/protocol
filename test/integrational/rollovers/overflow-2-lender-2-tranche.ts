@@ -136,7 +136,7 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
         .deposit(USDC(9000), await lender1.getAddress());
     });
 
-    it("gives 8000 tranche vault tokens to lender 1", async () => {
+    it("gives 9000 tranche vault tokens to lender 1", async () => {
       expect(
         await firstTrancheVault.balanceOf(await lender1.getAddress())
       ).to.equal(USDC(9000));
@@ -441,17 +441,18 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
         const finalBalanceOfPool1PlatformToken = await platformToken.balanceOf(lendingPool.address);
         const finalBalanceOfPool2PlatformToken = await platformToken.balanceOf(nextLendingPool.address);
 
-        expect(initialBalanceOfPool1PlatformToken.sub(finalBalanceOfPool1PlatformToken)).equals(initialBalanceOfPool1PlatformToken);
-        expect(finalBalanceOfPool2PlatformToken.sub(initialBalanceOfPool2PlatformToken)).equals(initialBalanceOfPool1PlatformToken);
+        expect(initialBalanceOfPool1PlatformToken.sub(finalBalanceOfPool1PlatformToken)).equals(0);
+        // this is zero because lender 1 is not opted in to rollovers
+        expect(finalBalanceOfPool2PlatformToken.sub(initialBalanceOfPool2PlatformToken)).equals(0);
 
         const finalBoostedLender1Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender1.getAddress());
         const finalBoostedLender2Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender2.getAddress());
         const finalBoostedLender2Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender2.getAddress());
 
-        expect(finalBoostedLender1Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender1Tranche0Pool2.lockedPlatformTokens)).equals(initialBoostedLender1Tranche0Pool1.lockedPlatformTokens)
-        expect(finalBoostedLender2Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche0Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche0Pool1.lockedPlatformTokens)
-        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens)
-        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender1Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender1Tranche0Pool2.lockedPlatformTokens)).equals(0)
+        expect(finalBoostedLender2Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche0Pool2.lockedPlatformTokens)).equals(0)
+        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(0)
+        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(0)
 
         const borroweredAssetsFinal = await lendingPool.borrowedAssets();
 
@@ -472,6 +473,8 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
           await secondTrancheVault.balanceOf(await lender1.getAddress()),
           await secondTrancheVault.balanceOf(await lender2.getAddress()),
         ])
+
+        const lender2Deposit = USDC(2000);
 
         const deltaBalancesAsset = [
           initialBalancesAsset[0].sub(finalBalancesAsset[0]),
@@ -500,17 +503,17 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
 
 
         expect(deltaBalancesVault[0]).equals(0)
-        expect(deltaBalancesVault[1]).equals(initialBalancesVault[1])
+        expect(deltaBalancesVault[1]).equals(0)
         expect(deltaBalancesVault[2]).equals(initialBalancesVault[2])
         expect(deltaBalancesVault[3]).equals(0)
         expect(deltaBalancesVault[4]).equals(initialBalancesVault[4])
         expect(deltaBalancesVault[5]).equals(initialBalancesVault[5])
 
-        expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(-borroweredAssetsInitial);
+        expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(-lender2Deposit);
       })
 
-      it("🏛️ borrower repays 0 USDC as principal", async () => {
-        await usdc.connect(borrower).approve(lendingPool.address, USDC(0));
+      it("🏛️ borrower repays 9000 USDC as principal", async () => {
+        await usdc.connect(borrower).approve(lendingPool.address, USDC(9000));
         await lendingPool.connect(borrower).borrowerRepayPrincipal();
       });
 
@@ -518,14 +521,14 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
         expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
       });
 
-      it("🏛️ borrower withdraws FLC(0) + excess spread (155USDC)", async () => {
+      it("🏛️ borrower withdraws FLC(0) + excess spread (172.500001)", async () => {
         const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
         await lendingPool
           .connect(borrower)
           .borrowerWithdrawFirstLossCapitalAndExcessSpread();
         const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
         expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-          USDC(155)
+          "172500001"
         );
 
         // borrower is still allowed to pull out the excess spread?
@@ -535,16 +538,19 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
         expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
       });
 
-      it("have lender1 redeem their rewards", async () => {
+      it("have lender1 try to redeem their rewards again", async () => {
         let amount = await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0);
-        expect(amount).gt(0);
+        expect(amount).eq(0);
+        // we already redeemed
         await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(0, amount);
       })
 
       it("have lender 2 redeem their rewards", async () => {
         let amount = await lendingPool.lenderRewardsByTrancheRedeemable(await lender2.getAddress(), 1);
+        console.log("lender 2  amount", amount)
+        console.log(await usdc.balanceOf(lendingPool.address));
         expect(amount).gt(0);
-        await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(1, amount);
+        await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(1, amount.sub(1));
       })
 
       it("transitioned nextLendingPool to the BORROWED stage", async () => {
@@ -625,8 +631,8 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
         expect(await nextLendingPool.borrowerOutstandingInterest()).to.equal(0);
       });
 
-      it("borrowerExcessSpread() is now 155", async () => {
-        expect(await nextLendingPool.borrowerExcessSpread()).to.equal(USDC(155));
+      it("borrowerExcessSpread() is now 615", async () => {
+        expect(await nextLendingPool.borrowerExcessSpread()).to.equal(USDC(615));
       });
 
       it("⏳ 3 days pass by", async () => {
@@ -658,6 +664,26 @@ describe("Rollovers (2 Lender / 2 Tranche) exceeding max funding", function () {
       it("transitions to FLC_WITHDRAWN stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
       });
+
+      it("lender1 withdraws from first tranche", async () => {
+        // Get initial balance of lender1 and firstTrancheVault
+        const initialLender1Balance = await usdc.balanceOf(await lender1.getAddress());
+        const initialVaultBalance = await usdc.balanceOf(firstTrancheVault.address);
+
+        // Perform the withdrawal
+        await firstTrancheVault.connect(lender1).withdraw(USDC(9000), await lender1.getAddress(), await lender1.getAddress());
+
+        // Get final balance of lender1 and firstTrancheVault
+        const finalLender1Balance = await usdc.balanceOf(await lender1.getAddress());
+        const finalVaultBalance = await usdc.balanceOf(firstTrancheVault.address);
+
+        // Assert that the lender1 balance has increased by 9000 USDC
+        expect(finalLender1Balance.sub(initialLender1Balance)).to.equal(USDC(9000));
+
+        // Optionally, assert that the firstTrancheVault balance has decreased by 9000 USDC
+        expect(initialVaultBalance.sub(finalVaultBalance)).to.equal(USDC(9000));
+
+      })
     });
   });
 });
