@@ -329,6 +329,7 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
+        defaultParams.minFundingCapacity = USDC(100)
         defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).add(USDC(1000));
 
         var updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await deployer.getAddress() };
@@ -402,7 +403,7 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
         await lendingPool.unpause();
       })
 
-      it("admin tries to do a rollover while paused", async () => {
+      it("admin tries to do a rollover with lenders removed", async () => {
         await authority.removeLender(await lender1.getAddress());
         await authority.removeLender(await lender2.getAddress());
         await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])

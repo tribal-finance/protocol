@@ -329,6 +329,7 @@ describe("Rollovers (2 Lender / 2 Tranche)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
+        defaultParams.minFundingCapacity = USDC(2000)
         defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).add(USDC(1000));
 
         const updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };

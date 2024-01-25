@@ -9,6 +9,8 @@ import "../factory/PoolFactory.sol";
 import "../vaults/TrancheVault.sol";
 
 library PoolTransfers {
+    error VaultFundingFailed(address vault, uint256 fundingAmount, uint256 expectedMinimumAmount, uint256 trancheId);
+
     event PlatformTokensReceivedFromDeadPool(address indexed lender, uint8 indexed trancheId, uint256 platformTokens);
     event WarningLenderHasNoPlatformTokensStaked(
         address indexed lender,
@@ -60,7 +62,7 @@ library PoolTransfers {
         require(deadpool.borrowerOutstandingInterest() == 0, "all interest must be repaid");
         require(lendingPool.borrowerAddress() == deadpool.borrowerAddress(), "borrowers must match");
         require(tranchesCount == deadTrancheAddrs.length, "tranche array mismatch");
-        
+
         uint256 rolledAssets = 0;
 
         for (uint256 i = 0; i < deadpool.lenderCount(); i++) {
@@ -79,20 +81,29 @@ library PoolTransfers {
                 }
             }
 
-            if (settings.rewards) {
-                // TODO: figure out how to roll interest
-            }
+            if (settings.rewards) {}
 
             if (settings.principal) {
                 for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
                     TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
                     uint256 lenderPrincipal = deadpool.lenderStakedTokensByTranche(lender, trancheId);
-                    rolledAssets += lenderPrincipal;
-                    vault.transferShares(lender, deadTrancheAddrs[trancheId], lenderPrincipal);
+                    // only roll the lender if their deposit won't let them go over maxFundingCapacity
+                    if (lenderPrincipal + vault.totalAssets() >= vault.maxFundingCapacity()) {
+                        rolledAssets += lenderPrincipal;
+                        vault.transferShares(lender, deadTrancheAddrs[trancheId], lenderPrincipal);
+                    }
                 }
             }
             deadpool.poolDisableRollOver(lender);
         }
+
+        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+            TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
+            if (vault.totalAssets() < vault.minFundingCapacity()) {
+                revert VaultFundingFailed(address(vault), vault.totalAssets(), vault.minFundingCapacity(), trancheId);
+            }
+        }
+
         deadpool.slashBorrowerBurden(rolledAssets);
     }
 }
