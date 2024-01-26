@@ -311,6 +311,7 @@ describe("Rollovers (1 Lender)", function () {
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.minFundingCapacity = USDC(8000)
+        defaultParams.maxFundingCapacity = USDC(20000)
 
         const lendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 

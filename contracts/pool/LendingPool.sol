@@ -815,6 +815,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      */
     function borrowerPayInterest(uint assets) external onlyPoolBorrower whenNotPaused {
         uint penalty = borrowerPenaltyAmount();
+        console.log("borrower penalty on pay interest", penalty);
         require(penalty < assets, "LP201"); // "LendingPool: penalty cannot be more than assets"
 
         if (penalty > 0) {

@@ -8,6 +8,8 @@ import "./LendingPool.sol";
 import "../factory/PoolFactory.sol";
 import "../vaults/TrancheVault.sol";
 
+import "hardhat/console.sol";
+
 library PoolTransfers {
     error VaultFundingFailed(address vault, uint256 fundingAmount, uint256 expectedMinimumAmount, uint256 trancheId);
 
@@ -85,22 +87,31 @@ library PoolTransfers {
 
             if (settings.principal) {
                 for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-                    TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
+                    TrancheVault vault0 = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
                     uint256 lenderPrincipal = deadpool.lenderStakedTokensByTranche(lender, trancheId);
                     // only roll the lender if their deposit won't let them go over maxFundingCapacity
-                    if (lenderPrincipal + vault.totalAssets() >= vault.maxFundingCapacity()) {
+                    console.logAddress(lender);
+                    console.log(lenderPrincipal);
+                    console.log(vault0.maxFundingCapacity());
+                    console.log("total assets");
+                    console.log(vault0.totalAssets());
+                    uint256 vaultMax = vault0.maxFundingCapacity();
+                    if (lenderPrincipal + vault0.totalAssets() <= vaultMax) {
                         rolledAssets += lenderPrincipal;
-                        vault.transferShares(lender, deadTrancheAddrs[trancheId], lenderPrincipal);
+                        vault0.transferShares(lender, deadTrancheAddrs[trancheId], lenderPrincipal);
                     }
+                    console.log(vault0.totalAssets());
+                    console.log("----------------");
                 }
             }
             deadpool.poolDisableRollOver(lender);
         }
 
         for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-            TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
-            if (vault.totalAssets() < vault.minFundingCapacity()) {
-                revert VaultFundingFailed(address(vault), vault.totalAssets(), vault.minFundingCapacity(), trancheId);
+            TrancheVault vault0 = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
+            uint256 vaultMin = vault0.minFundingCapacity();
+            if (vault0.totalAssets() < vaultMin) {
+                revert VaultFundingFailed(address(vault0), vault0.totalAssets(), vaultMin, trancheId);
             }
         }
 
