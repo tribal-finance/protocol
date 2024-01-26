@@ -1,18 +1,17 @@
-import { expect } from "chai";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { deployStaking, deployPlatformToken } from "../../lib/pool_deployments";
-import { deployAuthority } from "../../lib/pool_deployments";
-import testSetup, { USDC_ADDRESS_6 } from "../helpers/usdc";
 import { USDC } from "../helpers/conversion";
+import testSetup from "../helpers/usdc";
+import { deployAuthority, deployPlatformToken, deployStaking } from "../../lib/pool_deployments";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { expect } from "chai";
 
 describe("Staking", function () {
   async function fixture() {
     const { signers, usdc } = await testSetup();
-    const [deployer, lender1, lender2, lender3, borrower] = signers;
+    const [deployer, lender1, lender2, lender3, borrower, foundation] = signers;
     const lenders = [lender1, lender2, lender3];
-    const platformToken = await deployPlatformToken(deployer, lenders);
-    const authority = await deployAuthority(deployer, borrower, lenders);
+    const platformToken = await deployPlatformToken(deployer, lenders, foundation.address);
+    const authority = await deployAuthority(deployer, borrower, lenders, foundation.address);
     const staking = await deployStaking(
       authority.address,
       platformToken.address,

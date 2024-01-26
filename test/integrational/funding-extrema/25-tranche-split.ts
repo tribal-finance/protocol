@@ -46,7 +46,7 @@ const deterministicRand = (seed: number) => {
     return fundingSplitWads
 }
 
-describe.skip("Deploy lending with 25 vaults, fine granularity test", function () {
+describe("Deploy lending with 25 vaults, fine granularity test", function () {
     context("For unitranche pool", async function () {
         async function uniPoolFixture() {
             const { signers, usdc } = await testSetup();

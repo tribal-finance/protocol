@@ -35,6 +35,37 @@ task("deploy-empty-token", "deploys the 'no-platform-token'")
         })
     })
 
+task("deploy-usdc-token", "deploys the usdc token and faucet")
+    .setAction(async (args: any, hre) => {
+        const { ethers, upgrades } = hre;
+        const network = hre.network.name;
+
+        await retryableRequest(async () => {
+            const PlatformToken = await ethers.getContractFactory("MockUSDC");
+            const platformToken = await PlatformToken.deploy();
+            await platformToken.deployed();
+            console.log("Deployed Empty Platform Token to", platformToken.address);
+
+            writeToDeploymentsFile({
+                contractName: "mockusdc",
+                contractAddress: platformToken.address,
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+            }, network)
+        });
+
+        await retryableRequest(async () => {
+            const platformTokenAddress = getMostCurrentContract("mockusdc", network).contractAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: platformTokenAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified empty token")
+            })
+        })
+    })
+
 task("init-protocol", "deploys the lending protocol for production")
     .addParam("stableCoinAddress", "This is the address of the desired stable coin address to use in Lending Pool")
     .addParam("foundationAddress", "This is the beneficiary of the fee sharing")
@@ -410,12 +441,15 @@ task("prod-init-protocol", "deploys the lending protocol for production")
         const { stableCoinAddress, owner, feeSharingBeneficiaries, feeSharingBeneficiariesSharesWad } = args;
         const network = hre.network.name;
 
+        let shouldTransfer = true;
+
         if (!ethers.utils.isAddress(stableCoinAddress)) {
             throw Error(`--stable-coin-address is not a vaid address '${stableCoinAddress}'`);
         }
 
         if (!ethers.utils.isAddress(owner)) {
-            throw Error(`--owner is not a vaid address '${owner}'`);
+            console.log("[WARNING] ownship will not be transfered")
+            shouldTransfer = false;
         }
 
         const feeShareBeneficiariesParsed = feeSharingBeneficiaries.split(',')
@@ -581,19 +615,27 @@ task("prod-init-protocol", "deploys the lending protocol for production")
         deploySequence.push("Transfer ownship out of software wallet", () => retryableRequest(async () => {
             const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
             const authority = await ethers.getContractAt("Authority", authorityAddress);
-            await authority.transferOwnership(owner);
-            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${authority.address}`);
+
+            if(shouldTransfer) {
+                await authority.transferOwnership(owner);
+                console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${authority.address}`);
+            }
 
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
-            await factory.transferOwnership(owner);
-            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${factory.address}`);
+
+            if(shouldTransfer) {
+                await factory.transferOwnership(owner);
+                console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${factory.address}`);
+            }
 
             const FeeSharing = getMostCurrentContract("feeSharing", network);
             const feeSharing = await ethers.getContractAt("FeeSharing", FeeSharing.contractAddress);
-            await feeSharing.transferOwnership(owner);
-            console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${feeSharing.address}`);
 
+            if(shouldTransfer) {
+                await feeSharing.transferOwnership(owner);
+                console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${feeSharing.address}`);
+            }
         }))
 
         deploySequence.push("Verifies authority implementation", () => retryableRequest(async () => {

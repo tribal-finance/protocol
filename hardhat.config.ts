@@ -48,15 +48,17 @@ const config: HardhatUserConfig = {
         process.env.GOERLI_BORROWER_KEY!,
       ],
     },
-    staging: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 5,
+    sepolia: {
+      url: process.env.SEPOLIA_RPC,
+      chainId: 11155111.,
       accounts: [
-        process.env.GOERLI_DEPLOYER_KEY!,
-        process.env.GOERLI_LENDER1_KEY!,
-        process.env.GOERLI_LENDER2_KEY!,
-        process.env.GOERLI_BORROWER_KEY!,
+        process.env.SEPOLIA_DEPLOYER_KEY!,
+        process.env.SEPOLIA_LENDER1_KEY!,
+        process.env.SEPOLIA_LENDER2_KEY!,
+        process.env.SEPOLIA_BORROWER_KEY!,
       ],
+
+      gas: 4000000
     },
 
     mainnet: {

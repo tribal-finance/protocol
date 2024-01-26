@@ -5,17 +5,17 @@ export BORROWER_ADDRESS="0x8DfA5E23c8bd7911ea7A31b180b1572B5858300B"
 export PLATFORM_TOKEN_ADDRESS="0x3b1A962BE25430793B12a359E11760c2298e325D"
 
 npx hardhat encode-pool-initializer \
-  --name "Working capital for LATAM SMEs" \
+  --name "Dev Pool: Rollovers 1.1" \
   --token "TPT" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 80000 \
   --max-funding-capacity 100000 \
-  --funding-period-seconds 2592000 \
-  --lending-term-seconds 31557600 \
+  --funding-period-seconds 30 \
+  --lending-term-seconds 432000 \
   --first-loss-assets 5000 \
-  --repayment-recurrence-days 30 \
-  --grace-period-days 5 \
+  --repayment-recurrence-days 0 \
+  --grace-period-days 0 \
   --borrower-total-interest-rate-wad 0.15 \
   --borrower-address $BORROWER_ADDRESS \
   --protocol-fee-wad 0.1 \

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "hardhat test",
+    "test:all": "rm -f /tmp/test-errors.log /tmp/test-success.log; total=$(find test -name '*.ts' | wc -l); printf \"Total tests: $total\\nNote: 1 dot = 1 file processed\\n\"; find test -name '*.ts' -print0 | xargs -0 -n 1 -P 8 sh -c 'mkdir -p /tmp/test-output-$(dirname $1) && NODE_OPTIONS=\"--max-old-space-size=4096\" npx hardhat test $1 > /tmp/test-output-$1.log 2>&1 && echo $1 >> /tmp/test-success.log || echo $1 >> /tmp/test-errors.log; num_dots=$((RANDOM % 3 + 1)); for i in $(seq 1 $num_dots); do printf \".\"; done' sh; printf \"\\nTests completed. Successes: \\n\"; cat /tmp/test-success.log; printf \"Errors: \\n\"; if [ -f /tmp/test-errors.log ]; then cat /tmp/test-errors.log; else printf \"No errors found.\\n\"; fi; printf \"Total tests run: $(cat /tmp/test-success.log | wc -l)\\n\"",
     "test-coverage": "hardhat coverage",
     "compile": "hardhat compile",
     "docgen": "hardhat docgen"

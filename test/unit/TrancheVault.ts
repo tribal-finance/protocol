@@ -9,11 +9,13 @@ import { Signer, Contract } from "ethers";
 import {
     DEFAULT_LENDING_POOL_PARAMS,
     DEFAULT_MULTITRANCHE_FUNDING_SPLIT,
+    calculateTrancheCapacities,
     deployDuotranchePool,
     deployFactoryAndImplementations,
     deployUnitranchePool,
 } from "../../lib/pool_deployments";
 import STAGES from "../helpers/stages";
+import { WAD } from "../helpers/conversion";
 
 describe("TrancheVault contract", function () {
     let accounts;
@@ -83,14 +85,29 @@ describe("TrancheVault contract", function () {
         });
 
         it("Should correctly get minFundingCapacity", async function () {
-            expect(await tranches[0].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][1]).div(ethers.utils.parseEther("1")));
-            expect(await tranches[1].minFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][1]).div(ethers.utils.parseEther("1")));
+            const params = {
+                minFundingCapacity: DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity,
+                maxFundingCapacity: DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity,
+                tranchesCount: 2 
+            };
+
+            const capacities = calculateTrancheCapacities(params, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
+
+            expect(await tranches[0].minFundingCapacity()).equals(capacities[0].minCapacity);
+            expect(await tranches[1].minFundingCapacity()).equals(capacities[1].minCapacity);
         });
 
         it("Should correctly get maxFundingCapacity", async function () {
-            expect(await tranches[0].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[0][0]).div(ethers.utils.parseEther("1")));
-            expect(await tranches[1].maxFundingCapacity()).equals(DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity.mul(DEFAULT_MULTITRANCHE_FUNDING_SPLIT[1][0]).div(ethers.utils.parseEther("1")));
+            const params = {
+                minFundingCapacity: DEFAULT_LENDING_POOL_PARAMS.minFundingCapacity,
+                maxFundingCapacity: DEFAULT_LENDING_POOL_PARAMS.maxFundingCapacity,
+                tranchesCount: 2 
+            };
 
+            const capacities = calculateTrancheCapacities(params, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
+
+            expect(await tranches[0].maxFundingCapacity()).equals(capacities[0].maxCapacity);
+            expect(await tranches[1].maxFundingCapacity()).equals(capacities[1].maxCapacity);
         });
 
         it("Should correctly get withdrawEnabled", async function () {
