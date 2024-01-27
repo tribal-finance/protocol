@@ -258,8 +258,6 @@ export async function deployUnitranchePool(
   const tx = await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]);
   await tx.wait();
 
-  console.log("Deployed Unitranche Pool");
-
   const deployedContracts = await _getDeployedContracts(poolFactory);
 
   if (afterDeploy) {
