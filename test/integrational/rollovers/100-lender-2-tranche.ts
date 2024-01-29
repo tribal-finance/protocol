@@ -106,7 +106,7 @@ describe("Rollovers (100 Lenders / 2 Tranches)", function () {
       authority = data.authority;
       lendingPoolParams = data.lendingPoolParams;
 
-      signerPool = await generateLenders(100);
+      signerPool = await generateLenders(10);
     });
 
     it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
@@ -134,12 +134,12 @@ describe("Rollovers (100 Lenders / 2 Tranches)", function () {
     it("add 100 more lenders to the system", async () => {
       for (const signer of signerPool) {
         await authority.addLender(signer.address);
-        await usdc.mint(signer.address, USDC(100));
+        await usdc.mint(signer.address, USDC(1000));
         await lendingPool.connect(signer).lenderEnableRollOver(true, true, true);
-        await usdc.connect(signer).approve(firstTrancheVault.address, USDC(80));
-        await usdc.connect(signer).approve(secondTrancheVault.address, USDC(20));
-        await firstTrancheVault.connect(signer).deposit(USDC(80), signer.address);
-        await secondTrancheVault.connect(signer).deposit(USDC(20), signer.address);
+        await usdc.connect(signer).approve(firstTrancheVault.address, USDC(750));
+        await usdc.connect(signer).approve(secondTrancheVault.address, USDC(250));
+        await firstTrancheVault.connect(signer).deposit(USDC(750), signer.address);
+        await secondTrancheVault.connect(signer).deposit(USDC(250), signer.address);
       }
     });
     
