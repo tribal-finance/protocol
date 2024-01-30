@@ -209,7 +209,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     // ERRORS
     error InsufficientAllowance(uint256 shortfall, uint256 currentAllowance);
 
-
     /*///////////////////////////////////
        EVENTS
     ///////////////////////////////////*/
@@ -778,16 +777,16 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     ) external onlyOwnerOrAdminOrBorrower atStage(Stages.INITIAL) whenNotPaused {
         require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
 
-        if(pool.firstLossAssets() > firstLossAssets) {
+        if (pool.firstLossAssets() > firstLossAssets) {
             // we have surplus coming, refund extra to borrower
             uint256 flcSurplus = pool.firstLossAssets() - firstLossAssets;
             pool.poolRolloverFirstLossCaptial();
             SafeERC20.safeTransfer(IERC20(_stableCoinContract()), borrowerAddress, flcSurplus);
-        } else if(pool.firstLossAssets() < firstLossAssets) {
+        } else if (pool.firstLossAssets() < firstLossAssets) {
             // we have a shortfall, ask borrower for more
             uint256 flcShortfall = firstLossAssets - pool.firstLossAssets();
             uint256 allowance = IERC20(_stableCoinContract()).allowance(borrowerAddress, address(this));
-            if(allowance < flcShortfall) {
+            if (allowance < flcShortfall) {
                 revert InsufficientAllowance(flcShortfall, allowance);
             }
             SafeERC20.safeTransferFrom(IERC20(_stableCoinContract()), borrowerAddress, address(this), flcShortfall);
@@ -815,7 +814,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
      */
     function borrowerPayInterest(uint assets) external onlyPoolBorrower whenNotPaused {
         uint penalty = borrowerPenaltyAmount();
-        console.log("borrower penalty on pay interest", penalty);
         require(penalty < assets, "LP201"); // "LendingPool: penalty cannot be more than assets"
 
         if (penalty > 0) {
