@@ -4,6 +4,8 @@ import { getMostCurrentContract, getMostCurrentContracts, writeToDeploymentsFile
 import { getNumber, processLendingPoolParams, retryableRequest } from "./utils";
 import { BigNumberish } from "ethers";
 
+
+
 task("deploy-empty-token", "deploys the 'no-platform-token'")
     .setAction(async (args: any, hre) => {
         const { ethers, upgrades } = hre;
@@ -33,7 +35,61 @@ task("deploy-empty-token", "deploys the 'no-platform-token'")
                 console.log("verified empty token")
             })
         })
-    })
+    });
+
+task("deploy-staking-contract", "Deploys the staking contract")
+.addParam("authorityAddress", "The address of the authority contract")
+.addParam("stakingTokenAddress", "The address of the staking token (PLATFORM)")
+.addParam("rewardTokenAddress", "The address of the reward token (USDC)")
+    .addParam("cooldownPeriod", "The cooldown period in seconds for unstaking")
+    .setAction(async (args, hre) => {
+        const { ethers, upgrades } = hre;
+        const network = hre.network.name;
+        const { authorityAddress, stakingTokenAddress, rewardTokenAddress, cooldownPeriod } = args;
+
+        // Ensure the provided addresses are valid
+        if (!ethers.utils.isAddress(stakingTokenAddress) || !ethers.utils.isAddress(rewardTokenAddress)) {
+            throw new Error("Invalid token address provided.");
+        }
+        if (!ethers.utils.isAddress(authorityAddress)) {
+            throw new Error("Invalid authority address provided.");
+        }
+        const cooldownPeriodSeconds = parseInt(cooldownPeriod);
+        if (isNaN(cooldownPeriodSeconds)) {
+            throw new Error("Invalid cooldown period provided.");
+        }
+
+        await retryableRequest(async () => {
+            const Staking = await ethers.getContractFactory("Staking");
+
+            const staking = await upgrades.deployProxy(Staking, [
+                authorityAddress,
+                stakingTokenAddress,
+                rewardTokenAddress,
+                60,
+            ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
+
+            await staking.deployed();
+            console.log("Staking Contract deployed to:", staking.address);
+
+            writeToDeploymentsFile({
+                contractName: "staking",
+                contractAddress: staking.address,
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+            }, network);
+        });
+
+        await retryableRequest(async () => {
+            const stakingAddress = getMostCurrentContract("staking", network).contractAddress;
+
+            await hre.run("verify:verify", {
+                address: stakingAddress,
+                constructorArguments: [],
+            });
+            console.log("Staking contract verified");
+        });
+    });
+
 
 task("deploy-usdc-token", "deploys the usdc token and faucet")
     .setAction(async (args: any, hre) => {
@@ -62,6 +118,37 @@ task("deploy-usdc-token", "deploys the usdc token and faucet")
                     constructorArguments: [],
                 });
                 console.log("verified empty token")
+            })
+        })
+    })
+
+task("deploy-platform-token", "deploys the platform token and faucet")
+    .setAction(async (args: any, hre) => {
+        const { ethers, upgrades } = hre;
+        const network = hre.network.name;
+
+        await retryableRequest(async () => {
+            const PlatformToken = await ethers.getContractFactory("PlatformToken");
+            const platformToken = await PlatformToken.deploy();
+            await platformToken.deployed();
+            console.log("Deployed Platform Token to", platformToken.address);
+
+            writeToDeploymentsFile({
+                contractName: "mockplatform",
+                contractAddress: platformToken.address,
+                timestamp: (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp
+            }, network)
+        });
+
+        await retryableRequest(async () => {
+            const platformTokenAddress = getMostCurrentContract("mockplatform", network).contractAddress;
+
+            await retryableRequest(async () => {
+                await hre.run("verify:verify", {
+                    address: platformTokenAddress,
+                    constructorArguments: [],
+                });
+                console.log("verified mockplatform token")
             })
         })
     })
@@ -616,7 +703,7 @@ task("prod-init-protocol", "deploys the lending protocol for production")
             const authorityAddress = getMostCurrentContract("authority", network).contractAddress;
             const authority = await ethers.getContractAt("Authority", authorityAddress);
 
-            if(shouldTransfer) {
+            if (shouldTransfer) {
                 await authority.transferOwnership(owner);
                 console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${authority.address}`);
             }
@@ -624,7 +711,7 @@ task("prod-init-protocol", "deploys the lending protocol for production")
             const Factory = getMostCurrentContract("poolFactory", network);
             const factory = await ethers.getContractAt("PoolFactory", Factory.contractAddress);
 
-            if(shouldTransfer) {
+            if (shouldTransfer) {
                 await factory.transferOwnership(owner);
                 console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${factory.address}`);
             }
@@ -632,7 +719,7 @@ task("prod-init-protocol", "deploys the lending protocol for production")
             const FeeSharing = getMostCurrentContract("feeSharing", network);
             const feeSharing = await ethers.getContractAt("FeeSharing", FeeSharing.contractAddress);
 
-            if(shouldTransfer) {
+            if (shouldTransfer) {
                 await feeSharing.transferOwnership(owner);
                 console.log(`Transfered ownership from deployer ${signers[0].address} to ${owner} at ${feeSharing.address}`);
             }

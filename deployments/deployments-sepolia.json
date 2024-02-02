@@ -515,5 +515,15 @@
     "contractName": "trancheVaultV1",
     "contractAddress": "0x39597B9b13D4Ce490b0c205931098B660f181B9b",
     "timestamp": 1706669832
+  },
+  {
+    "contractName": "mockplatform",
+    "contractAddress": "0xF6FDf1c6A67247405c1C1b87c013e09269d6c35E",
+    "timestamp": 1706834280
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0xa4BCEC1C587a1F470d573499a0a180C5A58d7C67",
+    "timestamp": 1706836308
   }
 ]
