@@ -525,5 +525,15 @@
     "contractName": "staking",
     "contractAddress": "0xa4BCEC1C587a1F470d573499a0a180C5A58d7C67",
     "timestamp": 1706836308
+  },
+  {
+    "contractName": "mockplatform",
+    "contractAddress": "0x7660203Abd05FCabaBE812bFa87A6921BbeB3445",
+    "timestamp": 1707104244
+  },
+  {
+    "contractName": "staking",
+    "contractAddress": "0xc82cf925DF0B2601e2d789733C2A7f86ca4E633F",
+    "timestamp": 1707104352
   }
 ]

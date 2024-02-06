@@ -1,12 +1,12 @@
 #!/bin/bash
 
 export USDC_ADDRESS_6="0xd9af0d725ABE1070e2010C421596d81810E4a633"
-export BORROWER_ADDRESS="0x8DfA5E23c8bd7911ea7A31b180b1572B5858300B"
-export PLATFORM_TOKEN_ADDRESS="0x3b1A962BE25430793B12a359E11760c2298e325D"
+export BORROWER_ADDRESS="0x7F2AD66E5aA6768E6C74AA3F488Fe7b35276Aa2F"
+export PLATFORM_TOKEN_ADDRESS="0x7660203Abd05FCabaBE812bFa87A6921BbeB3445"
 
 npx hardhat encode-pool-initializer \
   --name "Working capital for LATAM SMEs" \
-  --token "TPT" \
+  --token "TPT-4" \
   --stable-coin-contract-address $USDC_ADDRESS_6 \
   --platform-token-contract-address $PLATFORM_TOKEN_ADDRESS \
   --min-funding-capacity 80000 \
