@@ -210,6 +210,26 @@ describe("Full cycle sequential test", function () {
         .lenderLockPlatformTokensByTranche(0, WAD(10000));
     });
 
+    it("sets allLendersInterest() to 625 USDC", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+      expect(await lendingPool.borrowerOutstandingInterest()).to.equal(USDC(750));
+
+      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).equals(0)
+    });
+
+    it("10000 PLATFORM tokens locked by lender2", async () => {
+
+      const maxBoost = await lendingPool.lenderPlatformTokensByTrancheLockable(await lender2.getAddress(), 0);
+      console.log("maxboost", maxBoost);
+
+      await platformToken
+        .connect(lender2)
+        .approve(lendingPool.address, maxBoost);
+      await lendingPool
+        .connect(lender2)
+        .lenderLockPlatformTokensByTranche(0, maxBoost);
+    });
+
     it("sets lenderTotalExpectedRewardsByTranche for lender1 to 525 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
       expect(
         await lendingPool.lenderTotalExpectedRewardsByTranche(
@@ -219,8 +239,9 @@ describe("Full cycle sequential test", function () {
       ).to.equal(USDC(525));
     });
 
-    it("sets allLendersInterest() to 625 USDC", async () => {
-      expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+    it("sets allLendersInterest() to 675 USDC after boosting all parties", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(675));
+      expect(await lendingPool.borrowerOutstandingInterest()).to.equal(USDC(750));
 
       expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).equals(0)
     });
@@ -331,9 +352,8 @@ describe("Full cycle sequential test", function () {
     it("borrowerOutstandingInterest() is now 0 (borrower already paid 750 USDC)", async () => {
       expect(await lendingPool.borrowerOutstandingInterest()).to.equal(0);
     });
-
-    it("borrowerExcessSpread() is now 50 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(50));
+    it("borrowerExcessSpread() is now 0 USDC", async () => {
+      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(0));
     });
 
     it("⏳ 3 days pass by", async () => {
@@ -357,10 +377,9 @@ describe("Full cycle sequential test", function () {
       /**
        * Excess Spread = Total Interest Paid by Borrower - (Total Interest Paid to Lenders + Protocol Fees)
        * The borrower has paid a total of $750 in interest. 
-       * The combined interest paid to lenders and protocol fees amounts to $700 ($625 to lenders + $75 in protocol fees, assuming a 10% fee rate). 
        * Thus, the excess spread becomes:
        * 
-       * Excess Spread = $750 - $700 = $50
+       * Excess Spread=750 USDC−(675 USDC+75 USDC)
        * 
        * Expected Result: Flc Deposit + Excess Spread = $2050
        */
@@ -372,7 +391,7 @@ describe("Full cycle sequential test", function () {
         .borrowerWithdrawFirstLossCapitalAndExcessSpread();
       const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
       expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-        USDC(2050)
+        USDC(2000)
       );
     });
 
@@ -391,8 +410,8 @@ describe("Full cycle sequential test", function () {
         .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
     });
 
-    it("👜 100 USDC interest withdraw from lender 2", async () => {
-      await lendingPool.connect(lender2).lenderRedeemRewards([USDC(100)]);
+    it("👜 150 USDC interest withdraw from lender 2", async () => {
+      await lendingPool.connect(lender2).lenderRedeemRewards([USDC(150)]);
     });
 
     it("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
