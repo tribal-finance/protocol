@@ -108,6 +108,7 @@ async function main() {
 
     const sims = response.data.simulation_results;
 
+    // TODO: generate the ids into shareable links
     for(let i = 0; i < sims.length; i++) {
         console.log(sims[i].simulation.id)
     }
