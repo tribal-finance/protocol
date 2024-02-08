@@ -10,6 +10,8 @@ async function main() {
     const authority = await ethers.getContractAt("Authority", "0xe28B7c821B9160dE8cB229A796248ba273C1aEB1");
     const proxyAdmin = await ethers.getContractAt("IProxyAdmin", "0xba84d840783279c3af52d0704c43d1cc1b231b29");
 
+    const address1 = proxyAdmin.address
+
     const transactions = [
         {
             network_id: "1",
@@ -28,6 +30,24 @@ async function main() {
             from: adminDeployer,
             to: proxyAdmin.address,
             input: proxyAdmin.interface.encodeFunctionData("changeProxyAdmin", [authority.address, adminMultisig])
+        },
+        {
+            network_id: "1",
+            save: true,
+            save_if_fails: true,
+            simulation_type: "full",
+            from: adminDeployer,
+            to: proxyAdmin.address,
+            input: proxyAdmin.interface.encodeFunctionData("upgrade", [authority.address, address1])
+        },
+        {
+            network_id: "1",
+            save: true,
+            save_if_fails: true,
+            simulation_type: "full",
+            from: adminMultisig,
+            to: proxyAdmin.address,
+            input: proxyAdmin.interface.encodeFunctionData("upgrade", [authority.address, address1])
         }
     ];
 
@@ -41,7 +61,13 @@ async function main() {
             }
         });
 
-    console.log(JSON.stringify(response.data, null, 2));
+    
+
+    const sims = response.data.simulation_results;
+
+    for(let i = 0; i < sims.length; i++) {
+        console.log(sims[i].simulation.id)
+    }
 }
 
 main().catch((error) => {
