@@ -40,7 +40,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   minFundingCapacity: USDC(10000),
   maxFundingCapacity: USDC(12000),
   fundingPeriodSeconds: 24 * 60 * 60,
-  lendingTermSeconds: (365 * 24 * 60 * 60) / 2, // 90 days
+  lendingTermSeconds: (365 * 24 * 60 * 60) / 2,
   firstLossAssets: USDC(2000),
   repaymentRecurrenceDays: 30,
   gracePeriodDays: 5,
@@ -257,8 +257,6 @@ export async function deployUnitranchePool(
 
   const tx = await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]);
   await tx.wait();
-
-  console.log("Deployed Unitranche Pool");
 
   const deployedContracts = await _getDeployedContracts(poolFactory);
 

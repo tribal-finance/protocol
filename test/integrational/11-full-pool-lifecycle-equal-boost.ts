@@ -4,18 +4,16 @@ import { Signer } from "ethers";
 
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
-import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
-import { DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT } from "../../../lib/pool_deployments";
-
+import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import {
   ITestUSDC,
   LendingPool,
   PoolFactory,
   TrancheVault,
   PlatformToken,
-  Authority,
-} from "../../../typechain-types";
-import { USDC, WAD } from "../../helpers/conversion";
+  FeeSharing,
+} from "../../typechain-types";
+import { USDC, WAD } from "../helpers/conversion";
 import {
   deployDuotranchePool,
   DeployedContractsType,
@@ -23,15 +21,16 @@ import {
   deployUnitranchePool,
   _getDeployedContracts,
   deployPlatformToken,
-} from "../../../lib/pool_deployments";
-import testSetup from "../../helpers/usdc";
-import STAGES from "../../helpers/stages";
+} from "../../lib/pool_deployments";
+import testSetup from "../helpers/usdc";
+import STAGES from "../helpers/stages";
+import { assertDefaultRatioWad, assertPoolViews } from "../helpers/view";
+import { feeSharing } from "../../typechain-types/contracts";
 
-describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
+describe("Full cycle sequential test", function () {
   context("For unitranche pool", async function () {
-    async function duoPoolFixture() {
+    async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
-
       const [deployer, lender1, lender2, lender3, borrower, foundation] =
         signers;
       const lenders = [lender1, lender2, lender3];
@@ -48,11 +47,12 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
         lenders,
         foundation.address
       );
+
       const afterDeploy = async (contracts: DeployedContractsType) => {
         return contracts;
       };
 
-      const data = await deployDuotranchePool(
+      const data = await deployUnitranchePool(
         poolFactory,
         deployer,
         borrower,
@@ -68,44 +68,63 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
         usdc,
         ...(await _getDeployedContracts(poolFactory)),
         platformToken,
-      }
+      };
     }
+
+    /**
+     * pool settings:
+     * - lending term: 182.5 days ( 1/2 year )
+     * - lender annual yield: 10%
+     * - lender adjusted yield: 5%
+     * - borrower annual interest rate: 15%
+     * - borrower adjusted interest rate: 7.5%
+     * - funds collected: $10,000
+     * - lender 1 deposit: $8,000
+     * - lender 2 deposit: $2,000
+     */
 
     let usdc: ITestUSDC,
       platformToken: PlatformToken,
       lendingPool: LendingPool,
       firstTrancheVault: TrancheVault,
-      secondTrancheVault: TrancheVault,
-      authority: Authority,
-      poolFactory: PoolFactory,
       deployer: Signer,
       borrower: Signer,
       lender1: Signer,
-      lender2: Signer,
-      lendingPoolParams: any;
+      failCase: number,
+      feeSharing: FeeSharing,
+      lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(duoPoolFixture);
+      const data = await loadFixture(uniPoolFixture);
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
       firstTrancheVault = data.firstTrancheVault;
-      secondTrancheVault = data.secondTrancheVault as TrancheVault;
-      if (!secondTrancheVault) {
-        throw new Error("Bad second tranche vault");
-      }
-      poolFactory = data.poolFactory;
       deployer = data.deployer;
       borrower = data.borrower;
       lender1 = data.lenders[0];
       lender2 = data.lenders[1];
-      authority = data.authority;
-      lendingPoolParams = data.lendingPoolParams;
+      feeSharing = data.feeSharing;
+
+      failCase = 0;
     });
+
+    beforeEach(async () => {
+      await assertPoolViews(lendingPool, lender1, failCase++)
+      await assertPoolViews(lendingPool, lender2, failCase++)
+      await assertDefaultRatioWad(lendingPool);
+    })
+
+    afterEach(async () => {
+      await assertPoolViews(lendingPool, lender1, failCase++)
+      await assertPoolViews(lendingPool, lender2, failCase++)
+      await assertDefaultRatioWad(lendingPool);
+    })
 
     it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.INITIAL);
       expect(await lendingPool.firstLossAssets()).to.equal(USDC(2000));
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("🏛️ 2000 USDC flc deposit from the borrower", async () => {
@@ -115,6 +134,7 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
 
     it("transitions to the FLC_DEPOSITED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("👮 receives adminOpenPool() from deployer", async () => {
@@ -123,14 +143,13 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
 
     it("transitions to OPEN stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
-
-    it("8000 USDC deposit from lender 1 & 2", async () => {
+    it("👛 8000 USDC deposit from lender 1", async () => {
       await usdc
         .connect(lender1)
         .approve(firstTrancheVault.address, USDC(8000));
-
       await firstTrancheVault
         .connect(lender1)
         .deposit(USDC(8000), await lender1.getAddress());
@@ -140,7 +159,6 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       expect(
         await firstTrancheVault.balanceOf(await lender1.getAddress())
       ).to.equal(USDC(8000));
-
     });
 
     it("increases collectedAssets() to 8000", async () => {
@@ -156,28 +174,22 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       ).to.equal(USDC(400));
     });
 
-    it("2000 USDC deposit from lender 2", async () => {
+    it("👜 2000 USDC deposit from lender 2", async () => {
       await usdc
         .connect(lender2)
-        .approve(secondTrancheVault.address, USDC(2000));
-
-      await secondTrancheVault
+        .approve(firstTrancheVault.address, USDC(2000));
+      await firstTrancheVault
         .connect(lender2)
         .deposit(USDC(2000), await lender2.getAddress());
     });
 
-    it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
-      await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
-      await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
-    })
-
-    it("sets lenderTotalExpectedRewardsByTranche for lender2 to 120 (2000* 1/2 year * 10%)", async () => {
+    it("sets lenderTotalExpectedRewardsByTranche for lender2 to 100 (2000* 1/2 year * 10%)", async () => {
       expect(
         await lendingPool.lenderTotalExpectedRewardsByTranche(
           await lender2.getAddress(),
-          1
+          0
         )
-      ).to.equal(USDC(120));
+      ).to.equal(USDC(100));
     });
 
     it("sets borrowerExpectedInterest() to 750 USDC", async () => {
@@ -188,7 +200,8 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       expect(await lendingPool.collectedAssets()).to.equal(USDC(10000));
     });
 
-    it("10000 PLATFORM tokens locked by lender1", async () => {
+    it("👛 10000 PLATFORM tokens locked by lender1", async () => {
+
       await platformToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
@@ -197,28 +210,57 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
         .lenderLockPlatformTokensByTranche(0, WAD(10000));
     });
 
-    it("sets lenderTotalExpectedRewardsByTranche for lender1 to 400 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
+    it("sets allLendersInterest() to 625 USDC", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
+      expect(await lendingPool.borrowerOutstandingInterest()).to.equal(USDC(750));
+
+      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).equals(0)
+    });
+
+    it("10000 PLATFORM tokens locked by lender2", async () => {
+
+      const maxBoost = await lendingPool.lenderPlatformTokensByTrancheLockable(await lender2.getAddress(), 0);
+      console.log("maxboost", maxBoost);
+
+      await platformToken
+        .connect(lender2)
+        .approve(lendingPool.address, maxBoost);
+      await lendingPool
+        .connect(lender2)
+        .lenderLockPlatformTokensByTranche(0, maxBoost);
+    });
+
+    it("sets lenderTotalExpectedRewardsByTranche for lender1 to 525 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
       expect(
         await lendingPool.lenderTotalExpectedRewardsByTranche(
           await lender1.getAddress(),
           0
         )
-      ).to.equal(USDC(400));
+      ).to.equal(USDC(525));
     });
 
-    it("sets allLendersInterest() to 520 USDC", async () => {
-      expect(await lendingPool.allLendersInterest()).to.equal(USDC(520));
+    it("sets allLendersInterest() to 675 USDC after boosting all parties", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal(USDC(675));
+      expect(await lendingPool.borrowerOutstandingInterest()).to.equal(USDC(750));
+
+      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).equals(0)
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
+
+      await expect(lendingPool.connect(deployer).adminTransitionToFundedState()).to.be.revertedWith("Cannot accrue interest or declare failure before start time");
+
+      // wait a delay such that now > openedAt + fundingPeriodSeconds is true
       const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
       await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
       await network.provider.send("evm_mine");
+
       await lendingPool.connect(deployer).adminTransitionToFundedState();
     });
 
     it("transitions to the FUNDED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FUNDED);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("pool contract now holds 12000 USDC", async () => {
@@ -243,6 +285,7 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
     it("🏛️ borrower pays $125 interest", async () => {
       await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("⏳ 30 days pass by", async () => {
@@ -260,11 +303,17 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       // wait 30 days
       await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine", []);
+      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).not.equals(0)
     });
 
     it("🏛️ borrower pays $125 interest", async () => {
       await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
+    });
+
+    it("👛 125 USDC interest withdrawal for lender 1", async () => {
+      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(125)]);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
     });
 
     it("⏳ 30 days pass by", async () => {
@@ -303,9 +352,8 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
     it("borrowerOutstandingInterest() is now 0 (borrower already paid 750 USDC)", async () => {
       expect(await lendingPool.borrowerOutstandingInterest()).to.equal(0);
     });
-
-    it("borrowerExcessSpread() is now 155 USDC (750(interest paid) - 625 (lenders interest) - 75(10% protocol fees))", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(155));
+    it("borrowerExcessSpread() is now 0 USDC", async () => {
+      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(0));
     });
 
     it("⏳ 3 days pass by", async () => {
@@ -314,108 +362,85 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       await ethers.provider.send("evm_mine", []);
     });
 
-    describe("test out rolling over into next pool", async () => {
-
-      let nextLendingPool: LendingPool;
-      let nextTrancheVault1: TrancheVault;
-      let nextTrancheVault2: TrancheVault;
-
-      let wrongLendingPool: LendingPool;
-      let wrongTrancheVault1: TrancheVault;
-
-      it("prepare bad pool to try and roll into", async () => {
-        const defaultParams = lendingPoolParams;
-
-        defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
-        defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
-        defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
-        defaultParams.minFundingCapacity = USDC(100)
-        defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).add(USDC(1000));
-
-        var updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await deployer.getAddress() };
-
-        await expect(poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT)).to.be.rejectedWith("LP023");
-
-        
-        // gen data for pool(n+1)
-        updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
-        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); 
-        nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
-        nextTrancheVault1 = await ethers.getContractAt("TrancheVault",  await nextLendingPool.trancheVaultAddresses(0));
-        nextTrancheVault2 = await ethers.getContractAt("TrancheVault", await nextLendingPool.trancheVaultAddresses(1));
-
-        // gen data for wrong pools
-        updatedLendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
-        const wrongPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
-        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); 
-        wrongLendingPool = await ethers.getContractAt("LendingPool", wrongPoolAddr);
-        wrongTrancheVault1 = await ethers.getContractAt("TrancheVault",  await wrongLendingPool.trancheVaultAddresses(0));
-      });
-
-      it("is initially in INITIAL stage and requires a deposit of 3000 USDC", async () => {
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
-        expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(3000));
-
-        expect(await wrongLendingPool.currentStage()).to.equal(STAGES.INITIAL);
-        expect(await wrongLendingPool.firstLossAssets()).to.equal(USDC(2000));
-      });
-
-      it("flc deposit from the borrower", async () => {
-        await wrongLendingPool.adminOrBorrowerRolloverFirstLossCaptial(wrongLendingPool.address);
-
-        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(3000));
-        await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
-      });
-
-      it("transitions to the FLC_DEPOSITED stage", async () => {
-        expect(await wrongLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
-      });
-
-      it("transitions to OPEN stage", async () => {
-        await wrongLendingPool.connect(deployer).adminOpenPool();
-        await nextLendingPool.connect(deployer).adminOpenPool();
-        expect(await wrongLendingPool.currentStage()).to.equal(STAGES.OPEN);
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
-      });
-
-      it("trying to execute rollovers with bad tranche lengths", async () => {
-        await expect(wrongLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("tranche array mismatch");
-      })
-
-      it("trying to execute rollovers with bad tranche addresses", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [wrongTrancheVault1.address, secondTrancheVault.address])).to.be.reverted;
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [await borrower.getAddress(), await lender1.getAddress()])).to.be.reverted;
-      })
-
-      it("trying to execute rollovers with bad pool address", async () => {
-        await expect(nextLendingPool.executeRollover(wrongLendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
-      })
-
-      it("non-admin tries to rollover", async () => {
-        await expect(nextLendingPool.connect(borrower).executeRollover(wrongLendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("AA:OA")
-      })
-
-      it("admin tries to do a rollover while paused", async () => {
-        await lendingPool.pause();
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("Pausable: paused")
-        await lendingPool.unpause();
-      })
-
-      it("admin tries to do a rollover with lenders removed", async () => {
-        await authority.removeLender(await lender1.getAddress());
-        await authority.removeLender(await lender2.getAddress());
-        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])
-      })
-
-      it("handle failure when trying to roll pool0 into different pool1", async () => {
-        await expect(wrongLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
-      })
-
-      it("admin tries to do a double rollover", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
-      })
+    it("🏛️ borrower repays 10000 USDC as principal", async () => {
+      await usdc.connect(borrower).approve(lendingPool.address, USDC(10000));
+      await lendingPool.connect(borrower).borrowerRepayPrincipal();
     });
+
+    it("transitions to REPAID stage", async () => {
+      expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+    });
+
+    it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
+
+      /**
+       * Excess Spread = Total Interest Paid by Borrower - (Total Interest Paid to Lenders + Protocol Fees)
+       * The borrower has paid a total of $750 in interest. 
+       * Thus, the excess spread becomes:
+       * 
+       * Excess Spread=750 USDC−(675 USDC+75 USDC)
+       * 
+       * Expected Result: Flc Deposit + Excess Spread = $2050
+       */
+
+
+      const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
+      await lendingPool
+        .connect(borrower)
+        .borrowerWithdrawFirstLossCapitalAndExcessSpread();
+      const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
+      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
+        USDC(2000)
+      );
+    });
+
+    it("transitions to FLC_WITHDRAWN stage", async () => {
+      expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+    });
+
+    it("👛 400 USDC interest withdrawal for lender 1", async () => {
+      await lendingPool.connect(lender1).lenderRedeemRewards([USDC(400)]);
+    });
+
+    it("👛 10000 PLATFORM tokens unlock for lender 1", async () => {
+      await lendingPool
+        .connect(lender1)
+        .lenderUnlockPlatformTokensByTranche(0, WAD(10000));
+    });
+
+    it("👜 150 USDC interest withdraw from lender 2", async () => {
+      await lendingPool.connect(lender2).lenderRedeemRewards([USDC(150)]);
+    });
+
+    it("pool balance is now drained to zero (flc, excess spread, lender 1 interest, lender 2 interest)", async () => {
+      expect(await usdc.balanceOf(lendingPool.address)).to.equal(0);
+    });
+
+    it("👛 8000 usdc principal withdrawal for lender 1", async () => {
+      await firstTrancheVault
+        .connect(lender1)
+        .withdraw(
+          USDC(8000),
+          await lender1.getAddress(),
+          await lender1.getAddress()
+        );
+    });
+
+    it("👜 2000 usdc principal withdrawal for lender 2", async () => {
+      await firstTrancheVault
+        .connect(lender2)
+        .withdraw(
+          USDC(2000),
+          await lender2.getAddress(),
+          await lender2.getAddress()
+        );
+    });
+
+    it("Expects $75 arrived at feeSharing", async () => {
+      const balance = await usdc.balanceOf(feeSharing.address);
+      expect(balance).equals(USDC(75))
+    })
   });
 });

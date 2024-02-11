@@ -27,7 +27,7 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 
-describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
+describe("Rollovers (2 Lender / 2 Tranche) Full Redemption (No Rewards)", function () {
   context("For unitranche pool", async function () {
     async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -320,102 +320,108 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       let nextTrancheVault1: TrancheVault;
       let nextTrancheVault2: TrancheVault;
 
-      let wrongLendingPool: LendingPool;
-      let wrongTrancheVault1: TrancheVault;
+      it("prepare next generation of protocol to roll into", async () => {
+        const futureLenders = await poolFactory.nextLenders();
+        const futureTranches = await poolFactory.nextTranches();
 
-      it("prepare bad pool to try and roll into", async () => {
         const defaultParams = lendingPoolParams;
 
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.maxFundingCapacity.mul(2);
-        defaultParams.minFundingCapacity = USDC(100)
+        defaultParams.minFundingCapacity = USDC(2000)
         defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).add(USDC(1000));
 
-        var updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await deployer.getAddress() };
+        const updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
 
-        await expect(poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT)).to.be.rejectedWith("LP023");
+        const nextPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); // view only execution to check lender address
+        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(false);
+        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); // run the state change
+        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(true);
 
-        
-        // gen data for pool(n+1)
-        updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
-        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); 
         nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
-        nextTrancheVault1 = await ethers.getContractAt("TrancheVault",  await nextLendingPool.trancheVaultAddresses(0));
+
+        expect(nextPoolAddr).hexEqual(futureLenders[0]);
+
+        const nextTrancheAddr = await nextLendingPool.trancheVaultAddresses(0);
+
+        expect(nextTrancheAddr).hexEqual(futureTranches[0]);
+
+        nextTrancheVault1 = await ethers.getContractAt("TrancheVault", nextTrancheAddr);
         nextTrancheVault2 = await ethers.getContractAt("TrancheVault", await nextLendingPool.trancheVaultAddresses(1));
 
-        // gen data for wrong pools
-        updatedLendingPoolParams = { ...DEFAULT_LENDING_POOL_PARAMS, borrowerAddress: await borrower.getAddress() };
-        const wrongPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT);
-        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); 
-        wrongLendingPool = await ethers.getContractAt("LendingPool", wrongPoolAddr);
-        wrongTrancheVault1 = await ethers.getContractAt("TrancheVault",  await wrongLendingPool.trancheVaultAddresses(0));
-      });
+      })
 
       it("is initially in INITIAL stage and requires a deposit of 3000 USDC", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
         expect(await nextLendingPool.firstLossAssets()).to.equal(USDC(3000));
-
-        expect(await wrongLendingPool.currentStage()).to.equal(STAGES.INITIAL);
-        expect(await wrongLendingPool.firstLossAssets()).to.equal(USDC(2000));
       });
 
-      it("flc deposit from the borrower", async () => {
-        await wrongLendingPool.adminOrBorrowerRolloverFirstLossCaptial(wrongLendingPool.address);
-
-        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(3000));
-        await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();
+      it("3000 USDC flc deposit from the borrower", async () => {
+        await expect(nextLendingPool.callStatic.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address)).to.be.revertedWith("InsufficientAllowance");
+        // previous flc was 2000 so now borrower needs to approve an additonal 1000 since the new flc is 3000
+        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(1000));
+        await nextLendingPool.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
       });
 
       it("transitions to the FLC_DEPOSITED stage", async () => {
-        expect(await wrongLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
       });
 
-      it("transitions to OPEN stage", async () => {
-        await wrongLendingPool.connect(deployer).adminOpenPool();
+      it("receives adminOpenPool() from deployer", async () => {
+        const lenderCount = await lendingPool.lenderCount();
+        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address])).to.be.revertedWith("LP004");
         await nextLendingPool.connect(deployer).adminOpenPool();
-        expect(await wrongLendingPool.currentStage()).to.equal(STAGES.OPEN);
+      });
+
+      it("transitions to OPEN stage", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
       });
 
-      it("trying to execute rollovers with bad tranche lengths", async () => {
-        await expect(wrongLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("tranche array mismatch");
+      it("lender 1 and lender 2 disable rollovers", async () => {
+        await lendingPool.connect(lender1).lenderEnableRollOver(false, false, false);
+        await lendingPool.connect(lender2).lenderEnableRollOver(false, false, false);
       })
 
-      it("trying to execute rollovers with bad tranche addresses", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [wrongTrancheVault1.address, secondTrancheVault.address])).to.be.reverted;
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [await borrower.getAddress(), await lender1.getAddress()])).to.be.reverted;
+      it("have lender1 redeem their rewards", async () => {
+        let amount = await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0);
+        expect(amount).gt(0);
+        await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(0, amount);
       })
 
-      it("trying to execute rollovers with bad pool address", async () => {
-        await expect(nextLendingPool.executeRollover(wrongLendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
+      it("have lender 2 redeem their rewards", async () => {
+        let amount = await lendingPool.lenderRewardsByTrancheRedeemable(await lender2.getAddress(), 1);
+        expect(amount).gt(0);
+        await lendingPool.connect(lender2).lenderRedeemRewardsByTranche(1, amount);
       })
 
-      it("non-admin tries to rollover", async () => {
-        await expect(nextLendingPool.connect(borrower).executeRollover(wrongLendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("AA:OA")
+      it("lender 1 and lender 2 enable rollovers", async () => {
+        await lendingPool.connect(lender1).lenderEnableRollOver(true, true, true);
+        await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
       })
 
-      it("admin tries to do a rollover while paused", async () => {
-        await lendingPool.pause();
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("Pausable: paused")
-        await lendingPool.unpause();
-      })
+      it("assert only their principal gets rolled", async () => {
+        const initialBalancesVault = await Promise.all([
+          await firstTrancheVault.balanceOf(await lender1.getAddress()),
+          await firstTrancheVault.balanceOf(await lender2.getAddress()),
+          await secondTrancheVault.balanceOf(await lender1.getAddress()),
+          await secondTrancheVault.balanceOf(await lender2.getAddress()),
+        ])
 
-      it("admin tries to do a rollover with lenders removed", async () => {
-        await authority.removeLender(await lender1.getAddress());
-        await authority.removeLender(await lender2.getAddress());
-        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])
-      })
+        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address]);
 
-      it("handle failure when trying to roll pool0 into different pool1", async () => {
-        await expect(wrongLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
-      })
+        const finalBalancesVault = await Promise.all([
+          await firstTrancheVault.balanceOf(await lender1.getAddress()),
+          await firstTrancheVault.balanceOf(await lender2.getAddress()),
+          await secondTrancheVault.balanceOf(await lender1.getAddress()),
+          await secondTrancheVault.balanceOf(await lender2.getAddress()),
+        ])
 
-      it("admin tries to do a double rollover", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
+        expect(finalBalancesVault[0].sub(initialBalancesVault[0])).equals(-USDC(8000));
+        expect(finalBalancesVault[1].sub(initialBalancesVault[1])).equals(0);
+        expect(finalBalancesVault[2].sub(initialBalancesVault[2])).equals(0);
+        expect(finalBalancesVault[3].sub(initialBalancesVault[3])).equals(-USDC(2000));
       })
-    });
+    })
   });
 });

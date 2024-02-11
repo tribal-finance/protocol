@@ -11,6 +11,7 @@ import {
   PoolFactory,
   TrancheVault,
   PlatformToken,
+  FeeSharing,
 } from "../../typechain-types";
 import { USDC, WAD } from "../helpers/conversion";
 import {
@@ -24,6 +25,7 @@ import {
 import testSetup from "../helpers/usdc";
 import STAGES from "../helpers/stages";
 import { assertDefaultRatioWad, assertPoolViews } from "../helpers/view";
+import { feeSharing } from "../../typechain-types/contracts";
 
 describe("Full cycle sequential test", function () {
   context("For unitranche pool", async function () {
@@ -89,6 +91,7 @@ describe("Full cycle sequential test", function () {
       borrower: Signer,
       lender1: Signer,
       failCase: number,
+      feeSharing: FeeSharing,
       lender2: Signer;
 
     before(async () => {
@@ -101,6 +104,7 @@ describe("Full cycle sequential test", function () {
       borrower = data.borrower;
       lender1 = data.lenders[0];
       lender2 = data.lenders[1];
+      feeSharing = data.feeSharing;
 
       failCase = 0;
     });
@@ -197,6 +201,7 @@ describe("Full cycle sequential test", function () {
     });
 
     it("👛 10000 PLATFORM tokens locked by lender1", async () => {
+
       await platformToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
@@ -348,6 +353,19 @@ describe("Full cycle sequential test", function () {
     });
 
     it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
+
+      /**
+       * Excess Spread = Total Interest Paid by Borrower - (Total Interest Paid to Lenders + Protocol Fees)
+       * The borrower has paid a total of $750 in interest. 
+       * The combined interest paid to lenders and protocol fees amounts to $700 ($625 to lenders + $75 in protocol fees, assuming a 10% fee rate). 
+       * Thus, the excess spread becomes:
+       * 
+       * Excess Spread = $750 - $700 = $50
+       * 
+       * Expected Result: Flc Deposit + Excess Spread = $2050
+       */
+
+
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool
         .connect(borrower)
@@ -400,5 +418,10 @@ describe("Full cycle sequential test", function () {
           await lender2.getAddress()
         );
     });
+
+    it("Expects $75 arrived at feeSharing", async () => {
+      const balance = await usdc.balanceOf(feeSharing.address);
+      expect(balance).equals(USDC(75))
+    })
   });
 });

@@ -39,7 +39,6 @@ async function main() {
       return contracts;
     }
   );
-  console.log("Deployed Unitranche Pool:", cs.lendingPool.address);
 
   // 2. Duotranche Pool
   // const cs = await deployDuotranchePool(
