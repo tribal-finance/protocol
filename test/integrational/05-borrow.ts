@@ -90,7 +90,7 @@ describe("Borrowing", function () {
     }
 
     it("sends collected assets the borrower way", async function () {
-      const { borrower, usdc, lendingPool } = await loadFixture(uniPoolFixture);
+      const { borrower, usdc, lendingPool } = await uniPoolFixture();
 
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool.connect(borrower).borrow();
@@ -102,7 +102,7 @@ describe("Borrowing", function () {
     });
 
     it("moves the pool to borrowed state", async function () {
-      const { borrower, usdc, lendingPool } = await loadFixture(uniPoolFixture);
+      const { borrower, usdc, lendingPool } = await uniPoolFixture();
 
       await lendingPool.connect(borrower).borrow();
       expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);
@@ -175,7 +175,7 @@ describe("Borrowing", function () {
     }
 
     it("sends collected assets the borrower way", async function () {
-      const { borrower, usdc, lendingPool } = await loadFixture(duoPoolFixture);
+      const { borrower, usdc, lendingPool } = await duoPoolFixture();
 
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool.connect(borrower).borrow();
@@ -187,7 +187,7 @@ describe("Borrowing", function () {
     });
 
     it("moves the pool to borrowed state", async function () {
-      const { borrower, usdc, lendingPool } = await loadFixture(duoPoolFixture);
+      const { borrower, usdc, lendingPool } = await duoPoolFixture();
 
       await lendingPool.connect(borrower).borrow();
       expect(await lendingPool.currentStage()).to.eq(STAGES.BORROWED);

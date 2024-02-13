@@ -30,7 +30,7 @@ import exp from "constants";
 import { Sign } from "crypto";
 
 export const deployDelinquencyPool = async (lendingPool: LendingPool, poolFactory: PoolFactory, borrower: Signer, usdc: ITestUSDC, lender1: Signer, opts: any = {}) => {
-  const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+  const defaultParams = JSON.parse(JSON.stringify(DEFAULT_LENDING_POOL_PARAMS));
 
   defaultParams.minFundingCapacity = opts.minFundingCapacity || ethers.utils.parseUnits("80000", 6);
   defaultParams.maxFundingCapacity = opts.maxFundingCapacity || ethers.utils.parseUnits("100000", 6);
@@ -134,7 +134,7 @@ describe("Run bad borrowerPenalty logic", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await uniPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;

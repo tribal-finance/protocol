@@ -95,7 +95,7 @@ describe("Full cycle sequential test", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await uniPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;

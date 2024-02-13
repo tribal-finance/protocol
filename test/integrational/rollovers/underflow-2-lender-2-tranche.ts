@@ -85,7 +85,7 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       lendingPoolParams: any;
 
     before(async () => {
-      const data = await loadFixture(duoPoolFixture);
+      const data = await duoPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;

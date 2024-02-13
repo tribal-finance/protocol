@@ -100,7 +100,7 @@ describe("Interests", function () {
      */
     context("when there is no interest payments from the borrower", () => {
       it("calculates borrowerExpectedInterest", async () => {
-        const { lendingPool } = await loadFixture(uniPoolFixture);
+        const { lendingPool } = await uniPoolFixture();
 
         expect(await lendingPool.borrowerExpectedInterest()).to.equal(
           USDC(750)
@@ -108,7 +108,7 @@ describe("Interests", function () {
       });
 
       it("calculates borrowerOutstandingInterest", async () => {
-        const { lendingPool } = await loadFixture(uniPoolFixture);
+        const { lendingPool } = await uniPoolFixture();
 
         expect(await lendingPool.borrowerOutstandingInterest()).to.equal(
           USDC(750)
@@ -118,7 +118,7 @@ describe("Interests", function () {
 
     context("after borrower pays $150 interest", async () => {
       async function partlyRepaidFixture() {
-        const data = await loadFixture(uniPoolFixture);
+        const data = await uniPoolFixture();
         const { usdc, lendingPool, borrower } = data;
 
         await usdc.connect(borrower).approve(lendingPool.address, USDC(150));
@@ -173,7 +173,7 @@ describe("Interests", function () {
       "after borrower repays $750 interest (all the interest)",
       async () => {
         async function fullyRepaidFixture() {
-          const data = await loadFixture(uniPoolFixture);
+          const data = await uniPoolFixture();
           const { usdc, lendingPool, borrower } = data;
 
           await usdc.connect(borrower).approve(lendingPool.address, USDC(750));
@@ -207,7 +207,7 @@ describe("Interests", function () {
       "after borrower repays $1000 interest (more than enough)",
       async () => {
         async function overRepaidFixture() {
-          const data = await loadFixture(uniPoolFixture);
+          const data = await uniPoolFixture();
           const { usdc, lendingPool, borrower } = data;
 
           await usdc.connect(borrower).approve(lendingPool.address, USDC(1000));

@@ -119,16 +119,14 @@ describe("When Lender deposits to Open state pool", function () {
 
   describe("When unitranche pool gets a deposit", function () {
     it("increases lenders balance", async function () {
-      const { lenders, firstTrancheVault } = await loadFixture(uniPoolFixture);
+      const { lenders, firstTrancheVault } = await uniPoolFixture();
       expect(
         await firstTrancheVault.balanceOf(await lenders[0].getAddress())
       ).to.eq(USDC(10000));
     });
 
     it("increases lenderDepositedAssetsByTranche", async function () {
-      const { lenders, firstTrancheVault, lendingPool } = await loadFixture(
-        uniPoolFixture
-      );
+      const { lenders, firstTrancheVault, lendingPool } = await uniPoolFixture();
       expect(
         await lendingPool.lenderDepositedAssetsByTranche(
           await lenders[0].getAddress(),
@@ -149,7 +147,7 @@ describe("When Lender deposits to Open state pool", function () {
     });
 
     it("calculates lenderTotalApyWad", async function () {
-      const { lenders, lendingPool } = await loadFixture(uniPoolFixture);
+      const { lenders, lendingPool } = await uniPoolFixture();
       expect(
         await lendingPool.lenderTotalAprWad(await lenders[0].getAddress())
       ).to.eq(await lendingPool.trancheAPRsWads(0));
@@ -159,7 +157,7 @@ describe("When Lender deposits to Open state pool", function () {
   describe("When duotranche pool gets a deposit", function () {
     it("increases lenders balances", async function () {
       const { lenders, firstTrancheVault, secondTrancheVault } =
-        await loadFixture(duoPoolFixture);
+        await duoPoolFixture();
       expect(
         await firstTrancheVault.balanceOf(await lenders[0].getAddress())
       ).to.eq(USDC(8000));
@@ -169,7 +167,7 @@ describe("When Lender deposits to Open state pool", function () {
     });
 
     it("increases lenderDepositedAssetsByTranche", async function () {
-      const { lenders, lendingPool } = await loadFixture(duoPoolFixture);
+      const { lenders, lendingPool } = await duoPoolFixture();
       expect(
         await lendingPool.lenderDepositedAssetsByTranche(
           await lenders[0].getAddress(),
@@ -186,7 +184,7 @@ describe("When Lender deposits to Open state pool", function () {
 
     it("increases lenderAllDepositedAssets", async function () {
       const { lenders, usdc, secondTrancheVault, lendingPool } =
-        await loadFixture(duoPoolFixture);
+        await duoPoolFixture();
       const lender1 = lenders[0];
       await usdc
         .connect(lender1)
@@ -207,7 +205,7 @@ describe("When Lender deposits to Open state pool", function () {
     });
 
     it("calculates lenderTotalApyWad", async function () {
-      const { lenders, lendingPool } = await loadFixture(duoPoolFixture);
+      const { lenders, lendingPool } = await duoPoolFixture();
 
       expect(
         await lendingPool.lenderTotalAprWad(await lenders[0].getAddress())

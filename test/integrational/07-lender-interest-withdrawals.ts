@@ -103,9 +103,7 @@ describe("Lenders redeem rewards", function () {
 
     context("after halve of the term passes", async () => {
       it("allows lender to withdraw $100 and rewards redeemable is $150", async () => {
-        const { lendingPool, usdc, lenders } = await loadFixture(
-          uniPoolFixture
-        );
+        const { lendingPool, usdc, lenders } = await uniPoolFixture();
 
         const balanceBefore = await usdc.balanceOf(
           await lenders[0].getAddress()

@@ -57,7 +57,7 @@ describe("Marking the pool as Funded", function () {
   describe("Open unitranche pool gets .adminTransitionToFundedState() call", function () {
     context("when there is not enough funding", function () {
       async function notEnoughFundingUnipoolFixture() {
-        const data = await loadFixture(uniPoolFixture);
+        const data = await uniPoolFixture();
         const { usdc, deployer, lenders, lendingPool, firstTrancheVault } =
           data;
         const [lender1] = lenders;
@@ -108,7 +108,7 @@ describe("Marking the pool as Funded", function () {
 
     context("when there is enough funding", function () {
       async function enoughFundingUnipoolFixture() {
-        const data = await loadFixture(uniPoolFixture);
+        const data = await uniPoolFixture();
         const { usdc, deployer, lenders, lendingPool, firstTrancheVault } =
           data;
         const [lender1] = lenders;

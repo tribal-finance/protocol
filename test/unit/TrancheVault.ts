@@ -58,7 +58,7 @@ describe("TrancheVault contract", function () {
         let lenders: Signer[];
 
         beforeEach(async () => {
-            const { lendingPool: _lendingPool, lenders: _lenders, deployer: _deployer, borrower: _borrower } = await loadFixture(duoPoolFixture);
+            const { lendingPool: _lendingPool, lenders: _lenders, deployer: _deployer, borrower: _borrower } = await duoPoolFixture();
 
             lendingPool = _lendingPool;
             deployer = _deployer;

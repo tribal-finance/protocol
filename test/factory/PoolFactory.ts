@@ -48,30 +48,28 @@ describe("PoolFactory", function () {
   describe("When unitranche pool is deployed", async () => {
     describe("First tranche", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { lendingPool, firstTrancheVault } = await loadFixture(
-          uniPoolFixture
-        );
+        let { lendingPool, firstTrancheVault } = await uniPoolFixture();
         expect(await firstTrancheVault.poolAddress()).to.equal(
           lendingPool.address
         );
       });
 
       it("sets deployer as a contract owner", async () => {
-        let { deployer, firstTrancheVault } = await loadFixture(uniPoolFixture);
+        let { deployer, firstTrancheVault } = await uniPoolFixture();
         expect(await firstTrancheVault.owner()).to.equal(
           await deployer.getAddress()
         );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity", async () => {
-        let { firstTrancheVault } = await loadFixture(uniPoolFixture);
+        let { firstTrancheVault } = await uniPoolFixture();
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
           USDC(10000)
         );
       });
 
       it("sets maxFundingCapacity to pool.maxFundingCapacity", async () => {
-        let { firstTrancheVault } = await loadFixture(uniPoolFixture);
+        let { firstTrancheVault } = await uniPoolFixture();
         expect(await firstTrancheVault.maxFundingCapacity()).to.equal(
           USDC(12000)
         );
@@ -82,30 +80,28 @@ describe("PoolFactory", function () {
   describe("When duo tranche pool is deployed", async () => {
     describe("First tranche", async () => {
       it("sets pool address on the first loss capital vault", async () => {
-        let { lendingPool, firstTrancheVault } = await loadFixture(
-          duoPoolFixture
-        );
+        let { lendingPool, firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.poolAddress()).to.equal(
           lendingPool.address
         );
       });
 
       it("sets deployer as a contract owner", async () => {
-        let { deployer, firstTrancheVault } = await loadFixture(duoPoolFixture);
+        let { deployer, firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.owner()).to.equal(
           await deployer.getAddress()
         );
       });
 
       it("sets minFundingCapacity to pool.minFundingCapacity * split", async () => {
-        let { firstTrancheVault } = await loadFixture(duoPoolFixture);
+        let { firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.minFundingCapacity()).to.equal(
           USDC(10000 * 0.75)
         );
       });
 
       it("sets maxFundingCapacity to pool.maxFundingCapacity", async () => {
-        let { firstTrancheVault } = await loadFixture(duoPoolFixture);
+        let { firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.maxFundingCapacity()).to.equal(
           USDC(12000 * 0.8)
         );
@@ -121,9 +117,7 @@ describe("PoolFactory", function () {
     let borrower: Signer;
 
     beforeEach(async () => {
-      const setupData = await loadFixture(
-        uniPoolFixture
-      );
+      const setupData = await uniPoolFixture();
       admin = setupData.deployer
       addr1 = setupData.borrower
       borrower = setupData.borrower;
@@ -132,7 +126,7 @@ describe("PoolFactory", function () {
 
     it('should fail to deploy pool if borrower is not whitelisted', async () => {
 
-      const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+      const defaultParams = JSON.parse(JSON.stringify(DEFAULT_LENDING_POOL_PARAMS));
 
       const lendingPoolParams = { ...defaultParams, borrowerAddress: ((await ethers.getSigners())[10]).address };
 

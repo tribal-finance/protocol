@@ -46,13 +46,13 @@ describe("When pool is in Initial ", function () {
 
   describe("When unitranche pool is deployed", async () => {
     it("is in initial stage", async () => {
-      const { lendingPool } = await loadFixture(uniPoolFixture);
+      const { lendingPool } = await uniPoolFixture();
       expect(await lendingPool.currentStage()).to.equal(STAGES.INITIAL);
     });
 
     describe("Tranche vault", async () => {
       it("does not allow withdrawals, deposits and transfers", async () => {
-        const { firstTrancheVault } = await loadFixture(uniPoolFixture);
+        const { firstTrancheVault } = await uniPoolFixture();
         expect(await firstTrancheVault.depositEnabled()).to.eq(false);
         expect(await firstTrancheVault.withdrawEnabled()).to.eq(false);
         expect(await firstTrancheVault.transferEnabled()).to.eq(false);
@@ -63,7 +63,7 @@ describe("When pool is in Initial ", function () {
   describe("When duotranche pool is deployed", async () => {
     describe("First Tranche vault", async () => {
       it("does not allow withdrawals, deposits and transfers", async () => {
-        const { firstTrancheVault } = await loadFixture(duoPoolFixture);
+        const { firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.depositEnabled()).to.eq(false);
         expect(await firstTrancheVault.withdrawEnabled()).to.eq(false);
         expect(await firstTrancheVault.transferEnabled()).to.eq(false);
@@ -72,7 +72,7 @@ describe("When pool is in Initial ", function () {
 
     describe("Second Tranche vault", async () => {
       it("does not allow withdrawals, deposits and transfers", async () => {
-        const { firstTrancheVault } = await loadFixture(duoPoolFixture);
+        const { firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.depositEnabled()).to.eq(false);
         expect(await firstTrancheVault.withdrawEnabled()).to.eq(false);
         expect(await firstTrancheVault.transferEnabled()).to.eq(false);

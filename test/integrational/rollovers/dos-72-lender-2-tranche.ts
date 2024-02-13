@@ -90,7 +90,7 @@ describe("Rollovers (72 Lenders / 2 Tranches)", function () {
       lendingPoolParams: any;
 
     before(async () => {
-      const data = await loadFixture(duoPoolFixture);
+      const data = await duoPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;

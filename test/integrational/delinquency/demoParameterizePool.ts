@@ -82,7 +82,7 @@ describe("Run borrowerPenalty logic", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await uniPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
@@ -95,7 +95,7 @@ describe("Run borrowerPenalty logic", function () {
     });
 
     it("deploy pool", async () => {
-      const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+      const defaultParams = JSON.parse(JSON.stringify(DEFAULT_LENDING_POOL_PARAMS));
     
       defaultParams.minFundingCapacity = ethers.utils.parseUnits("80000", 6);
       defaultParams.maxFundingCapacity = ethers.utils.parseUnits("100000", 6);
