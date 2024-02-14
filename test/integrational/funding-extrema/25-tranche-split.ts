@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
 
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
 import { DEFAULT_LENDING_POOL_PARAMS, deployUnitranchePool } from "../../../lib/pool_deployments";
 
