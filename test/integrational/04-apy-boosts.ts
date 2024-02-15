@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import { PoolFactory } from "../../typechain-types";
@@ -87,7 +86,7 @@ describe("Boosting the APR", function () {
   describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a partial boost (locks 1000 PLATFORM)", function () {
     it("is bumps APR to 12.5%", async () => {
       const { usdc, platformToken, lenders, lendingPool, firstTrancheVault } =
-        await loadFixture(uniPoolFixture);
+        await uniPoolFixture();
 
       const trancheAprBefore = await lendingPool.lenderEffectiveAprByTrancheWad(
         await lenders[0].getAddress(),
@@ -119,7 +118,7 @@ describe("Boosting the APR", function () {
   describe("Open unitranche pool with lender1 deposit of 1000 USDC gets a full boost (locks 2000 PLATFORM)", function () {
     it("is bumps APR to 15%", async () => {
       const { usdc, platformToken, lenders, lendingPool, firstTrancheVault } =
-        await loadFixture(uniPoolFixture);
+        await uniPoolFixture();
 
       const trancheAprBefore = await lendingPool.lenderEffectiveAprByTrancheWad(
         await lenders[0].getAddress(),
@@ -149,7 +148,7 @@ describe("Boosting the APR", function () {
   describe("Open unitranche pool with lender1 deposit of 1000 USDC gets overboost (locks 3000 PLATFORM)", function () {
     it("will revert", async () => {
       const { usdc, platformToken, lenders, lendingPool, firstTrancheVault } =
-        await loadFixture(uniPoolFixture);
+        await uniPoolFixture();
 
       const amountToLock = ethers.utils.parseEther("3000");
 
@@ -174,7 +173,7 @@ describe("Boosting the APR", function () {
 
   it("Prevents invalid user from locking tokens for APR boost in a specific tranche.", async () => {
     const { usdc, platformToken, lenders, lendingPool } =
-        await loadFixture(uniPoolFixture);
+        await uniPoolFixture();
 
       const amountToLock = ethers.utils.parseEther("2000");
 

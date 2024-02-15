@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import { PoolFactory } from "../../typechain-types";
@@ -101,12 +100,12 @@ describe("When Pool moves to Open state", function () {
 
   describe("When unitranche pool opens", function () {
     it("is in OPEN stage", async () => {
-      const { lendingPool } = await loadFixture(uniPoolFixture);
+      const { lendingPool } = await uniPoolFixture();
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
 
     it("Not able to be OPENED if called by non-admin ", async () => {
-      const { lendingPool } = await loadFixture(uniPoolFixture);
+      const { lendingPool } = await uniPoolFixture();
       const signer = (await ethers.getSigners())[10];
       expect(await signer.getAddress()).to.not.hexEqual(await lendingPool.owner());
       await expect(lendingPool.connect(signer).adminOpenPool()).to.be.revertedWith("AA:OA");
@@ -114,7 +113,7 @@ describe("When Pool moves to Open state", function () {
 
     describe("Tranche vault", async () => {
       it("does allows withdrawals and deposits", async () => {
-        const { firstTrancheVault } = await loadFixture(uniPoolFixture);
+        const { firstTrancheVault } = await uniPoolFixture();
         expect(await firstTrancheVault.depositEnabled()).to.eq(true);
         expect(await firstTrancheVault.withdrawEnabled()).to.eq(true);
         expect(await firstTrancheVault.transferEnabled()).to.eq(false);
@@ -125,7 +124,7 @@ describe("When Pool moves to Open state", function () {
   describe("When duotranche pool opens", function () {
     describe("First Tranche vault", async () => {
       it("does allows withdrawals and deposits", async () => {
-        const { firstTrancheVault } = await loadFixture(duoPoolFixture);
+        const { firstTrancheVault } = await duoPoolFixture();
         expect(await firstTrancheVault.depositEnabled()).to.eq(true);
         expect(await firstTrancheVault.withdrawEnabled()).to.eq(true);
         expect(await firstTrancheVault.transferEnabled()).to.eq(false);
@@ -134,7 +133,7 @@ describe("When Pool moves to Open state", function () {
 
     describe("Second Tranche vault", async () => {
       it("does allows withdrawals and deposits", async () => {
-        const { secondTrancheVault } = await loadFixture(duoPoolFixture);
+        const { secondTrancheVault } = await duoPoolFixture();
         expect(await secondTrancheVault.depositEnabled()).to.eq(true);
         expect(await secondTrancheVault.withdrawEnabled()).to.eq(true);
         expect(await secondTrancheVault.transferEnabled()).to.eq(false);

@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { Signer } from "ethers";
 
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
 import { DEFAULT_LENDING_POOL_PARAMS } from "../../../lib/pool_deployments";
@@ -81,7 +80,7 @@ describe("Rollovers (2 Lender)", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await uniPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
@@ -313,7 +312,7 @@ describe("Rollovers (2 Lender)", function () {
         const futureLenders = await poolFactory.nextLenders();
         const futureTranches = await poolFactory.nextTranches();
 
-        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+        const defaultParams = JSON.parse(JSON.stringify(DEFAULT_LENDING_POOL_PARAMS));
 
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();

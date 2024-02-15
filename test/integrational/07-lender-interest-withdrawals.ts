@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import { PoolFactory } from "../../typechain-types";
@@ -103,9 +102,7 @@ describe("Lenders redeem rewards", function () {
 
     context("after halve of the term passes", async () => {
       it("allows lender to withdraw $100 and rewards redeemable is $150", async () => {
-        const { lendingPool, usdc, lenders } = await loadFixture(
-          uniPoolFixture
-        );
+        const { lendingPool, usdc, lenders } = await uniPoolFixture();
 
         const balanceBefore = await usdc.balanceOf(
           await lenders[0].getAddress()

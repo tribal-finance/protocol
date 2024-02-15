@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { Signer } from "ethers";
 
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../helpers/usdc";
 import {
@@ -95,7 +94,7 @@ describe("Full cycle sequential test", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await uniPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
