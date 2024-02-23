@@ -334,7 +334,7 @@ describe("Rollovers (2 Lender / 2 Tranche) ensure pool can't stretch beyond max 
       });
 
       it("3000 USDC flc deposit from the borrower", async () => {
-        await expect(nextLendingPool.callStatic.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address)).to.be.revertedWith("InsufficientAllowance");
+        await expect(nextLendingPool.callStatic.adminOrOwnerRolloverFirstLossCaptial(lendingPool.address)).to.be.revertedWith("InsufficientAllowance");
         // previous flc was 2000 so now borrower needs to approve an additonal 1000 since the new flc is 3000
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(1000));
         await nextLendingPool.adminOrOwnerRolloverFirstLossCaptial(lendingPool.address);

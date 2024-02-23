@@ -361,7 +361,7 @@ describe("Badly Configured Rollovers (2 Lender / 2 Tranche)", function () {
       });
 
       it("flc deposit from the borrower", async () => {
-        await wrongLendingPool.adminOrBorrowerRolloverFirstLossCaptial(wrongLendingPool.address);
+        await wrongLendingPool.adminOrOwnerRolloverFirstLossCaptial(wrongLendingPool.address);
 
         await usdc.connect(borrower).approve(nextLendingPool.address, USDC(3000));
         await nextLendingPool.connect(borrower).borrowerDepositFirstLossCapital();

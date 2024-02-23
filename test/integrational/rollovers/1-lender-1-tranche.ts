@@ -344,7 +344,10 @@ describe("Rollovers (1 Lender)", function () {
       });
   
       it("2000 USDC flc deposit from the borrower", async () => {
-        await nextLendingPool.connect(borrower).adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
+        await expect(nextLendingPool.connect(borrower).adminOrOwnerRolloverFirstLossCaptial(lendingPool.address)).to.be.reverted;
+
+        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(2000));
+        await nextLendingPool.adminOrOwnerRolloverFirstLossCaptial(lendingPool.address);
       });
   
       it("transitions to the FLC_DEPOSITED stage", async () => {
