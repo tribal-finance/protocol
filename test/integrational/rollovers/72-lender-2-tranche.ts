@@ -29,7 +29,7 @@ import STAGES from "../../helpers/stages";
 import { generateLenders } from "../../helpers/utls";
 import { promises } from "dns";
 
-describe("Rollovers (71 Lenders / 2 Tranches)", function () {
+describe("Rollovers (72 Lenders / 2 Tranches)", function () {
   context("For unitranche pool", async function () {
     async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -85,7 +85,7 @@ describe("Rollovers (71 Lenders / 2 Tranches)", function () {
       signerPool: Wallet[],
       lender1: Signer,
       lender2: Signer,
-      maxLenders: number = 71,
+      maxLenders: number = 72,
       lendingPoolParams: any;
 
     before(async () => {

@@ -831,11 +831,12 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
         borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
 
+
+        SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
+        
         if (assetsToSendToFeeSharing > 0) {
             SafeERC20.safeTransfer(_stableCoinContract(), feeSharingContractAddress, assetsToSendToFeeSharing);
         }
-
-        SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
 
         if (penalty > 0) {
             emit BorrowerPayPenalty(_msgSender(), penalty);

@@ -29,7 +29,7 @@ import STAGES from "../../helpers/stages";
 import { generateLenders } from "../../helpers/utls";
 import { promises } from "dns";
 
-describe("Rollovers (72 Lenders / 2 Tranches)", function () {
+describe("Rollovers (73 Lenders / 2 Tranches)", function () {
   context("For unitranche pool", async function () {
     async function duoPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -85,7 +85,7 @@ describe("Rollovers (72 Lenders / 2 Tranches)", function () {
       signerPool: Wallet[],
       lender1: Signer,
       lender2: Signer,
-      maxLenders: number = 72,
+      maxLenders: number = 73,
       lendingPoolParams: any;
 
     before(async () => {
@@ -286,8 +286,7 @@ describe("Rollovers (72 Lenders / 2 Tranches)", function () {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
       });
 
-
-      it("perform rollover and expect no asset transfers", async () => {
+      it("expect out of gas error", async () => {
         await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
       });
     });
