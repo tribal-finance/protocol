@@ -777,7 +777,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
         require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
 
-        if (pool.firstLossAssets() > firstLossAssets) {
+        if (pool.firstLossAssets() >= firstLossAssets) {
             // we have surplus coming, refund extra to borrower
             uint256 flcSurplus = pool.firstLossAssets() - firstLossAssets;
             pool.poolRolloverFirstLossCaptial();
@@ -831,9 +831,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
         borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
 
-
         SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
-        
+
         if (assetsToSendToFeeSharing > 0) {
             SafeERC20.safeTransfer(_stableCoinContract(), feeSharingContractAddress, assetsToSendToFeeSharing);
         }
