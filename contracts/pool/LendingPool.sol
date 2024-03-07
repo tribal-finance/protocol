@@ -448,7 +448,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         for (uint i; i < trancheVaultAddresses.length; i++) {
             TrancheVault tv = vaults[i];
             uint assetsToSend = (trancheCoveragesWads[i] * availableAssets) / WAD;
-            uint trancheDefaultRatioWad = (assetsToSend * WAD) / tv.totalAssets();
+            uint totalAssets = tv.totalAssets();
+            uint trancheDefaultRatioWad = 0;
+            if (totalAssets > 0) {
+                trancheDefaultRatioWad = (assetsToSend * WAD) / totalAssets;
+            }
 
             if (assetsToSend > 0) {
                 SafeERC20.safeTransfer(_stableCoinContract(), address(tv), assetsToSend);
