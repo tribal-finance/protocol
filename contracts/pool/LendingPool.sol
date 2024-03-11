@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// import solmate fixedpoint math library
+import "solmate/src/utils/FixedPointMathLib.sol";
 
 import "./PoolCalculations.sol";
 import "./PoolTransfers.sol";
@@ -555,7 +557,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     /// @notice average APR of all lenders across all tranches, boosted or not
     function allLendersInterest() public view returns (uint) {
-        return (((allLendersEffectiveAprWad() * collectedAssets) / WAD) * lendingTermSeconds) / YEAR;
+        // use mulDiv to avoid precision loss
+        return
+            FixedPointMathLib.mulDivUp((allLendersEffectiveAprWad() * collectedAssets) / WAD, lendingTermSeconds, YEAR);
     }
 
     function allLendersInterestByDate() public view returns (uint) {
@@ -717,6 +721,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint256 amount,
         address lender
     ) external onlyDeployedPool {
+        require(
+            platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
+            "LP101" //"LendingPool: lock will lead to overboost"
+        );
         LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
         r.lockedPlatformTokens += amount;
         s_totalLockedPlatformTokensByTranche[trancheId] += amount;
