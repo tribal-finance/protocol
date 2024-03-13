@@ -205,8 +205,8 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       ).to.equal(USDC(450));
     });
 
-    it("sets allLendersInterest() to 569.999999 USDC", async () => {
-      expect(await lendingPool.allLendersInterest()).to.equal("569999999");
+    it("sets allLendersInterest() to 570000000 USDC", async () => {
+      expect(await lendingPool.allLendersInterest()).to.equal("570000000");
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {

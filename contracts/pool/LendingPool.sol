@@ -17,6 +17,8 @@ import "../fee_sharing/IFeeSharing.sol";
 import "../authority/AuthorityAware.sol";
 import "../vaults/TrancheVault.sol";
 
+import "hardhat/console.sol";
+
 contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint;
@@ -364,6 +366,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function _transitionToFundedStage() internal whenNotPaused {
         fundedAt = uint64(block.timestamp);
         currentStage = Stages.FUNDED;
+
+        //console.log("borrowerTotalInterestRateWad in ldending pool");
+        uint256 totalInterestOwed = (allLendersEffectiveAprWad() + protocolFeeWad) * collectedAssets * lendingTermSeconds / YEAR;
+        borrowerTotalInterestRateWad = PoolCalculations.calculateInterestRate(totalInterestOwed, collectedAssets, lendingTermSeconds);
+        console.log(allLendersEffectiveAprWad() + protocolFeeWad);
 
         TrancheVault[] memory vaults = trancheVaultContracts();
 
@@ -721,11 +728,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint256 amount,
         address lender
     ) external onlyDeployedPool {
+        LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
         require(
-            platformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
+            r.lockedPlatformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
             "LP101" //"LendingPool: lock will lead to overboost"
         );
-        LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
         r.lockedPlatformTokens += amount;
         s_totalLockedPlatformTokensByTranche[trancheId] += amount;
     }

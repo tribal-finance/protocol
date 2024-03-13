@@ -110,6 +110,15 @@ library PoolCalculations {
         return borrowerExpectedInterest - borrowerInterestRepaid;
     }
 
+    function calculateInterestRate(
+        uint totalInterestAmountWad,
+        uint principal,
+        uint loanTermSeconds
+    ) public pure returns (uint) {
+        uint termWad = (loanTermSeconds * WAD) / YEAR;
+        return (totalInterestAmountWad * WAD) / (principal * termWad);
+    }
+
     function borrowerExcessSpread(LendingPool lendingPool) public view returns (uint) {
         uint borrowerInterestRepaid = lendingPool.borrowerInterestRepaid();
         uint allLendersInterest = lendingPool.allLendersInterest();
