@@ -267,7 +267,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         address[] calldata _trancheVaultAddresses,
         address _feeSharingContractAddress,
         address _authorityAddress,
-        address _poolFactoryAddress
+        address _poolFactoryAddress,
+        uint256 borrowerAPRWad
     ) external initializer {
         PoolCalculations.validateInitParams(
             params,
@@ -288,7 +289,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         lendingTermSeconds = params.lendingTermSeconds;
         borrowerAddress = params.borrowerAddress;
         firstLossAssets = params.firstLossAssets;
-        borrowerTotalInterestRateWad = params.borrowerTotalInterestRateWad;
         repaymentRecurrenceDays = params.repaymentRecurrenceDays;
         gracePeriodDays = params.gracePeriodDays;
         protocolFeeWad = params.protocolFeeWad;
@@ -299,7 +299,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         trancheBoostedAPRsWads = params.trancheBoostedAPRsWads;
         trancheBoostRatios = params.trancheBoostRatios;
         trancheCoveragesWads = params.trancheCoveragesWads;
-
+        borrowerTotalInterestRateWad = borrowerAPRWad;
         trancheVaultAddresses = _trancheVaultAddresses;
         feeSharingContractAddress = _feeSharingContractAddress;
         poolFactoryAddress = _poolFactoryAddress;
@@ -722,6 +722,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         address[] memory deadTrancheAddrs
     ) external onlyOwnerOrAdmin atStage(Stages.OPEN) whenNotPaused {
         PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs);
+        fundedAt = uint64(block.timestamp);
         _transitionToBorrowedStage(collectedAssets);
     }
 
@@ -793,12 +794,13 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         firstLossAssets = 0;
     }
 
-    function adminOrBorrowerRolloverFirstLossCaptial(
+    function adminOrOwnerRolloverFirstLossCaptial(
         LendingPool pool
-    ) external onlyOwnerOrAdminOrBorrower atStage(Stages.INITIAL) whenNotPaused {
+    ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
         require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
+        require(address(pool) != address(this), "pool cannot be the same as this contract");
 
-        if (pool.firstLossAssets() > firstLossAssets) {
+        if (pool.firstLossAssets() >= firstLossAssets) {
             // we have surplus coming, refund extra to borrower
             uint256 flcSurplus = pool.firstLossAssets() - firstLossAssets;
             pool.poolRolloverFirstLossCaptial();
@@ -852,11 +854,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
         borrowerInterestRepaid = borrowerInterestRepaid + assets - penalty;
 
+        SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
+
         if (assetsToSendToFeeSharing > 0) {
             SafeERC20.safeTransfer(_stableCoinContract(), feeSharingContractAddress, assetsToSendToFeeSharing);
         }
-
-        SafeERC20.safeTransferFrom(_stableCoinContract(), _msgSender(), address(this), assets);
 
         if (penalty > 0) {
             emit BorrowerPayPenalty(_msgSender(), penalty);

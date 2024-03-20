@@ -95,6 +95,17 @@ contract PoolFactory is AuthorityAware {
         }
         require(wadMax == 1e18, "LP024 - bad max wad");
         require(wadMin == 1e18, "LP027 - bad min wad");
+        // calculate the borrower total apr based on the tranches apr and splits
+        uint256 totalApr;
+        if (params.trancheBoostedAPRsWads[0] > params.trancheAPRsWads[0]) {
+            for (uint256 i = 0; i < params.tranchesCount; i++) {
+                totalApr += params.trancheBoostedAPRsWads[i].mulDiv(fundingSplitWads[i][0], WAD);
+            }
+        } else {
+            for (uint256 i = 0; i < params.tranchesCount; i++) {
+                totalApr += params.trancheAPRsWads[i].mulDiv(fundingSplitWads[i][0], WAD);
+            }
+        }
 
         address poolAddress = _clonePool();
         prevDeployedPool[poolAddress] = true;
@@ -106,7 +117,13 @@ contract PoolFactory is AuthorityAware {
             _msgSender()
         );
 
-        initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
+        initializePoolAndCreatePoolRecord(
+            poolAddress,
+            params,
+            trancheVaultAddresses,
+            feeSharingContractAddress,
+            totalApr
+        );
 
         return poolAddress;
     }
@@ -173,14 +190,16 @@ contract PoolFactory is AuthorityAware {
         address poolAddress,
         LendingPool.LendingPoolParams calldata params,
         address[] memory trancheVaultAddresses,
-        address _feeSharingContractAddress
+        address _feeSharingContractAddress,
+        uint256 totalApr
     ) public onlyOwner {
         LendingPool(poolAddress).initialize(
             params,
             trancheVaultAddresses,
             _feeSharingContractAddress,
             address(authority),
-            address(this)
+            address(this),
+            totalApr
         );
         Ownable(poolAddress).transferOwnership(_msgSender());
 

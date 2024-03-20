@@ -269,7 +269,7 @@ describe("Rollovers (72 Lenders / 2 Tranches)", function () {
       });
 
       it("3000 USDC flc deposit from the borrower", async () => {
-        await nextLendingPool.adminOrBorrowerRolloverFirstLossCaptial(lendingPool.address);
+        await nextLendingPool.adminOrOwnerRolloverFirstLossCaptial(lendingPool.address);
       });
 
       it("transitions to the FLC_DEPOSITED stage", async () => {
@@ -288,7 +288,158 @@ describe("Rollovers (72 Lenders / 2 Tranches)", function () {
 
 
       it("perform rollover and expect no asset transfers", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.reverted;
+        const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
+        const platformToken = await ethers.getContractAt("ERC20", await lendingPool.platformTokenContractAddress());
+
+        const initialBalancesAsset = await Promise.all([
+          await asset.balanceOf(lendingPool.address),
+          await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(secondTrancheVault.address),
+          await asset.balanceOf(nextLendingPool.address),
+          await asset.balanceOf(nextTrancheVault1.address),
+          await asset.balanceOf(nextTrancheVault2.address)
+        ])
+
+        const initialBalancesVault = await Promise.all([
+          await firstTrancheVault.balanceOf(await borrower.getAddress()),
+          await firstTrancheVault.balanceOf(await lender1.getAddress()),
+          await firstTrancheVault.balanceOf(await lender2.getAddress()),
+          await secondTrancheVault.balanceOf(await borrower.getAddress()),
+          await secondTrancheVault.balanceOf(await lender1.getAddress()),
+          await secondTrancheVault.balanceOf(await lender2.getAddress()),
+        ])
+
+        const borroweredAssetsInitial = await lendingPool.borrowedAssets();
+
+        const initialBoostedLender1Tranche0Pool1 = await lendingPool.s_trancheRewardables(0, await lender1.getAddress());
+        const initialBoostedLender2Tranche0Pool1 = await lendingPool.s_trancheRewardables(0, await lender2.getAddress());
+        const initialBoostedLender1Tranche1Pool1 = await lendingPool.s_trancheRewardables(1, await lender1.getAddress());
+        const initialBoostedLender2Tranche1Pool1 = await lendingPool.s_trancheRewardables(1, await lender2.getAddress());
+
+        const initialBoostedLender1Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender1.getAddress());
+        const initialBoostedLender2Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender2.getAddress());
+        const initialBoostedLender1Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender1.getAddress());
+        const initialBoostedLender2Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender2.getAddress());
+
+        const initialBalanceOfPool1PlatformToken = await platformToken.balanceOf(lendingPool.address);
+        const initialBalanceOfPool2PlatformToken = await platformToken.balanceOf(nextLendingPool.address);
+
+        console.log("Boosting state-transfer tests")
+        console.log("initials pool 1")
+        console.log(initialBoostedLender1Tranche0Pool1.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche0Pool1.lockedPlatformTokens);
+        console.log(initialBoostedLender1Tranche1Pool1.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens);
+        console.log("initials pool 2")
+        console.log(initialBoostedLender1Tranche0Pool2.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche0Pool2.lockedPlatformTokens);
+        console.log(initialBoostedLender1Tranche1Pool2.lockedPlatformTokens);
+        console.log(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens);
+
+        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address]);
+
+        const finalBalanceOfPool1PlatformToken = await platformToken.balanceOf(lendingPool.address);
+        const finalBalanceOfPool2PlatformToken = await platformToken.balanceOf(nextLendingPool.address);
+
+        expect(initialBalanceOfPool1PlatformToken.sub(finalBalanceOfPool1PlatformToken)).equals(initialBalanceOfPool1PlatformToken);
+        expect(finalBalanceOfPool2PlatformToken.sub(initialBalanceOfPool2PlatformToken)).equals(initialBalanceOfPool1PlatformToken);
+
+        const finalBoostedLender1Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender1.getAddress());
+        const finalBoostedLender2Tranche0Pool2 = await nextLendingPool.s_trancheRewardables(0, await lender2.getAddress());
+        const finalBoostedLender1Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender1.getAddress());
+        const finalBoostedLender2Tranche1Pool2 = await nextLendingPool.s_trancheRewardables(1, await lender2.getAddress());
+
+        console.log("finals pool 2")
+        console.log(finalBoostedLender1Tranche0Pool2.lockedPlatformTokens);
+        console.log(finalBoostedLender2Tranche0Pool2.lockedPlatformTokens);
+        console.log(finalBoostedLender1Tranche1Pool2.lockedPlatformTokens);
+        console.log(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens);
+
+        expect(finalBoostedLender1Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender1Tranche0Pool2.lockedPlatformTokens)).equals(initialBoostedLender1Tranche0Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender2Tranche0Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche0Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche0Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens)
+        expect(finalBoostedLender2Tranche1Pool2.lockedPlatformTokens.sub(initialBoostedLender2Tranche1Pool2.lockedPlatformTokens)).equals(initialBoostedLender2Tranche1Pool1.lockedPlatformTokens)
+
+
+        const borroweredAssetsFinal = await lendingPool.borrowedAssets();
+
+        const finalBalancesAsset = await Promise.all([
+          await asset.balanceOf(lendingPool.address),
+          await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(secondTrancheVault.address),
+          await asset.balanceOf(nextLendingPool.address),
+          await asset.balanceOf(nextTrancheVault1.address),
+          await asset.balanceOf(nextTrancheVault2.address)
+        ])
+
+        const finalBalancesVault = await Promise.all([
+          await firstTrancheVault.balanceOf(await borrower.getAddress()),
+          await firstTrancheVault.balanceOf(await lender1.getAddress()),
+          await firstTrancheVault.balanceOf(await lender2.getAddress()),
+          await secondTrancheVault.balanceOf(await borrower.getAddress()),
+          await secondTrancheVault.balanceOf(await lender1.getAddress()),
+          await secondTrancheVault.balanceOf(await lender2.getAddress()),
+        ])
+
+        const deltaBalancesAsset = [
+          initialBalancesAsset[0].sub(finalBalancesAsset[0]),
+          initialBalancesAsset[1].sub(finalBalancesAsset[1]),
+          initialBalancesAsset[2].sub(finalBalancesAsset[2]),
+          initialBalancesAsset[3].sub(finalBalancesAsset[3]),
+          initialBalancesAsset[4].sub(finalBalancesAsset[4]),
+          initialBalancesAsset[5].sub(finalBalancesAsset[5]),
+        ]
+
+        const deltaBalancesVault = [
+          initialBalancesVault[0].sub(finalBalancesVault[0]),
+          initialBalancesVault[1].sub(finalBalancesVault[1]),
+          initialBalancesVault[2].sub(finalBalancesVault[2]),
+          initialBalancesVault[3].sub(finalBalancesVault[3]),
+          initialBalancesVault[4].sub(finalBalancesVault[4]),
+          initialBalancesVault[5].sub(finalBalancesVault[5]),
+        ]
+
+        expect(deltaBalancesAsset[0]).equals(0)
+        expect(deltaBalancesAsset[1]).equals(0)
+        expect(deltaBalancesAsset[2]).equals(0)
+        expect(deltaBalancesAsset[3]).equals(0)
+        expect(deltaBalancesAsset[4]).equals(0)
+        expect(deltaBalancesAsset[5]).equals(0)
+
+
+        expect(deltaBalancesVault[0]).equals(0)
+        expect(deltaBalancesVault[1]).equals(initialBalancesVault[1])
+        expect(deltaBalancesVault[2]).equals(initialBalancesVault[2])
+        expect(deltaBalancesVault[3]).equals(0)
+        expect(deltaBalancesVault[4]).equals(initialBalancesVault[4])
+        expect(deltaBalancesVault[5]).equals(initialBalancesVault[5])
+
+        expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(-borroweredAssetsInitial);
+      })
+
+      it("🏛️ borrower repays 0 USDC as principal", async () => {
+        await usdc.connect(borrower).approve(lendingPool.address, USDC(0));
+        await lendingPool.connect(borrower).borrowerRepayPrincipal();
+      });
+
+      it("transitions to REPAID stage", async () => {
+        expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
+      });
+
+      it("🏛️ borrower withdraws FLC(0) + excess spread (155USDC)", async () => {
+        const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
+        await lendingPool
+          .connect(borrower)
+          .borrowerWithdrawFirstLossCapitalAndExcessSpread();
+      });
+
+      it("transitions to FLC_WITHDRAWN stage", async () => {
+        expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
+      });
+
+
+      it("transitioned nextLendingPool to the BORROWED stage", async () => {
+        expect(await nextLendingPool.currentStage()).to.equal(STAGES.BORROWED);
       });
     });
   });
