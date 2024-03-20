@@ -54,7 +54,6 @@ library PoolTransfers {
     // Remember to declare the event used in the function
     event PlatformTokensReceivedFromOldPool(address indexed lender, uint8 indexed trancheId, uint256 platformTokens);
 
-    // need to clarify the logic here
     // Only the principal
     function executeRollover(
         LendingPool lendingPool,
@@ -88,7 +87,6 @@ library PoolTransfers {
                     uint256 lenderRollOver = lenderPrincipal;
 
                     // only roll the lender if their deposit won't let them go over maxFundingCapacity
-                    // FIXME: I thought that as much of the lender's principal as possible should be rolled over and the rest returned to the lender
                     uint256 vaultMax = vault0.maxFundingCapacity();
                     if (lenderPrincipal + vault0.totalAssets() > vaultMax) {
                         // transfer the difference back to the lender
@@ -100,8 +98,7 @@ library PoolTransfers {
                     if (settings.platformTokens) {
                         // ask deadpool to move platform token into this new contract
                         for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-                            // FIXME: transfer appropriate amount of platform tokens to the new pool
-                            // _transferPlatformTokensToNewPool(deadPool, lender, trancheId, lendingPool);
+                            // transfer appropriate amount of platform tokens to the new pool
                             uint256 platformTokens = deadpool.lenderStakedTokensByTranche(lender, trancheId);
                             uint256 rolloverPlatformTokens = (platformTokens * lenderPrincipal) / lenderRollOver;
                             _transferPlatformTokensToNewPool(
