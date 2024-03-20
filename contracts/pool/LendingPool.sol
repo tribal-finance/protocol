@@ -263,7 +263,8 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         address[] calldata _trancheVaultAddresses,
         address _feeSharingContractAddress,
         address _authorityAddress,
-        address _poolFactoryAddress
+        address _poolFactoryAddress,
+        uint256 borrowerAPRWad
     ) external initializer {
         PoolCalculations.validateInitParams(
             params,
@@ -284,7 +285,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         lendingTermSeconds = params.lendingTermSeconds;
         borrowerAddress = params.borrowerAddress;
         firstLossAssets = params.firstLossAssets;
-        borrowerTotalInterestRateWad = params.borrowerTotalInterestRateWad;
         repaymentRecurrenceDays = params.repaymentRecurrenceDays;
         gracePeriodDays = params.gracePeriodDays;
         protocolFeeWad = params.protocolFeeWad;
@@ -295,7 +295,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         trancheBoostedAPRsWads = params.trancheBoostedAPRsWads;
         trancheBoostRatios = params.trancheBoostRatios;
         trancheCoveragesWads = params.trancheCoveragesWads;
-
+        borrowerTotalInterestRateWad = borrowerAPRWad;
         trancheVaultAddresses = _trancheVaultAddresses;
         feeSharingContractAddress = _feeSharingContractAddress;
         poolFactoryAddress = _poolFactoryAddress;
