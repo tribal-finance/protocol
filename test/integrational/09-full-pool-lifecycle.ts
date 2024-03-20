@@ -109,21 +109,21 @@ describe("Full cycle sequential test", function () {
     });
 
     beforeEach(async () => {
-      await assertPoolViews(lendingPool, lender1, failCase++)
-      await assertPoolViews(lendingPool, lender2, failCase++)
+      await assertPoolViews(lendingPool, lender1, failCase++);
+      await assertPoolViews(lendingPool, lender2, failCase++);
       await assertDefaultRatioWad(lendingPool);
-    })
+    });
 
     afterEach(async () => {
-      await assertPoolViews(lendingPool, lender1, failCase++)
-      await assertPoolViews(lendingPool, lender2, failCase++)
+      await assertPoolViews(lendingPool, lender1, failCase++);
+      await assertPoolViews(lendingPool, lender2, failCase++);
       await assertDefaultRatioWad(lendingPool);
-    })
+    });
 
     it("is initially in INITIAL stage and requires a deposit of 2000 USDC", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.INITIAL);
       expect(await lendingPool.firstLossAssets()).to.equal(USDC(2000));
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("🏛️ 2000 USDC flc deposit from the borrower", async () => {
@@ -133,7 +133,7 @@ describe("Full cycle sequential test", function () {
 
     it("transitions to the FLC_DEPOSITED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("👮 receives adminOpenPool() from deployer", async () => {
@@ -142,7 +142,7 @@ describe("Full cycle sequential test", function () {
 
     it("transitions to OPEN stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("👛 8000 USDC deposit from lender 1", async () => {
@@ -200,7 +200,6 @@ describe("Full cycle sequential test", function () {
     });
 
     it("👛 10000 PLATFORM tokens locked by lender1", async () => {
-
       await platformToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
@@ -221,16 +220,26 @@ describe("Full cycle sequential test", function () {
     it("sets allLendersInterest() to 625 USDC", async () => {
       expect(await lendingPool.allLendersInterest()).to.equal(USDC(625));
 
-      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).equals(0)
+      expect(
+        await lendingPool.lenderRewardsByTrancheGeneratedByDate(
+          await lender1.getAddress(),
+          0
+        )
+      ).equals(0);
     });
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
-
-      await expect(lendingPool.connect(deployer).adminTransitionToFundedState()).to.be.revertedWith("Cannot accrue interest or declare failure before start time");
+      await expect(
+        lendingPool.connect(deployer).adminTransitionToFundedState()
+      ).to.be.revertedWith(
+        "Cannot accrue interest or declare failure before start time"
+      );
 
       // wait a delay such that now > openedAt + fundingPeriodSeconds is true
       const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
-      await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+      await network.provider.send("evm_increaseTime", [
+        fundingPeriodSeconds.toNumber(),
+      ]);
       await network.provider.send("evm_mine");
 
       await lendingPool.connect(deployer).adminTransitionToFundedState();
@@ -238,7 +247,7 @@ describe("Full cycle sequential test", function () {
 
     it("transitions to the FUNDED stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FUNDED);
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("pool contract now holds 12000 USDC", async () => {
@@ -263,7 +272,7 @@ describe("Full cycle sequential test", function () {
     it("🏛️ borrower pays $125 interest", async () => {
       await usdc.connect(borrower).approve(lendingPool.address, USDC(125));
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("⏳ 30 days pass by", async () => {
@@ -281,7 +290,12 @@ describe("Full cycle sequential test", function () {
       // wait 30 days
       await ethers.provider.send("evm_increaseTime", [30 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine", []);
-      expect(await lendingPool.lenderRewardsByTrancheGeneratedByDate(await lender1.getAddress(), 0)).not.equals(0)
+      expect(
+        await lendingPool.lenderRewardsByTrancheGeneratedByDate(
+          await lender1.getAddress(),
+          0
+        )
+      ).not.equals(0);
     });
 
     it("🏛️ borrower pays $125 interest", async () => {
@@ -291,7 +305,7 @@ describe("Full cycle sequential test", function () {
 
     it("👛 125 USDC interest withdrawal for lender 1", async () => {
       await lendingPool.connect(lender1).lenderRedeemRewards([USDC(125)]);
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("⏳ 30 days pass by", async () => {
@@ -348,22 +362,20 @@ describe("Full cycle sequential test", function () {
 
     it("transitions to REPAID stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
-
       /**
        * Excess Spread = Total Interest Paid by Borrower - (Total Interest Paid to Lenders + Protocol Fees)
-       * The borrower has paid a total of $750 in interest. 
-       * The combined interest paid to lenders and protocol fees amounts to $700 ($625 to lenders + $75 in protocol fees, assuming a 10% fee rate). 
+       * The borrower has paid a total of $750 in interest.
+       * The combined interest paid to lenders and protocol fees amounts to $700 ($625 to lenders + $75 in protocol fees, assuming a 10% fee rate).
        * Thus, the excess spread becomes:
-       * 
+       *
        * Excess Spread = $750 - $700 = $50
-       * 
+       *
        * Expected Result: Flc Deposit + Excess Spread = $2050
        */
-
 
       const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
       await lendingPool
@@ -377,7 +389,7 @@ describe("Full cycle sequential test", function () {
 
     it("transitions to FLC_WITHDRAWN stage", async () => {
       expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
-      expect(await lendingPool.borrowerPenaltyAmount()).equals(0)
+      expect(await lendingPool.borrowerPenaltyAmount()).equals(0);
     });
 
     it("👛 400 USDC interest withdrawal for lender 1", async () => {
@@ -420,7 +432,7 @@ describe("Full cycle sequential test", function () {
 
     it("Expects $75 arrived at feeSharing", async () => {
       const balance = await usdc.balanceOf(feeSharing.address);
-      expect(balance).equals(USDC(75))
-    })
+      expect(balance).equals(USDC(75));
+    });
   });
 });

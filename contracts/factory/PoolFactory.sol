@@ -73,7 +73,7 @@ contract PoolFactory is AuthorityAware {
         delete poolRegistry;
     }
 
-    /// @dev gets the length of the pool of records 
+    /// @dev gets the length of the pool of records
     function poolRecordsLength() external view returns (uint) {
         return poolRegistry.length;
     }
@@ -88,13 +88,24 @@ contract PoolFactory is AuthorityAware {
         // validate wad
         uint256 wadMax;
         uint256 wadMin;
-        for(uint256 i = 0; i < fundingSplitWads.length; i++) {
+        for (uint256 i = 0; i < fundingSplitWads.length; i++) {
             require(fundingSplitWads[i].length == 2, "LP026 - bad fundingSplitWads");
             wadMax += fundingSplitWads[i][0];
             wadMin += fundingSplitWads[i][1];
         }
         require(wadMax == 1e18, "LP024 - bad max wad");
         require(wadMin == 1e18, "LP027 - bad min wad");
+        // calculate the borrower total apr based on the tranches apr and splits
+        uint256 totalApr;
+        if (params.trancheBoostedAPRsWads[0] > params.trancheAPRsWads[0]) {
+            for (uint256 i = 0; i < params.tranchesCount; i++) {
+                totalApr += params.trancheBoostedAPRsWads[i].mulDiv(fundingSplitWads[i][0], WAD);
+            }
+        } else {
+            for (uint256 i = 0; i < params.tranchesCount; i++) {
+                totalApr += params.trancheAPRsWads[i].mulDiv(fundingSplitWads[i][0], WAD);
+            }
+        }
 
         address poolAddress = _clonePool();
         prevDeployedPool[poolAddress] = true;
@@ -106,7 +117,13 @@ contract PoolFactory is AuthorityAware {
             _msgSender()
         );
 
-        initializePoolAndCreatePoolRecord(poolAddress, params, trancheVaultAddresses, feeSharingContractAddress);
+        initializePoolAndCreatePoolRecord(
+            poolAddress,
+            params,
+            trancheVaultAddresses,
+            feeSharingContractAddress,
+            totalApr
+        );
 
         return poolAddress;
     }
@@ -117,28 +134,27 @@ contract PoolFactory is AuthorityAware {
         emit PoolCloned(poolAddress, poolImplementationAddress);
     }
 
-    function nextLender() public view returns(address) {
+    function nextLender() public view returns (address) {
         return nextAddress(poolImplementationAddress);
     }
 
-    function nextLenders() public view returns(address[4] memory lenders) {
+    function nextLenders() public view returns (address[4] memory lenders) {
         address impl = poolImplementationAddress;
-        for(uint256 i = 0; i < lenders.length; i++) {
+        for (uint256 i = 0; i < lenders.length; i++) {
             lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
         }
     }
 
-    function nextTranches() public view returns(address[8] memory lenders) {
+    function nextTranches() public view returns (address[8] memory lenders) {
         address impl = trancheVaultImplementationAddress;
-        for(uint256 i = 0; i < lenders.length; i++) {
+        for (uint256 i = 0; i < lenders.length; i++) {
             lenders[i] = Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + i));
         }
     }
 
-    function nextAddress(address impl) public view returns(address) {
+    function nextAddress(address impl) public view returns (address) {
         return Clones.predictDeterministicAddress(impl, bytes32(nonces[impl] + 1));
     }
-
 
     function _deployTrancheVaults(
         LendingPool.LendingPoolParams calldata params,
@@ -151,7 +167,7 @@ contract PoolFactory is AuthorityAware {
 
         for (uint8 i; i < params.tranchesCount; ++i) {
             address impl = trancheVaultImplementationAddress;
-            trancheVaultAddresses[i] = Clones.cloneDeterministic(impl,  bytes32(nonces[impl]++));
+            trancheVaultAddresses[i] = Clones.cloneDeterministic(impl, bytes32(nonces[impl]++));
 
             emit TrancheVaultCloned(trancheVaultAddresses[i], impl);
             prevDeployedTranche[trancheVaultAddresses[i]] = true;
@@ -174,14 +190,16 @@ contract PoolFactory is AuthorityAware {
         address poolAddress,
         LendingPool.LendingPoolParams calldata params,
         address[] memory trancheVaultAddresses,
-        address _feeSharingContractAddress
+        address _feeSharingContractAddress,
+        uint256 totalApr
     ) public onlyOwner {
         LendingPool(poolAddress).initialize(
             params,
             trancheVaultAddresses,
             _feeSharingContractAddress,
             address(authority),
-            address(this)
+            address(this),
+            totalApr
         );
         Ownable(poolAddress).transferOwnership(_msgSender());
 

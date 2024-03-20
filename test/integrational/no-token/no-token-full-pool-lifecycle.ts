@@ -25,7 +25,6 @@ import {
 import testSetup from "../../helpers/usdc";
 import STAGES from "../../helpers/stages";
 
-
 describe("Full cycle sequential test (Empty Token)", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
@@ -37,7 +36,6 @@ describe("Full cycle sequential test (Empty Token)", function () {
       const PlatformToken = await ethers.getContractFactory("EmptyToken");
       const platformToken = await PlatformToken.deploy();
       await platformToken.deployed();
-
 
       const poolFactory: PoolFactory = await deployFactoryAndImplementations(
         deployer,
@@ -182,9 +180,11 @@ describe("Full cycle sequential test (Empty Token)", function () {
       await platformToken
         .connect(lender1)
         .approve(lendingPool.address, WAD(10000));
-      await expect(lendingPool
-        .connect(lender1)
-        .lenderLockPlatformTokensByTranche(0, WAD(10000))).to.be.revertedWith("Lock: Token Locking Disabled");
+      await expect(
+        lendingPool
+          .connect(lender1)
+          .lenderLockPlatformTokensByTranche(0, WAD(10000))
+      ).to.be.revertedWith("Lock: Token Locking Disabled");
     });
 
     it("sets lenderTotalExpectedRewardsByTranche for lender1 to 525 (3000 * 1/2 year * 10%) + (5000 * 1/2 year * 15%)", async () => {
@@ -202,7 +202,9 @@ describe("Full cycle sequential test (Empty Token)", function () {
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
       const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
-      await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+      await network.provider.send("evm_increaseTime", [
+        fundingPeriodSeconds.toNumber(),
+      ]);
       await network.provider.send("evm_mine");
       await lendingPool.connect(deployer).adminTransitionToFundedState();
     });
@@ -333,15 +335,20 @@ describe("Full cycle sequential test (Empty Token)", function () {
     });
 
     it("maxWithdraw USDC interest withdrawal for lender 1", async () => {
-      const maxWithdraw = await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0);
+      const maxWithdraw = await lendingPool.lenderRewardsByTrancheRedeemable(
+        await lender1.getAddress(),
+        0
+      );
 
       await lendingPool.connect(lender1).lenderRedeemRewards([maxWithdraw]);
     });
 
     it("Fail to do a 10000 PLATFORM tokens unlock for lender 1", async () => {
-      await expect(lendingPool
-        .connect(lender1)
-        .lenderUnlockPlatformTokensByTranche(0, WAD(10000))).to.be.revertedWith("Unlock: Token Locking Disabled")
+      await expect(
+        lendingPool
+          .connect(lender1)
+          .lenderUnlockPlatformTokensByTranche(0, WAD(10000))
+      ).to.be.revertedWith("Unlock: Token Locking Disabled");
     });
 
     it("👜 100 USDC interest withdraw from lender 2", async () => {

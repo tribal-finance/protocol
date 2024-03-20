@@ -4,7 +4,10 @@ import { Signer } from "ethers";
 
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
-import { DEFAULT_LENDING_POOL_PARAMS, DEFAULT_MULTITRANCHE_FUNDING_SPLIT } from "../../../lib/pool_deployments";
+import {
+  DEFAULT_LENDING_POOL_PARAMS,
+  DEFAULT_MULTITRANCHE_FUNDING_SPLIT,
+} from "../../../lib/pool_deployments";
 
 import {
   ITestUSDC,
@@ -67,7 +70,7 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
         usdc,
         ...(await _getDeployedContracts(poolFactory)),
         platformToken,
-      }
+      };
     }
 
     let usdc: ITestUSDC,
@@ -124,7 +127,6 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       expect(await lendingPool.currentStage()).to.equal(STAGES.OPEN);
     });
 
-
     it("9000 USDC deposit from lender 1 & 2", async () => {
       await usdc
         .connect(lender1)
@@ -139,7 +141,6 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       expect(
         await firstTrancheVault.balanceOf(await lender1.getAddress())
       ).to.equal(USDC(9000));
-
     });
 
     it("increases collectedAssets() to 9000", async () => {
@@ -166,9 +167,11 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
     });
 
     it("In an ostentatious display of financial acumen, the lender manifests a predilection for the activation of rollovers", async () => {
-      await lendingPool.connect(lender1).lenderEnableRollOver(false, false, false);
+      await lendingPool
+        .connect(lender1)
+        .lenderEnableRollOver(false, false, false);
       await lendingPool.connect(lender2).lenderEnableRollOver(true, true, true);
-    })
+    });
 
     it("sets lenderTotalExpectedRewardsByTranche for lender2 to 120 (2000* 1/2 year * 10%)", async () => {
       expect(
@@ -179,8 +182,8 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       ).to.equal(USDC(120));
     });
 
-    it("sets borrowerExpectedInterest() to 825 USDC", async () => {
-      expect(await lendingPool.borrowerExpectedInterest()).to.equal(USDC(825));
+    it("sets borrowerExpectedInterest() to 572 USDC", async () => {
+      expect(await lendingPool.borrowerExpectedInterest()).to.equal(USDC(572));
     });
 
     it("increases collectedAssets() to 11000", async () => {
@@ -211,7 +214,9 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
 
     it("👮 gets adminTransitionToFundedState() call from deployer", async () => {
       const fundingPeriodSeconds = await lendingPool.fundingPeriodSeconds();
-      await network.provider.send("evm_increaseTime", [fundingPeriodSeconds.toNumber()]);
+      await network.provider.send("evm_increaseTime", [
+        fundingPeriodSeconds.toNumber(),
+      ]);
       await network.provider.send("evm_mine");
       await lendingPool.connect(deployer).adminTransitionToFundedState();
     });
@@ -299,12 +304,12 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       await lendingPool.connect(borrower).borrowerPayInterest(USDC(125));
     });
 
-    it("borrowerOutstandingInterest() is now 750", async () => {
-      expect(await lendingPool.borrowerOutstandingInterest()).to.equal("75000000");
+    it("borrowerOutstandingInterest() is now 0", async () => {
+      expect(await lendingPool.borrowerOutstandingInterest()).to.equal("0");
     });
 
-    it("borrowerExcessSpread() is 0", async () => {
-      expect(await lendingPool.borrowerExcessSpread()).to.equal(USDC(0));
+    it("borrowerExcessSpread() is 122.8", async () => {
+      expect(await lendingPool.borrowerExcessSpread()).to.equal("122800001");
     });
 
     it("⏳ 3 days pass by", async () => {
@@ -314,7 +319,6 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
     });
 
     describe("test out rolling over into next pool", async () => {
-
       let nextLendingPool: LendingPool;
       let nextTrancheVault1: TrancheVault;
       let nextTrancheVault2: TrancheVault;
@@ -325,19 +329,39 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
 
         const defaultParams = lendingPoolParams;
 
-        defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
-        defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
+        defaultParams.platformTokenContractAddress =
+          await lendingPool.platformTokenContractAddress();
+        defaultParams.stableCoinContractAddress =
+          await lendingPool.stableCoinContractAddress();
         defaultParams.maxFundingCapacity = defaultParams.minFundingCapacity;
-        defaultParams.firstLossAssets = (await lendingPool.firstLossAssets()).add(USDC(1000));
+        defaultParams.firstLossAssets = (
+          await lendingPool.firstLossAssets()
+        ).add(USDC(1000));
 
-        const updatedLendingPoolParams = { ...defaultParams, borrowerAddress: await borrower.getAddress() };
+        const updatedLendingPoolParams = {
+          ...defaultParams,
+          borrowerAddress: await borrower.getAddress(),
+        };
 
-        const nextPoolAddr = await poolFactory.callStatic.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); // view only execution to check lender address
-        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(false);
-        await poolFactory.deployPool(updatedLendingPoolParams, DEFAULT_MULTITRANCHE_FUNDING_SPLIT); // run the state change
-        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(true);
+        const nextPoolAddr = await poolFactory.callStatic.deployPool(
+          updatedLendingPoolParams,
+          DEFAULT_MULTITRANCHE_FUNDING_SPLIT
+        ); // view only execution to check lender address
+        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(
+          false
+        );
+        await poolFactory.deployPool(
+          updatedLendingPoolParams,
+          DEFAULT_MULTITRANCHE_FUNDING_SPLIT
+        ); // run the state change
+        expect(await poolFactory.prevDeployedTranche(futureTranches[0])).equals(
+          true
+        );
 
-        nextLendingPool = await ethers.getContractAt("LendingPool", nextPoolAddr);
+        nextLendingPool = await ethers.getContractAt(
+          "LendingPool",
+          nextPoolAddr
+        );
 
         expect(nextPoolAddr).hexEqual(futureLenders[0]);
 
@@ -345,10 +369,15 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
 
         expect(nextTrancheAddr).hexEqual(futureTranches[0]);
 
-        nextTrancheVault1 = await ethers.getContractAt("TrancheVault", nextTrancheAddr);
-        nextTrancheVault2 = await ethers.getContractAt("TrancheVault", await nextLendingPool.trancheVaultAddresses(1));
-
-      })
+        nextTrancheVault1 = await ethers.getContractAt(
+          "TrancheVault",
+          nextTrancheAddr
+        );
+        nextTrancheVault2 = await ethers.getContractAt(
+          "TrancheVault",
+          await nextLendingPool.trancheVaultAddresses(1)
+        );
+      });
 
       it("is initially in INITIAL stage and requires a deposit of 3000 USDC", async () => {
         expect(await nextLendingPool.currentStage()).to.equal(STAGES.INITIAL);
@@ -356,19 +385,33 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       });
 
       it("3000 USDC flc deposit from the borrower", async () => {
-        await expect(nextLendingPool.callStatic.adminOrOwnerRolloverFirstLossCaptial(lendingPool.address)).to.be.revertedWith("InsufficientAllowance");
+        await expect(
+          nextLendingPool.callStatic.adminOrOwnerRolloverFirstLossCaptial(
+            lendingPool.address
+          )
+        ).to.be.revertedWith("InsufficientAllowance");
         // previous flc was 2000 so now borrower needs to approve an additonal 1000 since the new flc is 3000
-        await usdc.connect(borrower).approve(nextLendingPool.address, USDC(1000));
-        await nextLendingPool.adminOrOwnerRolloverFirstLossCaptial(lendingPool.address);
+        await usdc
+          .connect(borrower)
+          .approve(nextLendingPool.address, USDC(1000));
+        await nextLendingPool.adminOrOwnerRolloverFirstLossCaptial(
+          lendingPool.address
+        );
       });
 
       it("transitions to the FLC_DEPOSITED stage", async () => {
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.FLC_DEPOSITED);
+        expect(await nextLendingPool.currentStage()).to.equal(
+          STAGES.FLC_DEPOSITED
+        );
       });
 
       it("receives adminOpenPool() from deployer", async () => {
         const lenderCount = await lendingPool.lenderCount();
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address])).to.be.revertedWith("LP004");
+        await expect(
+          nextLendingPool.executeRollover(lendingPool.address, [
+            firstTrancheVault.address,
+          ])
+        ).to.be.revertedWith("LP004");
         await nextLendingPool.connect(deployer).adminOpenPool();
       });
 
@@ -377,27 +420,53 @@ describe("Rollovers (2 Lender / 2 Tranche) dipping below max funding", function 
       });
 
       it("fails to rollover to due not having paid all outstanding interest", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.eventually.rejectedWith("all interest must be repaid");
-      })
+        await expect(
+          nextLendingPool.executeRollover(lendingPool.address, [
+            firstTrancheVault.address,
+            secondTrancheVault.address,
+          ])
+        ).to.eventually.rejectedWith("all interest must be repaid");
+      });
 
       it("claim all outstanding interest lender1", async () => {
-        const tranche1rewards = await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 0);
-        await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(0, tranche1rewards);
+        const tranche1rewards =
+          await lendingPool.lenderRewardsByTrancheRedeemable(
+            await lender1.getAddress(),
+            0
+          );
+        await lendingPool
+          .connect(lender1)
+          .lenderRedeemRewardsByTranche(0, tranche1rewards);
 
-        const tranche2rewards = await lendingPool.lenderRewardsByTrancheRedeemable(await lender1.getAddress(), 1);
-        await lendingPool.connect(lender1).lenderRedeemRewardsByTranche(1, tranche2rewards);
-      })
+        const tranche2rewards =
+          await lendingPool.lenderRewardsByTrancheRedeemable(
+            await lender1.getAddress(),
+            1
+          );
+        await lendingPool
+          .connect(lender1)
+          .lenderRedeemRewardsByTranche(1, tranche2rewards);
+      });
 
       it("pay outstanding interest", async () => {
-        const borrowerOutstandingInterest = await lendingPool.borrowerOutstandingInterest();
-        await usdc.connect(borrower).approve(lendingPool.address, borrowerOutstandingInterest);
-        await lendingPool.connect(borrower).borrowerPayInterest(borrowerOutstandingInterest);
-      })
+        const borrowerOutstandingInterest =
+          await lendingPool.borrowerOutstandingInterest();
+        await usdc
+          .connect(borrower)
+          .approve(lendingPool.address, borrowerOutstandingInterest);
+        await lendingPool
+          .connect(borrower)
+          .borrowerPayInterest(borrowerOutstandingInterest);
+      });
 
       it("perform rollover and expect error due to not meeting minimum funding thresholds", async () => {
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address, secondTrancheVault.address])).to.be.revertedWith("VaultFundingFailed");
-      })
-
+        await expect(
+          nextLendingPool.executeRollover(lendingPool.address, [
+            firstTrancheVault.address,
+            secondTrancheVault.address,
+          ])
+        ).to.be.revertedWith("VaultFundingFailed");
+      });
     });
   });
 });
