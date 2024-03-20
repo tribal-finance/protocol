@@ -419,8 +419,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint rewards = lenderRewardsByTrancheRedeemable(lender, trancheId);
         if (rewards > 0) {
             s_trancheRewardables[trancheId][lender].redeemedRewards += rewards;
-            SafeERC20.safeTransfer(_stableCoinContract(), lender, rewards);
-            emit LenderWithdrawInterest(lender, trancheId, rewards);
+            // wrap transfer in try catch block to prevent reverting the whole loop
+            // can only be external contract
+            try _stableCoinContract().transfer(lender, rewards) {
+                emit LenderWithdrawInterest(lender, trancheId, rewards);
+            } catch {}
         }
     }
 
