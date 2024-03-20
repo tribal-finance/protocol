@@ -705,6 +705,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         address[] memory deadTrancheAddrs
     ) external onlyOwnerOrAdmin atStage(Stages.OPEN) whenNotPaused {
         PoolTransfers.executeRollover(this, deadLendingPoolAddr, deadTrancheAddrs);
+        fundedAt = uint64(block.timestamp);
         _transitionToBorrowedStage(collectedAssets);
     }
 
