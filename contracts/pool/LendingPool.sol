@@ -508,7 +508,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint platformTokens
     ) external onlyLender atStages2(Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
         require(!s_rollOverSettings[msg.sender].platformTokens, "LP102"); // "LendingPool: tokens are locked for rollover"
-        require(lenderRewardsByTrancheRedeemable(_msgSender(), trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
+        require(lenderRewardsByTrancheRedeemableSpecial(_msgSender(), trancheId) == 0, "LP103"); // "LendingPool: rewards not redeemed"
         require(IERC20(platformTokenContractAddress).totalSupply() > 0, "Unlock: Token Locking Disabled");
 
         Rewardable storage r = s_trancheRewardables[trancheId][_msgSender()];
