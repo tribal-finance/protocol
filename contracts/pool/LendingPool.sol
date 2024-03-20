@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+// import solmate fixedpoint math library
+import "solmate/src/utils/FixedPointMathLib.sol";
 
 import "./PoolCalculations.sol";
 import "./PoolTransfers.sol";
@@ -14,6 +16,8 @@ import "./ILendingPool.sol";
 import "../fee_sharing/IFeeSharing.sol";
 import "../authority/AuthorityAware.sol";
 import "../vaults/TrancheVault.sol";
+
+import "hardhat/console.sol";
 
 contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -363,6 +367,11 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         fundedAt = uint64(block.timestamp);
         currentStage = Stages.FUNDED;
 
+        //console.log("borrowerTotalInterestRateWad in ldending pool");
+        uint256 totalInterestOwed = (allLendersEffectiveAprWad() + protocolFeeWad) * collectedAssets * lendingTermSeconds / YEAR;
+        borrowerTotalInterestRateWad = PoolCalculations.calculateInterestRate(totalInterestOwed, collectedAssets, lendingTermSeconds);
+        console.log(allLendersEffectiveAprWad() + protocolFeeWad);
+
         TrancheVault[] memory vaults = trancheVaultContracts();
 
         for (uint i; i < vaults.length; i++) {
@@ -555,7 +564,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
     /// @notice average APR of all lenders across all tranches, boosted or not
     function allLendersInterest() public view returns (uint) {
-        return (((allLendersEffectiveAprWad() * collectedAssets) / WAD) * lendingTermSeconds) / YEAR;
+        // use mulDiv to avoid precision loss
+        return
+            FixedPointMathLib.mulDivUp((allLendersEffectiveAprWad() * collectedAssets) / WAD, lendingTermSeconds, YEAR);
     }
 
     function allLendersInterestByDate() public view returns (uint) {
@@ -718,6 +729,10 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         address lender
     ) external onlyDeployedPool {
         LendingPool.Rewardable storage r = s_trancheRewardables[trancheId][lender];
+        require(
+            r.lockedPlatformTokens <= lenderPlatformTokensByTrancheLockable(_msgSender(), trancheId),
+            "LP101" //"LendingPool: lock will lead to overboost"
+        );
         r.lockedPlatformTokens += amount;
         s_totalLockedPlatformTokensByTranche[trancheId] += amount;
     }
