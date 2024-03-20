@@ -529,7 +529,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         uint8 trancheId,
         uint toWithdraw
     ) public onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
-        require(!s_rollOverSettings[msg.sender].rewards, "LP105"); // "LendingPool: rewards are locked for rollover"
         if (toWithdraw == 0) {
             return;
         }
@@ -553,7 +552,6 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderRedeemRewards(
         uint[] calldata toWithdraws
     ) external onlyLender atStages3(Stages.BORROWED, Stages.REPAID, Stages.FLC_WITHDRAWN) whenNotPaused {
-        require(!s_rollOverSettings[msg.sender].rewards, "LP105"); //"LendingPool: rewards are locked for rollover"
         require(toWithdraws.length == tranchesCount, "LP107"); //"LendingPool: wrong amount of tranches"
         for (uint8 i; i < toWithdraws.length; i++) {
             lenderRedeemRewardsByTranche(i, toWithdraws[i]);
