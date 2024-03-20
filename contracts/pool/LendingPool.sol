@@ -435,7 +435,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     }
 
     /**
-     * @notice Transitions the pool to the defaulted state and pays out remaining assets to the tranche vaults
+     * @notice Transitions the pool to the defaulted state and pays out all remaining assets to the tranche vaults
      * @dev This function is expected to be called by *owner* after the maturity date has passed and principal has not been repaid
      */
     function _transitionToDefaultedStage() internal whenNotPaused {
