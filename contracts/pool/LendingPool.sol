@@ -522,6 +522,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
 
         require(r.lockedPlatformTokens >= platformTokens, "LP104"); // LendingPool: not enough locked tokens"
         r.lockedPlatformTokens -= platformTokens;
+        s_totalLockedPlatformTokensByTranche[trancheId] -= platformTokens;
 
         SafeERC20.safeTransfer(IERC20(platformTokenContractAddress), _msgSender(), platformTokens);
 
