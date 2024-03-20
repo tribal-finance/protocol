@@ -776,6 +776,7 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         LendingPool pool
     ) external onlyOwnerOrAdmin atStage(Stages.INITIAL) whenNotPaused {
         require(pool.borrowerAddress() == borrowerAddress, "borrowers must match");
+        require(address(pool) != address(this), "pool cannot be the same as this contract");
 
         if (pool.firstLossAssets() >= firstLossAssets) {
             // we have surplus coming, refund extra to borrower
