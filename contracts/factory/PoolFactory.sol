@@ -106,7 +106,7 @@ contract PoolFactory is AuthorityAware {
                 totalApr += params.trancheAPRsWads[i].mulDiv(fundingSplitWads[i][0], WAD);
             }
         }
-
+        totalApr += totalApr.mulDiv(params.protocolFeeWad, WAD); // add protocol fee
         address poolAddress = _clonePool();
         prevDeployedPool[poolAddress] = true;
 
