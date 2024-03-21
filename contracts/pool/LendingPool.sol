@@ -2,8 +2,6 @@
 pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 // import solmate fixedpoint math library
@@ -13,7 +11,6 @@ import "./PoolCalculations.sol";
 import "./PoolTransfers.sol";
 import "./ILendingPool.sol";
 
-import "../fee_sharing/IFeeSharing.sol";
 import "../authority/AuthorityAware.sol";
 import "../vaults/TrancheVault.sol";
 
@@ -368,8 +365,14 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
         currentStage = Stages.FUNDED;
 
         //console.log("borrowerTotalInterestRateWad in ldending pool");
-        uint256 totalInterestOwed = (allLendersEffectiveAprWad() + protocolFeeWad) * collectedAssets * lendingTermSeconds / YEAR;
-        borrowerTotalInterestRateWad = PoolCalculations.calculateInterestRate(totalInterestOwed, collectedAssets, lendingTermSeconds);
+        uint256 totalInterestOwed = ((allLendersEffectiveAprWad() + protocolFeeWad) *
+            collectedAssets *
+            lendingTermSeconds) / YEAR;
+        borrowerTotalInterestRateWad = PoolCalculations.calculateInterestRate(
+            totalInterestOwed,
+            collectedAssets,
+            lendingTermSeconds
+        );
         console.log(allLendersEffectiveAprWad() + protocolFeeWad);
 
         TrancheVault[] memory vaults = trancheVaultContracts();
