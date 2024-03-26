@@ -66,6 +66,7 @@ library PoolTransfers {
         require(deadpool.borrowerOutstandingInterest() == 0, "all interest must be repaid");
         require(lendingPool.borrowerAddress() == deadpool.borrowerAddress(), "borrowers must match");
         require(tranchesCount == deadTrancheAddrs.length, "tranche array mismatch");
+        require(deadpool.platformTokenContractAddress == lendingPool.platformTokenContractAddress, "non matching platform tokens");
 
         uint256 rolledAssets = 0;
 
