@@ -22,6 +22,7 @@ const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.18",
     settings: {
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 0,
@@ -50,7 +51,7 @@ const config: HardhatUserConfig = {
     },
     sepolia: {
       url: process.env.SEPOLIA_RPC,
-      chainId: 11155111.,
+      chainId: 11155111,
       accounts: [
         process.env.SEPOLIA_DEPLOYER_KEY!,
         process.env.SEPOLIA_LENDER1_KEY!,
@@ -60,7 +61,6 @@ const config: HardhatUserConfig = {
 
       gas: 4000000
     },
-
     mainnet: {
       url: process.env.MAINNET_FORK_ALCHEMY_URL,
       accounts: [

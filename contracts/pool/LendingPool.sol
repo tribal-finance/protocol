@@ -698,6 +698,9 @@ contract LendingPool is ILendingPool, AuthorityAware, PausableUpgradeable {
     function lenderPlatformTokensByTrancheLockable(address lenderAddress, uint8 trancheId) public view returns (uint) {
         Rewardable storage r = s_trancheRewardables[trancheId][lenderAddress];
         uint maxLockablePlatformTokens = r.stakedAssets * trancheBoostRatios[trancheId];
+        if(r.lockedPlatformTokens > maxLockablePlatformTokens){
+            return 0;
+        }
         return maxLockablePlatformTokens - r.lockedPlatformTokens;
     }
 
