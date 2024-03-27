@@ -121,13 +121,13 @@ describe("Defaulting", function () {
     }
 
     it("sets the pool to defaulted stage", async function () {
-      const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
+      const { lendingPool, lenders } = await uniPoolFixture();
       await assertPoolViews(lendingPool, lenders[0], 1000)
       expect(await lendingPool.currentStage()).to.eq(STAGES.DEFAULTED);
     });
 
     it("Assert lenderRewardsByTrancheRedeemable() doesn't revert before withdrawal", async () => {
-      const { lendingPool, lenders } = await loadFixture(uniPoolFixture);
+      const { lendingPool, lenders } = await uniPoolFixture();
 
       await expect(lendingPool.lenderRewardsByTrancheRedeemable(await lenders[0].getAddress(), 0)).to.not.be.reverted;
     })
@@ -147,7 +147,7 @@ describe("Defaulting", function () {
     });
 
     it("sets maxWithdraw for first lender to 600 (4000 * 0.15)", async function () {
-      const { firstTrancheVault, lenders, lendingPool } = await loadFixture(uniPoolFixture);
+      const { firstTrancheVault, lenders, lendingPool } = await uniPoolFixture();
       await assertPoolViews(lendingPool, lenders[0], 1002)
 
       expect(
@@ -199,7 +199,7 @@ describe("Defaulting", function () {
     });
 
     it("sets maxWithdraw for second lender to 900 (6000 * 0.15)", async function () {
-      const { firstTrancheVault, lenders } = await loadFixture(uniPoolFixture);
+      const { firstTrancheVault, lenders } = await uniPoolFixture();
 
       expect(
         await firstTrancheVault.maxWithdraw(lenders[1].getAddress())
@@ -650,7 +650,7 @@ describe("Defaulting", function () {
         deployer,
         firstTrancheVault,
         secondTrancheVault,
-      } = await loadFixture(duoPoolFixture);
+      } = await duoPoolFixture();
       if (!secondTrancheVault)
         throw new Error("Second tranche vault not deployed");
 
@@ -705,7 +705,7 @@ describe("Defaulting", function () {
         deployer,
         firstTrancheVault,
         secondTrancheVault,
-      } = await loadFixture(duoPoolFixture);
+      } = await duoPoolFixture();
       if (!secondTrancheVault)
         throw new Error("Second tranche vault not deployed");
 

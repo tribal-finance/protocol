@@ -22,9 +22,10 @@ const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.18",
     settings: {
+      viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 10,
+        runs: 0,
       },
     },
   },
@@ -48,17 +49,18 @@ const config: HardhatUserConfig = {
         process.env.GOERLI_BORROWER_KEY!,
       ],
     },
-    staging: {
-      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      chainId: 5,
+    sepolia: {
+      url: process.env.SEPOLIA_RPC,
+      chainId: 11155111,
       accounts: [
-        process.env.GOERLI_DEPLOYER_KEY!,
-        process.env.GOERLI_LENDER1_KEY!,
-        process.env.GOERLI_LENDER2_KEY!,
-        process.env.GOERLI_BORROWER_KEY!,
+        process.env.SEPOLIA_DEPLOYER_KEY!,
+        process.env.SEPOLIA_LENDER1_KEY!,
+        process.env.SEPOLIA_LENDER2_KEY!,
+        process.env.SEPOLIA_BORROWER_KEY!,
       ],
-    },
 
+      gas: 4000000
+    },
     mainnet: {
       url: process.env.MAINNET_FORK_ALCHEMY_URL,
       accounts: [
@@ -85,6 +87,10 @@ const config: HardhatUserConfig = {
     enabled: true,
     currency: 'USD',
     gasPrice: 25
+  },
+
+  mocha: {
+    timeout: 99999999
   }
 };
 

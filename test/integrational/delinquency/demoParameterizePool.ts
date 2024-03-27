@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { Signer } from "ethers";
 
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
 import {
@@ -27,7 +26,7 @@ import STAGES from "../../helpers/stages";
 import { pool } from "../../../typechain-types/contracts";
 import exp from "constants";
 
-describe.skip("Run borrowerPenalty logic", function () {
+describe("Run borrowerPenalty logic", function () {
   context("For unitranche pool", async function () {
     async function uniPoolFixture() {
       const { signers, usdc } = await testSetup();
@@ -82,7 +81,7 @@ describe.skip("Run borrowerPenalty logic", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(uniPoolFixture);
+      const data = await uniPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
@@ -95,7 +94,7 @@ describe.skip("Run borrowerPenalty logic", function () {
     });
 
     it("deploy pool", async () => {
-      const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+      const defaultParams = JSON.parse(JSON.stringify(DEFAULT_LENDING_POOL_PARAMS));
     
       defaultParams.minFundingCapacity = ethers.utils.parseUnits("80000", 6);
       defaultParams.maxFundingCapacity = ethers.utils.parseUnits("100000", 6);

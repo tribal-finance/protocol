@@ -11,7 +11,7 @@
  */
 
 import { ethers, upgrades } from "hardhat";
-import type { BigNumberish, Signer } from "ethers";
+import type { BigNumber, Signer } from "ethers";
 import type {
   ERC20Upgradeable,
   FeeSharing,
@@ -40,7 +40,7 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   minFundingCapacity: USDC(10000),
   maxFundingCapacity: USDC(12000),
   fundingPeriodSeconds: 24 * 60 * 60,
-  lendingTermSeconds: (365 * 24 * 60 * 60) / 2, // 90 days
+  lendingTermSeconds: (365 * 24 * 60 * 60) / 2,
   firstLossAssets: USDC(2000),
   repaymentRecurrenceDays: 30,
   gracePeriodDays: 5,
@@ -55,6 +55,35 @@ export const DEFAULT_LENDING_POOL_PARAMS = {
   trancheCoveragesWads: [WAD(1)],
 };
 export const DEFAULT_MULTITRANCHE_FUNDING_SPLIT = [[WAD(0.8), WAD(0.75)], [WAD(0.2), WAD(0.25)]];
+
+export function calculateTrancheCapacities(
+  params: {
+    minFundingCapacity: BigNumber,
+    maxFundingCapacity: BigNumber,
+    tranchesCount: number
+  },
+  fundingSplitWads: BigNumber[][]
+): { tranche: number; minCapacity: BigNumber; maxCapacity: BigNumber }[] {
+  let trancheCapacities: { tranche: number; minCapacity: BigNumber; maxCapacity: BigNumber }[] = [];
+
+  for (let i = 0; i < params.tranchesCount; i++) {
+    let minCapacityForTranche = params.minFundingCapacity.mul(fundingSplitWads[i][1]).div(ethers.constants.WeiPerEther); // Using 1e18 for WAD
+    let maxCapacityForTranche = params.maxFundingCapacity.mul(fundingSplitWads[i][0]).div(ethers.constants.WeiPerEther);
+
+    // Swap if minCapacity is greater than maxCapacity
+    if (minCapacityForTranche.gt(maxCapacityForTranche)) {
+      [minCapacityForTranche, maxCapacityForTranche] = [maxCapacityForTranche, minCapacityForTranche];
+    }
+
+    trancheCapacities.push({
+      tranche: i,
+      minCapacity: minCapacityForTranche,
+      maxCapacity: maxCapacityForTranche
+    });
+  }
+
+  return trancheCapacities;
+}
 
 export async function deployPlatformToken(
   deployer: Signer,
@@ -91,7 +120,7 @@ export async function deployAuthority(
   lenders: Array<Signer>,
   foundationAddress: string | null
 ): Promise<Authority> {
-  const AuthorityProxy = await upgrades.deployProxy(await ethers.getContractFactory("Authority"), [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+  const AuthorityProxy = await upgrades.deployProxy(await ethers.getContractFactory("Authority"), [], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
   const authority = await ethers.getContractAt("Authority", AuthorityProxy.address);
 
   authority.connect(deployer).addAdmin(await deployer.getAddress());
@@ -119,7 +148,7 @@ export async function deployStaking(
     platformTokenAddress,
     usdcAddress,
     60,
-  ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+  ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
   await staking.deployed();
 
   return staking;
@@ -156,7 +185,7 @@ export async function deployFactoryAndImplementations(
     USDC_ADDRESS_6,
     [staking.address, foundationAddress],
     [ethers.utils.parseEther("0.2"), ethers.utils.parseEther("0.8")],
-  ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor']});
+  ], { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] });
   await feeSharing.deployed();
 
   const PoolCalculations = await ethers.getContractFactory("PoolCalculations");
@@ -183,9 +212,9 @@ export async function deployFactoryAndImplementations(
   await trancheVaultImplementation.deployed();
 
   const PoolFactory = await upgrades.deployProxy(
-    await ethers.getContractFactory("PoolFactory"), 
-    [authority.address], 
-    { 'initializer': 'initialize', 'unsafeAllow': ['constructor']}
+    await ethers.getContractFactory("PoolFactory"),
+    [authority.address],
+    { 'initializer': 'initialize', 'unsafeAllow': ['constructor'] }
   );
 
   const poolFactory = await ethers.getContractAt("PoolFactory", PoolFactory.address)
@@ -228,8 +257,6 @@ export async function deployUnitranchePool(
 
   const tx = await poolFactory.deployPool(lendingPoolParams, [[WAD(1), WAD(1)]]);
   await tx.wait();
-
-  console.log("Deployed Unitranche Pool");
 
   const deployedContracts = await _getDeployedContracts(poolFactory);
 
@@ -287,6 +314,7 @@ export async function deployDuotranchePool(
     borrower,
     lenders,
     poolFactory,
+    lendingPoolParams,
     ...deployedContracts,
   };
 }

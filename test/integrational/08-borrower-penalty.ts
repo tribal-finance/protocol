@@ -98,7 +98,7 @@ describe("Penalties", function () {
      */
     context("when there is no interest payments from the borrower", () => {
       it("has zero borrower penalty", async () => {
-        const data = await loadFixture(uniPoolFixture);
+        const data = await uniPoolFixture();
         const { usdc, lendingPool, borrower } = data;
         expect(await lendingPool.borrowerPenaltyAmount()).to.be.equal(USDC(0));
         expect(await lendingPool.poolBalance()).to.be.gt(USDC(99_999));
@@ -106,7 +106,7 @@ describe("Penalties", function () {
       });
 
       it("has zero penalty after 30 days", async () => {
-        const data = await loadFixture(uniPoolFixture);
+        const data = await uniPoolFixture();
         const { usdc, lendingPool, borrower } = data;
 
         // wait 30 days
@@ -116,7 +116,7 @@ describe("Penalties", function () {
       });
 
       it("has ~7297 USDC penalty after 100 days if borrower made no payments", async () => {
-        const data = await loadFixture(uniPoolFixture);
+        const data = await uniPoolFixture();
         const { usdc, lendingPool, borrower } = data;
 
         // wait 100 days
@@ -140,7 +140,7 @@ describe("Penalties", function () {
 
       describe("when there is ~7297 USDC penalty", async () => {
         async function uniPoolFixtureWithPenalty() {
-          const data = await loadFixture(uniPoolFixture);
+          const data = await uniPoolFixture();
           const { usdc, lendingPool, borrower, lenders } = data;
           const [lender1, lender2] = lenders;
           await ethers.provider.send("evm_increaseTime", [100 * 24 * 60 * 60]);

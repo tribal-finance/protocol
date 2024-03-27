@@ -28,14 +28,21 @@ export function getNumber(maxLength: number): number {
 export async function processLendingPoolParams(ethers: any, factory: PoolFactory, lendingPoolParams: string, network: string) {
     const signers = await ethers.getSigners();
 
+    lendingPoolParams = lendingPoolParams.trim();
+
+    console.log("sending data to factory...")
+
     const tx = await signers[0].sendTransaction({
         to: factory.address,
         data: lendingPoolParams
     })
 
+    
     const receipt = await tx.wait();
     const timestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp
-
+    
+    console.log("parsing deployment into cache...")
+    
     receipt.logs.forEach((log: any) => {
         try {
             const parsedLog = factory.interface.parseLog(log);

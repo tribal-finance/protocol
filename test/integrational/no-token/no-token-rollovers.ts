@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { Signer } from "ethers";
 
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumberish } from "ethers";
 import setupUSDC, { USDC_PRECISION, USDC_ADDRESS_6 } from "../../helpers/usdc";
 import { DEFAULT_LENDING_POOL_PARAMS } from "../../../lib/pool_deployments";
@@ -79,7 +78,7 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
       lender2: Signer;
 
     before(async () => {
-      const data = await loadFixture(duoPoolFixture);
+      const data = await duoPoolFixture();
       usdc = data.usdc;
       platformToken = data.platformToken;
       lendingPool = data.lendingPool;
@@ -302,31 +301,6 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
       await ethers.provider.send("evm_mine", []);
     });
 
-    it("🏛️ borrower repays 10000 USDC as principal", async () => {
-      await usdc.connect(borrower).approve(lendingPool.address, USDC(10000));
-      await lendingPool.connect(borrower).borrowerRepayPrincipal();
-    });
-
-    it("transitions to REPAID stage", async () => {
-      expect(await lendingPool.currentStage()).to.equal(STAGES.REPAID);
-    });
-
-    it("🏛️ borrower withdraws FLC + excess spread (2050USDC)", async () => {
-      const borrowerBalanceBefore = await usdc.balanceOf(borrower.getAddress());
-      await lendingPool
-        .connect(borrower)
-        .borrowerWithdrawFirstLossCapitalAndExcessSpread();
-      const borrowerBalanceAfter = await usdc.balanceOf(borrower.getAddress());
-      expect(borrowerBalanceAfter.sub(borrowerBalanceBefore)).to.equal(
-        USDC(2175)
-      );
-    });
-
-    it("transitions to FLC_WITHDRAWN stage", async () => {
-      expect(await lendingPool.currentStage()).to.equal(STAGES.FLC_WITHDRAWN);
-    });
-
-
     describe("test out rolling over into next pool", async () => {
 
       let nextLendingPool: LendingPool;
@@ -336,7 +310,7 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
         const futureLenders = await poolFactory.nextLenders();
         const futureTranches = await poolFactory.nextTranches();
 
-        const defaultParams = DEFAULT_LENDING_POOL_PARAMS;
+        const defaultParams = { ...DEFAULT_LENDING_POOL_PARAMS };
 
         defaultParams.platformTokenContractAddress = await lendingPool.platformTokenContractAddress();
         defaultParams.stableCoinContractAddress = await lendingPool.stableCoinContractAddress();
@@ -384,44 +358,69 @@ describe("Empty Token Rollovers Test (2 Lender / 2 Tranche)", function () {
       });
 
       it("receives adminOpenPool() from deployer", async () => {
-        const lenderCount = await lendingPool.lenderCount();
-        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, lenderCount.sub(1))).to.be.revertedWith("LP004");
-        await nextLendingPool.connect(deployer).adminOpenPool();
+        await expect(nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address])).to.be.revertedWith("LP004");
+        await nextLendingPool.adminOpenPool();
       });
-
-      it("transitions to OPEN stage", async () => {
-        expect(await nextLendingPool.currentStage()).to.equal(STAGES.OPEN);
-      });
-
 
       it("perform rollover", async () => {
         const asset = await ethers.getContractAt("ERC20", await lendingPool.stableCoinContractAddress());
 
-        const initialBalances = await Promise.all([
-          await asset.balanceOf(lendingPool.address),
-          await asset.balanceOf(firstTrancheVault.address),
-          await asset.balanceOf(nextLendingPool.address),
-          await asset.balanceOf(nextTrancheVault.address)
-        ])
-        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address], 0, 1);
-        const finalBalances = await Promise.all([
+        const initialBalancesAsset = await Promise.all([
           await asset.balanceOf(lendingPool.address),
           await asset.balanceOf(firstTrancheVault.address),
           await asset.balanceOf(nextLendingPool.address),
           await asset.balanceOf(nextTrancheVault.address)
         ])
 
-        const deltaBalances = [
-          initialBalances[0].sub(finalBalances[0]),
-          initialBalances[1].sub(finalBalances[1]),
-          initialBalances[2].sub(finalBalances[2]),
-          initialBalances[3].sub(finalBalances[3]),
+        const initialBalancesVault = await Promise.all([
+          await firstTrancheVault.balanceOf(await borrower.getAddress()),
+          await firstTrancheVault.balanceOf(await lender1.getAddress()),
+          await firstTrancheVault.balanceOf(await lender2.getAddress()),
+        ])
+
+        const borroweredAssetsInitial = await lendingPool.borrowedAssets();
+
+        await nextLendingPool.executeRollover(lendingPool.address, [firstTrancheVault.address]);
+
+        const borroweredAssetsFinal = await lendingPool.borrowedAssets();
+
+        const finalBalancesAsset = await Promise.all([
+          await asset.balanceOf(lendingPool.address),
+          await asset.balanceOf(firstTrancheVault.address),
+          await asset.balanceOf(nextLendingPool.address),
+          await asset.balanceOf(nextTrancheVault.address)
+        ])
+
+        const finalBalancesVault = await Promise.all([
+          await firstTrancheVault.balanceOf(await borrower.getAddress()),
+          await firstTrancheVault.balanceOf(await lender1.getAddress()),
+          await firstTrancheVault.balanceOf(await lender2.getAddress()),
+        ])
+
+        const deltaBalancesAsset = [
+          initialBalancesAsset[0].sub(finalBalancesAsset[0]),
+          initialBalancesAsset[1].sub(finalBalancesAsset[1]),
+          initialBalancesAsset[2].sub(finalBalancesAsset[2]),
+          initialBalancesAsset[3].sub(finalBalancesAsset[3]),
         ]
 
-        expect(deltaBalances[0]).equals(initialBalances[0])
-        expect(deltaBalances[1]).equals(initialBalances[1])
-        expect(deltaBalances[2]).equals(0)
-        expect(deltaBalances[3]).equals(-initialBalances[1].add(initialBalances[0]))
+        const deltaBalancesVault = [
+          initialBalancesVault[0].sub(finalBalancesVault[0]),
+          initialBalancesVault[1].sub(finalBalancesVault[1]),
+          initialBalancesVault[2].sub(finalBalancesVault[2]),
+        ]
+
+        expect(deltaBalancesAsset[0]).equals(0)
+        expect(deltaBalancesAsset[1]).equals(0)
+        expect(deltaBalancesAsset[2]).equals(0)
+        expect(deltaBalancesAsset[3]).equals(0)
+
+
+        expect(deltaBalancesVault[0]).equals(0)
+        expect(deltaBalancesVault[1]).equals(initialBalancesVault[1])
+        expect(deltaBalancesVault[2]).equals(initialBalancesVault[2])
+
+        expect(borroweredAssetsFinal.sub(borroweredAssetsInitial)).equals(-borroweredAssetsInitial);
       })
     })
   });

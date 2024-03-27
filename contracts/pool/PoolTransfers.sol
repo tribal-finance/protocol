@@ -2,100 +2,129 @@
 pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "./LendingPool.sol";
-
 import "../factory/PoolFactory.sol";
 import "../vaults/TrancheVault.sol";
 
 library PoolTransfers {
-    function lenderEnableRollOver(
+    error VaultFundingFailed(address vault, uint256 fundingAmount, uint256 expectedMinimumAmount, uint256 trancheId);
+
+    event PlatformTokensReceivedFromDeadPool(address indexed lender, uint8 indexed trancheId, uint256 platformTokens);
+    event WarningLenderHasNoPlatformTokensStaked(
+        address indexed lender,
+        uint8 indexed trancheId,
+        uint256 platformTokens
+    );
+
+    // handle transfer of appropriate number of platform tokens from deadpool to new pool
+    function _transferPlatformTokensToNewPool(
+        LendingPool deadPool,
+        address lender,
+        uint8 trancheId,
         LendingPool lendingPool,
-        bool principal,
-        bool rewards,
-        bool platformTokens,
-        address lender
-    ) external {
-        PoolFactory poolFactory = PoolFactory(lendingPool.poolFactoryAddress());
-        uint256 lockedPlatformTokens;
-        uint256 trancheCount = lendingPool.tranchesCount();
-        for (uint8 trancheId; trancheId < trancheCount; trancheId++) {
-            (uint256 staked, , , ) = lendingPool.s_trancheRewardables(trancheId, lender);
-            TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
-            (, uint256 locked, , ) = lendingPool.s_trancheRewardables(trancheId, lender);
-            lockedPlatformTokens += locked;
-            vault.approveRollover(lender, staked);
+        uint256 platformTokens
+    ) internal {
+        (, uint256 totalPlatformTokens, , ) = deadPool.s_trancheRewardables(trancheId, lender);
+        require(platformTokens <= totalPlatformTokens, "platform tokens exceed total");
+
+        // Is warning necessary?
+        if (platformTokens == 0) {
+            emit WarningLenderHasNoPlatformTokensStaked(lender, trancheId, platformTokens);
         }
 
-        address[4] memory futureLenders = poolFactory.nextLenders();
-        for (uint256 i = 0; i < futureLenders.length; i++) {
-            SafeERC20.safeApprove(
-                IERC20(lendingPool.platformTokenContractAddress()),
-                futureLenders[i],
-                0
-            );
-            // approve transfer of platform tokens
-            SafeERC20.safeApprove(
-                IERC20(lendingPool.platformTokenContractAddress()),
-                futureLenders[i],
-                lockedPlatformTokens
-            );
+        // Transfer the platform tokens from the dead pool to the lending pool
+        deadPool.decrementTotalLockedPlatformTokens(trancheId, platformTokens, lender);
+        _receivePlatformTokensFromDeadPool(lender, trancheId, platformTokens, lendingPool);
 
-            SafeERC20.safeApprove(
-                IERC20(lendingPool.stableCoinContractAddress()),
-                futureLenders[i],
-                0
-            );
-            // approve transfer of the stablecoin contract
-            SafeERC20.safeApprove(
-                IERC20(lendingPool.stableCoinContractAddress()), // asume tranches.asset() == stablecoin address
-                futureLenders[i],
-                2 ** 256 - 1 // infinity approve because we don't know how much interest will need to be accounted for
-            );
-        }
+        // Transfer platform tokens to the lending pool contract
+        IERC20 platformToken = IERC20(deadPool.platformTokenContractAddress());
+        deadPool.transferToAdjacentPool(platformToken, platformTokens);
     }
 
+    function _receivePlatformTokensFromDeadPool(
+        address lender,
+        uint8 trancheId,
+        uint platformTokens,
+        LendingPool lendingPool
+    ) internal {
+        lendingPool.incrementTotalLockedPlatformTokens(trancheId, platformTokens, lender);
+        emit PlatformTokensReceivedFromDeadPool(lender, trancheId, platformTokens);
+    }
+
+    // Remember to declare the event used in the function
+    event PlatformTokensReceivedFromOldPool(address indexed lender, uint8 indexed trancheId, uint256 platformTokens);
+
+    // Only the principal
     function executeRollover(
         LendingPool lendingPool,
         address deadLendingPoolAddr,
-        address[] memory deadTrancheAddrs,
-        uint256 lenderStartIndex,
-        uint256 lenderEndIndex
+        address[] memory deadTrancheAddrs
     ) external {
         uint256 tranchesCount = lendingPool.tranchesCount();
-        require(tranchesCount == deadTrancheAddrs.length, "tranche array mismatch");
-        require(
-            keccak256(deadLendingPoolAddr.code) == keccak256(address(this).code),
-            "rollover incampatible due to version mismatch"
-        ); // upgrades to the next contract need to be set before users are allowed to rollover in the current contract
-        // should do a check to ensure there aren't more than n protocols running in parallel, if this is true, the protocol will revert for reasons unknown to future devs
         LendingPool deadpool = LendingPool(deadLendingPoolAddr);
-        for (uint256 i = lenderStartIndex; i <= lenderEndIndex; i++) {
+        require(deadpool.currentStage() == LendingPool.Stages.BORROWED, "must be in borrowed stage");
+        require(deadpool.borrowerOutstandingInterest() == 0, "all interest must be repaid");
+        require(lendingPool.borrowerAddress() == deadpool.borrowerAddress(), "borrowers must match");
+        require(tranchesCount == deadTrancheAddrs.length, "tranche array mismatch");
+        require(deadpool.platformTokenContractAddress == lendingPool.platformTokenContractAddress, "non matching platform tokens");
+
+        uint256 rolledAssets = 0;
+
+        for (uint256 i = 0; i < deadpool.lenderCount(); i++) {
             address lender = deadpool.lendersAt(i);
-            LendingPool.RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(lender);
+            LendingPool.RollOverSetting memory settings = LendingPool(deadLendingPoolAddr).lenderRollOverSettings(
+                lender
+            );
             if (!settings.enabled) {
                 continue;
             }
 
-            for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
-                TrancheVault vault = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
-                uint256 rewards = settings.rewards ? deadpool.lenderRewardsByTrancheRedeemable(lender, trancheId) : 0;
-                // lenderRewardsByTrancheRedeemable will revert if the lender has previously withdrawn
-                // transfer rewards from dead lender to dead tranche
-                SafeERC20.safeTransferFrom(
-                    IERC20(lendingPool.stableCoinContractAddress()),
-                    deadLendingPoolAddr,
-                    deadTrancheAddrs[trancheId],
-                    rewards
-                );
+            if (settings.rewards) {}
 
-                vault.rollover(lender, deadTrancheAddrs[trancheId], rewards);
+            if (settings.principal) {
+                for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+                    TrancheVault vault0 = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
+                    uint256 lenderPrincipal = deadpool.lenderStakedTokensByTranche(lender, trancheId);
+                    uint256 lenderRollOver = lenderPrincipal;
+
+                    // only roll the lender if their deposit won't let them go over maxFundingCapacity
+                    uint256 vaultMax = vault0.maxFundingCapacity();
+                    if (lenderPrincipal + vault0.totalAssets() > vaultMax) {
+                        // transfer the difference back to the lender
+                        uint256 excess = lenderPrincipal + vault0.totalAssets() - vaultMax;
+                        lenderRollOver -= excess;
+                    }
+                    rolledAssets += lenderRollOver;
+                    vault0.transferShares(lender, deadTrancheAddrs[trancheId], lenderRollOver);
+                    if (settings.platformTokens) {
+                        // ask deadpool to move platform token into this new contract
+                        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+                            // transfer appropriate amount of platform tokens to the new pool
+                            uint256 platformTokens = deadpool.lenderStakedTokensByTranche(lender, trancheId);
+                            uint256 rolloverPlatformTokens = (platformTokens * lenderPrincipal) / lenderRollOver;
+                            _transferPlatformTokensToNewPool(
+                                deadpool,
+                                lender,
+                                trancheId,
+                                lendingPool,
+                                rolloverPlatformTokens
+                            );
+                        }
+                    }
+                }
             }
 
-            // ask deadpool to move platform token into this new contract
-            IERC20 platoken = IERC20(lendingPool.platformTokenContractAddress());
-            uint256 platokens = platoken.allowance(deadLendingPoolAddr, address(this));
-            SafeERC20.safeTransferFrom(platoken, deadLendingPoolAddr, address(this), platokens);
+            deadpool.poolDisableRollOver(lender);
         }
+
+        for (uint8 trancheId; trancheId < tranchesCount; trancheId++) {
+            TrancheVault vault0 = TrancheVault(lendingPool.trancheVaultAddresses(trancheId));
+            uint256 vaultMin = vault0.minFundingCapacity();
+            if (vault0.totalAssets() < vaultMin) {
+                revert VaultFundingFailed(address(vault0), vault0.totalAssets(), vaultMin, trancheId);
+            }
+        }
+
+        deadpool.slashBorrowerBurden(rolledAssets);
     }
 }

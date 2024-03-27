@@ -218,7 +218,10 @@ task("set-pool-state", "Sets the state of a given pool or deploys a fresh pool i
             console.log("Deployed fresh LendingPool.")
         }
 
+
         let lendingPool: LendingPool = !poolAddress ? await ethers.getContractAt("LendingPool", getMostCurrentContract("lendingPoolV1", network).contractAddress) : await ethers.getContractAt("LendingPool", poolAddress);
+        console.log("operating on lendingPool at", lendingPool.address)
+        console.log("code: ", await ethers.provider.getCode(lendingPool.address));
         const desiredStage = STAGES_LOOKUP_STR[`${stage.toUpperCase()}`];
         const currentStage = parseInt((await lendingPool.currentStage()).toString());
         console.log("PoolFactoryAddress: ", poolFactoryAddress)
